@@ -1,0 +1,17 @@
+
+:root {
+  --project-blue: #0EA5E9;
+  --project-blue-rgb: 14, 165, 233;
+  
+  --project-purple: #8B5CF6;
+  --project-purple-rgb: 139, 92, 246;
+  
+  --project-pink: #D946EF;
+  --project-pink-rgb: 217, 70, 239;
+  
+  --project-orange: #F97316;
+  --project-orange-rgb: 249, 115, 22;
+  
+  --project-green: #10B981;
+  --project-green-rgb: 16, 185, 129;
+}
