@@ -5,6 +5,8 @@ import { DragItem } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Minus, Plus } from 'lucide-react';
 
 interface AllocationItemProps {
   id: string;
@@ -21,7 +23,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
   days, 
   weekId 
 }) => {
-  const { getProjectById, deleteAllocation } = usePlanner();
+  const { getProjectById, deleteAllocation, updateAllocation } = usePlanner();
   const project = getProjectById(projectId);
   
   const ref = useRef<HTMLDivElement>(null);
@@ -48,6 +50,32 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
     deleteAllocation(id);
   };
 
+  const handleIncreaseDays = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (days < 5) {
+      updateAllocation({
+        id,
+        employeeId,
+        projectId,
+        weekId,
+        days: days + 1
+      });
+    }
+  };
+
+  const handleDecreaseDays = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (days > 1) {
+      updateAllocation({
+        id,
+        employeeId,
+        projectId,
+        weekId,
+        days: days - 1
+      });
+    }
+  };
+
   // Apply styles based on the drag state
   const opacity = isDragging ? 0.4 : 1;
 
@@ -68,16 +96,38 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
       <div className="flex justify-between items-center">
         <div>
           <div className="font-medium text-sm">{project.name}</div>
-          <Badge 
-            variant="outline" 
-            className="mt-1"
-            style={{ 
-              color: `var(--project-${project.color})`,
-              borderColor: `var(--project-${project.color})`
-            }}
-          >
-            {days} {days === 1 ? 'day' : 'days'}
-          </Badge>
+          <div className="flex items-center gap-2 mt-1">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-5 w-5 rounded-full p-0"
+              onClick={handleDecreaseDays}
+              disabled={days <= 1}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            
+            <Badge 
+              variant="outline" 
+              className="px-2 py-0 h-5"
+              style={{ 
+                color: `var(--project-${project.color})`,
+                borderColor: `var(--project-${project.color})`
+              }}
+            >
+              {days} {days === 1 ? 'day' : 'days'}
+            </Badge>
+            
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-5 w-5 rounded-full p-0"
+              onClick={handleIncreaseDays}
+              disabled={days >= 5}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
         <button 
           onClick={handleDelete}

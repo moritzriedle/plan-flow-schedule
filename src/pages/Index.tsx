@@ -1,6 +1,7 @@
 
 import React from 'react';
 import ResourcePlanner from '@/components/ResourcePlanner';
+import '@/components/ProjectColors.css';
 
 const Index = () => {
   return (

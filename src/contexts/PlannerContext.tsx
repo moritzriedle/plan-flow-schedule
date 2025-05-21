@@ -69,6 +69,7 @@ type PlannerContextType = {
   allocations: Allocation[];
   weeks: Week[];
   addEmployee: (employee: Omit<Employee, 'id'>) => void;
+  updateEmployee: (employee: Employee) => void;
   addProject: (project: Omit<Project, 'id'>) => void;
   addAllocation: (allocation: Omit<Allocation, 'id'>) => void;
   updateAllocation: (allocation: Allocation) => void;
@@ -76,6 +77,7 @@ type PlannerContextType = {
   deleteAllocation: (id: string) => void;
   getEmployeeAllocations: (employeeId: string) => Allocation[];
   getProjectById: (id: string) => Project | undefined;
+  getEmployeeById: (id: string) => Employee | undefined;
   getTotalAllocationDays: (employeeId: string, weekId: string) => number;
   getProjectAllocations: (projectId: string) => Allocation[];
 };
@@ -85,7 +87,7 @@ const PlannerContext = createContext<PlannerContextType | undefined>(undefined);
 
 export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialize state with sample data
-  const [employees] = useState<Employee[]>(sampleEmployees);
+  const [employees, setEmployees] = useState<Employee[]>(sampleEmployees);
   const [projects] = useState<Project[]>(sampleProjects);
   const [allocations, setAllocations] = useState<Allocation[]>(sampleAllocations);
   const [weeks] = useState<Week[]>(generateWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 8));
@@ -96,8 +98,21 @@ export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...employee,
       id: `emp${Date.now()}`,
     };
-    employees.push(newEmployee);
+    setEmployees(prev => [...prev, newEmployee]);
     toast.success(`Added employee: ${newEmployee.name}`);
+  }, []);
+
+  // Update an existing employee
+  const updateEmployee = useCallback((updatedEmployee: Employee) => {
+    setEmployees(prev => 
+      prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+    );
+    toast.success(`Updated employee: ${updatedEmployee.name}`);
+  }, []);
+
+  // Get an employee by ID
+  const getEmployeeById = useCallback((id: string) => {
+    return employees.find(employee => employee.id === id);
   }, [employees]);
 
   // Add a new project
@@ -189,6 +204,7 @@ export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     allocations,
     weeks,
     addEmployee,
+    updateEmployee,
     addProject,
     addAllocation,
     updateAllocation,
@@ -196,6 +212,7 @@ export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     deleteAllocation,
     getEmployeeAllocations,
     getProjectById,
+    getEmployeeById,
     getTotalAllocationDays,
     getProjectAllocations,
   };
