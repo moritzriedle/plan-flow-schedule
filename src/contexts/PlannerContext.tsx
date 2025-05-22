@@ -86,45 +86,64 @@ type PlannerContextType = {
 const PlannerContext = createContext<PlannerContextType | undefined>(undefined);
 
 export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('PlannerProvider initializing');
+
   // Weeks don't change, so we can just generate them once
-  const [weeks] = useState<Week[]>(generateWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 8));
+  const [weeks] = useState<Week[]>(() => {
+    console.log('Generating weeks');
+    return generateWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 8);
+  });
   
   // Initialize state with data from localStorage or sample data
   const [employees, setEmployees] = useState<Employee[]>(() => {
+    console.log('Loading employees');
     const savedEmployees = localStorage.getItem('planner_employees');
-    return savedEmployees ? JSON.parse(savedEmployees) : sampleEmployees;
+    const loadedEmployees = savedEmployees ? JSON.parse(savedEmployees) : sampleEmployees;
+    console.log('Loaded employees:', loadedEmployees);
+    return loadedEmployees;
   });
   
   const [projects, setProjects] = useState<Project[]>(() => {
+    console.log('Loading projects');
     const savedProjects = localStorage.getItem('planner_projects');
+    let loadedProjects;
     if (savedProjects) {
       // Parse and convert date strings back to Date objects
       const parsedProjects = JSON.parse(savedProjects);
-      return parsedProjects.map((proj: any) => ({
+      loadedProjects = parsedProjects.map((proj: any) => ({
         ...proj,
         startDate: new Date(proj.startDate),
         endDate: new Date(proj.endDate)
       }));
+    } else {
+      loadedProjects = sampleProjects;
     }
-    return sampleProjects;
+    console.log('Loaded projects:', loadedProjects);
+    return loadedProjects;
   });
   
   const [allocations, setAllocations] = useState<Allocation[]>(() => {
+    console.log('Loading allocations');
     const savedAllocations = localStorage.getItem('planner_allocations');
-    return savedAllocations ? JSON.parse(savedAllocations) : sampleAllocations;
+    const loadedAllocations = savedAllocations ? JSON.parse(savedAllocations) : sampleAllocations;
+    console.log('Loaded allocations:', loadedAllocations);
+    return loadedAllocations;
   });
   
   // Save to localStorage when data changes
   useEffect(() => {
+    console.log('Saving employees to localStorage:', employees);
     localStorage.setItem('planner_employees', JSON.stringify(employees));
   }, [employees]);
   
   useEffect(() => {
     // For projects, we need to handle Date objects specially
+    console.log('Saving projects to localStorage:', projects);
     localStorage.setItem('planner_projects', JSON.stringify(projects));
   }, [projects]);
   
   useEffect(() => {
+    console.log('Saving allocations to localStorage:', allocations);
     localStorage.setItem('planner_allocations', JSON.stringify(allocations));
   }, [allocations]);
 
@@ -253,6 +272,8 @@ export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getProjectAllocations,
   };
 
+  console.log('PlannerProvider rendering with value:', value);
+
   return (
     <PlannerContext.Provider value={value}>
       {children}
@@ -265,5 +286,6 @@ export const usePlanner = () => {
   if (context === undefined) {
     throw new Error('usePlanner must be used within a PlannerProvider');
   }
+  console.log('usePlanner hook called, returning context');
   return context;
 };
