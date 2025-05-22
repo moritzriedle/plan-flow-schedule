@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Week, DragItem } from '../types';
 import { startOfWeek } from 'date-fns';
 import { generateWeeks } from '../utils/dateUtils';
@@ -86,11 +86,47 @@ type PlannerContextType = {
 const PlannerContext = createContext<PlannerContextType | undefined>(undefined);
 
 export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state with sample data
-  const [employees, setEmployees] = useState<Employee[]>(sampleEmployees);
-  const [projects] = useState<Project[]>(sampleProjects);
-  const [allocations, setAllocations] = useState<Allocation[]>(sampleAllocations);
+  // Weeks don't change, so we can just generate them once
   const [weeks] = useState<Week[]>(generateWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 8));
+  
+  // Initialize state with data from localStorage or sample data
+  const [employees, setEmployees] = useState<Employee[]>(() => {
+    const savedEmployees = localStorage.getItem('planner_employees');
+    return savedEmployees ? JSON.parse(savedEmployees) : sampleEmployees;
+  });
+  
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const savedProjects = localStorage.getItem('planner_projects');
+    if (savedProjects) {
+      // Parse and convert date strings back to Date objects
+      const parsedProjects = JSON.parse(savedProjects);
+      return parsedProjects.map((proj: any) => ({
+        ...proj,
+        startDate: new Date(proj.startDate),
+        endDate: new Date(proj.endDate)
+      }));
+    }
+    return sampleProjects;
+  });
+  
+  const [allocations, setAllocations] = useState<Allocation[]>(() => {
+    const savedAllocations = localStorage.getItem('planner_allocations');
+    return savedAllocations ? JSON.parse(savedAllocations) : sampleAllocations;
+  });
+  
+  // Save to localStorage when data changes
+  useEffect(() => {
+    localStorage.setItem('planner_employees', JSON.stringify(employees));
+  }, [employees]);
+  
+  useEffect(() => {
+    // For projects, we need to handle Date objects specially
+    localStorage.setItem('planner_projects', JSON.stringify(projects));
+  }, [projects]);
+  
+  useEffect(() => {
+    localStorage.setItem('planner_allocations', JSON.stringify(allocations));
+  }, [allocations]);
 
   // Add a new employee
   const addEmployee = useCallback((employee: Omit<Employee, 'id'>) => {
@@ -121,9 +157,9 @@ export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...project,
       id: `proj${Date.now()}`,
     };
-    projects.push(newProject);
+    setProjects(prev => [...prev, newProject]);
     toast.success(`Added project: ${newProject.name}`);
-  }, [projects]);
+  }, []);
 
   // Add a new allocation
   const addAllocation = useCallback((allocation: Omit<Allocation, 'id'>) => {
