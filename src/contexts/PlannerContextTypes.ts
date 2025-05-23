@@ -10,6 +10,7 @@ export type PlannerContextType = {
   addEmployee: (employee: Omit<Employee, 'id'>) => void;
   updateEmployee: (employee: Employee) => void;
   addProject: (project: Omit<Project, 'id'>) => void;
+  updateProject: (project: Project) => void; // Added updateProject function
   addAllocation: (allocation: Omit<Allocation, 'id'>) => void;
   updateAllocation: (allocation: Allocation) => void;
   moveAllocation: (dragItem: DragItem, weekId: string) => void;

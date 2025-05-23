@@ -101,6 +101,14 @@ export const usePlannerStore = () => {
     toast.success(`Added project: ${newProject.name}`);
   }, []);
 
+  // Update an existing project
+  const updateProject = useCallback((updatedProject: Project) => {
+    setProjects(prev => 
+      prev.map(proj => proj.id === updatedProject.id ? updatedProject : proj)
+    );
+    toast.success(`Updated project: ${updatedProject.name}`);
+  }, []);
+
   // Add a new allocation
   const addAllocation = useCallback((allocation: Omit<Allocation, 'id'>) => {
     const newAllocation = {
@@ -182,6 +190,7 @@ export const usePlannerStore = () => {
     addEmployee,
     updateEmployee,
     addProject,
+    updateProject,
     addAllocation,
     updateAllocation,
     moveAllocation,

@@ -11,7 +11,7 @@ import { FilterIcon } from 'lucide-react';
 
 const ResourcePlanner: React.FC = () => {
   const { employees, weeks } = usePlanner();
-  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Extract unique roles for filter dropdown
@@ -19,7 +19,7 @@ const ResourcePlanner: React.FC = () => {
   
   // Filter employees based on role and search query
   const filteredEmployees = employees.filter(employee => {
-    const matchesRole = !roleFilter || employee.role === roleFilter;
+    const matchesRole = roleFilter === "all" || employee.role === roleFilter;
     const matchesSearch = !searchQuery || 
       employee.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
@@ -54,7 +54,7 @@ const ResourcePlanner: React.FC = () => {
                   <SelectValue placeholder="All roles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All roles</SelectItem>
+                  <SelectItem value="all">All roles</SelectItem>
                   {uniqueRoles.map(role => (
                     <SelectItem key={role} value={role}>
                       {role}

@@ -12,6 +12,7 @@ export interface Project {
   color: 'blue' | 'purple' | 'pink' | 'orange' | 'green';
   startDate: Date;
   endDate: Date;
+  leadId?: string; // Adding project lead field
 }
 
 export interface Allocation {

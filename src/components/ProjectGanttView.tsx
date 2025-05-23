@@ -1,10 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, addMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Project } from '@/types';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, ChevronUp, Edit } from 'lucide-react';
+import ProjectEditDialog from './ProjectEditDialog';
+import ProjectMonthDetails from './ProjectMonthDetails';
 
 const ProjectGanttView = () => {
   const { projects } = usePlanner();
@@ -67,9 +71,12 @@ interface ProjectGanttRowProps {
 }
 
 const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ project, months }) => {
-  const { getProjectAllocations, getTotalAllocationDays } = usePlanner();
+  const { getProjectAllocations, getTotalAllocationDays, getEmployeeById } = usePlanner();
   const allocations = getProjectAllocations(project.id);
   const totalAllocation = allocations.reduce((sum, alloc) => sum + alloc.days, 0);
+  
+  const [expandedMonth, setExpandedMonth] = useState<Date | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Check if project is active in a given month
   const isActiveInMonth = (month: Date) => {
@@ -81,44 +88,109 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ project, months }) =>
     );
   };
 
+  // Get project lead name
+  const projectLead = project.leadId ? getEmployeeById(project.leadId) : null;
+
+  const toggleExpandMonth = (month: Date) => {
+    if (expandedMonth && expandedMonth.getTime() === month.getTime()) {
+      setExpandedMonth(null);
+    } else {
+      setExpandedMonth(month);
+    }
+  };
+
   return (
-    <div className="flex border-b hover:bg-gray-50">
-      <div 
-        className="w-64 flex-shrink-0 p-3 border-r"
-        style={{ borderLeftColor: `var(--project-${project.color})`, borderLeftWidth: '4px' }}
-      >
-        <div className="font-medium">{project.name}</div>
-        <div className="text-xs text-gray-500 mt-1">
-          <span className="font-medium">{totalAllocation} days</span> allocated
+    <>
+      <div className="flex border-b hover:bg-gray-50">
+        <div 
+          className="w-64 flex-shrink-0 p-3 border-r"
+          style={{ borderLeftColor: `var(--project-${project.color})`, borderLeftWidth: '4px' }}
+        >
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="font-medium">{project.name}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                <span className="font-medium">{totalAllocation} days</span> allocated
+                {projectLead && (
+                  <div className="mt-1">Lead: {projectLead.name}</div>
+                )}
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0" 
+              onClick={() => setIsEditDialogOpen(true)}
+            >
+              <Edit className="h-4 w-4" />
+              <span className="sr-only">Edit project</span>
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex flex-1">
+          {months.map((month, index) => {
+            const isActive = isActiveInMonth(month);
+            const isExpanded = expandedMonth && expandedMonth.getTime() === month.getTime();
+            
+            return (
+              <div 
+                key={index} 
+                className={`flex-1 min-w-[100px] border-r relative ${isActive ? 'cursor-pointer' : ''}`}
+              >
+                {isActive && (
+                  <div
+                    className="h-full w-full p-2 flex items-center justify-center"
+                    style={{ backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.2)` }}
+                    onClick={() => isActive && toggleExpandMonth(month)}
+                  >
+                    <div className="flex flex-col items-center">
+                      <Badge 
+                        variant="outline"
+                        style={{ 
+                          borderColor: `var(--project-${project.color})`,
+                          color: `var(--project-${project.color})`
+                        }}
+                      >
+                        active
+                      </Badge>
+                      
+                      {isActive && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0 mt-1"
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
       
-      <div className="flex flex-1">
-        {months.map((month, index) => (
-          <div 
-            key={index} 
-            className={`flex-1 min-w-[100px] border-r ${isActiveInMonth(month) ? '' : ''}`}
-          >
-            {isActiveInMonth(month) && (
-              <div
-                className="h-full w-full p-2 flex items-center justify-center"
-                style={{ backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.2)` }}
-              >
-                <Badge 
-                  variant="outline"
-                  style={{ 
-                    borderColor: `var(--project-${project.color})`,
-                    color: `var(--project-${project.color})`
-                  }}
-                >
-                  active
-                </Badge>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+      {/* Expanded month details */}
+      {expandedMonth && (
+        <div className="bg-gray-50 p-4 border-b">
+          <ProjectMonthDetails project={project} month={expandedMonth} />
+        </div>
+      )}
+      
+      {/* Project edit dialog */}
+      <ProjectEditDialog 
+        project={project} 
+        isOpen={isEditDialogOpen} 
+        onClose={() => setIsEditDialogOpen(false)} 
+      />
+    </>
   );
 };
 

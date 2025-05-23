@@ -17,35 +17,40 @@ export const sampleProjects: Project[] = [
     name: 'Website Redesign', 
     color: 'blue', 
     startDate: new Date(), 
-    endDate: new Date(new Date().setDate(new Date().getDate() + 60)) 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 60)),
+    leadId: 'emp3'
   },
   { 
     id: 'proj2', 
     name: 'Mobile App', 
     color: 'purple', 
     startDate: new Date(), 
-    endDate: new Date(new Date().setDate(new Date().getDate() + 90)) 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 90)),
+    leadId: 'emp1'
   },
   { 
     id: 'proj3', 
     name: 'Dashboard', 
     color: 'pink', 
     startDate: new Date(), 
-    endDate: new Date(new Date().setDate(new Date().getDate() + 45)) 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 45)),
+    leadId: 'emp2'
   },
   { 
     id: 'proj4', 
     name: 'API Integration', 
     color: 'orange', 
     startDate: new Date(), 
-    endDate: new Date(new Date().setDate(new Date().getDate() + 30)) 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+    leadId: 'emp2'
   },
   { 
     id: 'proj5', 
     name: 'Documentation', 
     color: 'green', 
     startDate: new Date(), 
-    endDate: new Date(new Date().setDate(new Date().getDate() + 15)) 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 15)),
+    leadId: 'emp4'
   },
 ];
 
