@@ -4,6 +4,7 @@ import { useDrop } from 'react-dnd';
 import { DragItem } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import AllocationItem from './AllocationItem';
+import { Loader2 } from 'lucide-react';
 
 interface DroppableCellProps {
   employeeId: string;
@@ -13,6 +14,7 @@ interface DroppableCellProps {
 const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => {
   const { allocations, moveAllocation, getTotalAllocationDays } = usePlanner();
   const [isOver, setIsOver] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Filter allocations for this employee and week
   const cellAllocations = allocations.filter(
@@ -26,7 +28,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
   const [{ isOverCurrent }, drop] = useDrop({
     accept: 'ALLOCATION',
     drop: (item: DragItem) => {
-      moveAllocation(item, weekId);
+      handleDrop(item);
       return { weekId };
     },
     hover: () => {
@@ -36,6 +38,18 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
       isOverCurrent: monitor.isOver({ shallow: true }),
     }),
   });
+
+  const handleDrop = async (item: DragItem) => {
+    setIsProcessing(true);
+    
+    try {
+      console.log('Dropping item:', item, 'to week:', weekId);
+      await moveAllocation(item, weekId);
+      console.log('Drop successful, allocation updated');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!isOverCurrent) {
@@ -48,7 +62,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
       ref={drop}
       className={`droppable-cell p-2 h-full min-h-[120px] border-r border-b ${
         isOver ? 'active bg-primary/10' : ''
-      } ${isOverallocated ? 'bg-red-50' : ''}`}
+      } ${isOverallocated ? 'bg-red-50' : ''} ${isProcessing ? 'bg-gray-50' : ''}`}
     >
       <div className="mb-1 flex justify-between items-center">
         <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>
@@ -56,6 +70,9 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
         </span>
         {isOverallocated && (
           <span className="text-xs text-red-500 font-bold">!</span>
+        )}
+        {isProcessing && (
+          <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
         )}
       </div>
       

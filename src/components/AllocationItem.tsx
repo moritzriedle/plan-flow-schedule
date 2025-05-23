@@ -1,12 +1,12 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { DragItem } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, Loader2 } from 'lucide-react';
 
 interface AllocationItemProps {
   id: string;
@@ -25,6 +25,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
 }) => {
   const { getProjectById, deleteAllocation, updateAllocation } = usePlanner();
   const project = getProjectById(projectId);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   const ref = useRef<HTMLDivElement>(null);
   
@@ -45,34 +46,52 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
 
   if (!project) return null;
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteAllocation(id);
-  };
-
-  const handleIncreaseDays = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (days < 5) {
-      updateAllocation({
-        id,
-        employeeId,
-        projectId,
-        weekId,
-        days: days + 1
-      });
+    setIsUpdating(true);
+    
+    try {
+      await deleteAllocation(id);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleDecreaseDays = (e: React.MouseEvent) => {
+  const handleIncreaseDays = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (days > 1) {
-      updateAllocation({
-        id,
-        employeeId,
-        projectId,
-        weekId,
-        days: days - 1
-      });
+    if (days < 5 && !isUpdating) {
+      setIsUpdating(true);
+      
+      try {
+        await updateAllocation({
+          id,
+          employeeId,
+          projectId,
+          weekId,
+          days: days + 1
+        });
+      } finally {
+        setIsUpdating(false);
+      }
+    }
+  };
+
+  const handleDecreaseDays = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (days > 1 && !isUpdating) {
+      setIsUpdating(true);
+      
+      try {
+        await updateAllocation({
+          id,
+          employeeId,
+          projectId,
+          weekId,
+          days: days - 1
+        });
+      } finally {
+        setIsUpdating(false);
+      }
     }
   };
 
@@ -86,7 +105,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
       ref={ref}
       className={`allocation-item mb-2 p-2 border-l-4 bg-white shadow-sm hover:shadow-md ${
         isDragging ? 'opacity-40' : 'opacity-100'
-      }`}
+      } ${isUpdating ? 'bg-gray-50' : ''}`}
       style={{ 
         borderLeftColor: `var(--project-${project.color})`,
         backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.05)`,
@@ -102,7 +121,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
               size="icon" 
               className="h-5 w-5 rounded-full p-0"
               onClick={handleDecreaseDays}
-              disabled={days <= 1}
+              disabled={days <= 1 || isUpdating}
             >
               <Minus className="h-3 w-3" />
             </Button>
@@ -123,18 +142,23 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
               size="icon" 
               className="h-5 w-5 rounded-full p-0"
               onClick={handleIncreaseDays}
-              disabled={days >= 5}
+              disabled={days >= 5 || isUpdating}
             >
               <Plus className="h-3 w-3" />
             </Button>
           </div>
         </div>
-        <button 
-          onClick={handleDelete}
-          className="text-gray-400 hover:text-red-500 transition-colors"
-        >
-          &times;
-        </button>
+        {isUpdating ? (
+          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        ) : (
+          <button 
+            onClick={handleDelete}
+            className="text-gray-400 hover:text-red-500 transition-colors"
+            disabled={isUpdating}
+          >
+            &times;
+          </button>
+        )}
       </div>
     </Card>
   );

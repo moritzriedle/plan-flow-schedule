@@ -7,6 +7,12 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatDistanceToNow } from 'date-fns';
 import ProjectTimelineView from './ProjectTimelineView';
+import { Button } from './ui/button';
+import { FolderPlus } from 'lucide-react';
+
+interface ProjectsSidebarProps {
+  onAddProject?: () => void;
+}
 
 const ProjectItem: React.FC<{ 
   id: string; 
@@ -46,7 +52,7 @@ const ProjectItem: React.FC<{
   );
 };
 
-const ProjectsSidebar: React.FC = () => {
+const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({ onAddProject }) => {
   const { projects, getProjectById } = usePlanner();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   
@@ -55,7 +61,21 @@ const ProjectsSidebar: React.FC = () => {
   return (
     <>
       <div className="w-64 border-r bg-white p-4 flex flex-col h-full">
-        <h2 className="font-bold mb-4">Projects</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="font-bold">Projects</h2>
+          {onAddProject && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onAddProject} 
+              className="h-7 px-2"
+            >
+              <FolderPlus className="h-4 w-4" />
+              <span className="sr-only">Add Project</span>
+            </Button>
+          )}
+        </div>
+        
         <p className="text-sm text-gray-500 mb-4">Drag projects to allocate resources or click for details</p>
 
         <Separator className="mb-4" />

@@ -9,7 +9,173 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      allocations: {
+        Row: {
+          created_at: string
+          days: number
+          id: string
+          project_id: string
+          updated_at: string
+          user_id: string
+          week: string
+          week_label: string | null
+        }
+        Insert: {
+          created_at?: string
+          days: number
+          id?: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+          week: string
+          week_label?: string | null
+        }
+        Update: {
+          created_at?: string
+          days?: number
+          id?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+          week?: string
+          week_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allocations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allocations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professions: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          lead_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          lead_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          lead_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_professions: {
+        Row: {
+          created_at: string
+          id: string
+          profession_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profession_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profession_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_professions_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_professions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          image_url: string | null
+          name: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          image_url?: string | null
+          name: string
+          role: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          role?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

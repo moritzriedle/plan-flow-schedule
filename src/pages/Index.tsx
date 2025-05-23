@@ -1,10 +1,11 @@
 
-import React, { ErrorInfo, ReactNode, Suspense } from 'react';
+import React, { ErrorInfo, ReactNode, Suspense, useState } from 'react';
 import ResourcePlanner from '@/components/ResourcePlanner';
 import ProjectGanttView from '@/components/ProjectGanttView';
+import ProfessionView from '@/components/ProfessionView';
 import '@/components/ProjectColors.css';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FilterIcon, ChartGantt } from 'lucide-react';
+import { FilterIcon, ChartGantt, Users } from 'lucide-react';
 
 // Component-specific error boundary for better error isolation
 class ComponentErrorBoundary extends React.Component<
@@ -55,6 +56,10 @@ const Index = () => {
             <ChartGantt className="w-4 h-4" />
             Project Timeline
           </TabsTrigger>
+          <TabsTrigger value="profession" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            By Profession
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="allocation">
@@ -69,6 +74,14 @@ const Index = () => {
           <Suspense fallback={<div>Loading Project Timeline...</div>}>
             <ComponentErrorBoundary name="ProjectGanttView">
               <ProjectGanttView />
+            </ComponentErrorBoundary>
+          </Suspense>
+        </TabsContent>
+        
+        <TabsContent value="profession">
+          <Suspense fallback={<div>Loading Profession View...</div>}>
+            <ComponentErrorBoundary name="ProfessionView">
+              <ProfessionView />
             </ComponentErrorBoundary>
           </Suspense>
         </TabsContent>

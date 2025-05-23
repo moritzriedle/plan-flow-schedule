@@ -5,6 +5,8 @@ import { sampleEmployees, sampleProjects, sampleAllocations } from '../data/samp
 import { toast } from '@/components/ui/sonner';
 import { startOfWeek } from 'date-fns';
 import { generateWeeks } from '../utils/dateUtils';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 export const usePlannerStore = () => {
   console.log('usePlannerStore initializing');
@@ -15,75 +17,191 @@ export const usePlannerStore = () => {
     return generateWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 8);
   });
   
-  // Initialize state with data from localStorage or sample data
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    console.log('Loading employees');
-    const savedEmployees = localStorage.getItem('planner_employees');
-    const loadedEmployees = savedEmployees ? JSON.parse(savedEmployees) : sampleEmployees;
-    console.log('Loaded employees:', loadedEmployees);
-    return loadedEmployees;
-  });
+  // State for data from Supabase
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const [projects, setProjects] = useState<Project[]>(() => {
-    console.log('Loading projects');
-    const savedProjects = localStorage.getItem('planner_projects');
-    let loadedProjects;
-    if (savedProjects) {
-      // Parse and convert date strings back to Date objects
-      const parsedProjects = JSON.parse(savedProjects);
-      loadedProjects = parsedProjects.map((proj: any) => ({
-        ...proj,
-        startDate: new Date(proj.startDate),
-        endDate: new Date(proj.endDate)
-      }));
-    } else {
-      loadedProjects = sampleProjects;
+  // Load data from Supabase on mount
+  useEffect(() => {
+    async function loadInitialData() {
+      setLoading(true);
+      
+      try {
+        // Fetch employees (users)
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('*');
+          
+        if (usersError) {
+          throw usersError;
+        }
+        
+        const mappedEmployees: Employee[] = usersData.map(user => ({
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          imageUrl: user.image_url
+        }));
+        
+        // Fetch projects
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('*');
+          
+        if (projectsError) {
+          throw projectsError;
+        }
+        
+        const mappedProjects: Project[] = projectsData.map(project => ({
+          id: project.id,
+          name: project.name,
+          color: project.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
+          startDate: new Date(),  // We'll calculate these from allocations later
+          endDate: new Date(),    // We'll calculate these from allocations later
+          leadId: project.lead_id
+        }));
+        
+        // Fetch allocations
+        const { data: allocationsData, error: allocationsError } = await supabase
+          .from('allocations')
+          .select('*');
+          
+        if (allocationsError) {
+          throw allocationsError;
+        }
+        
+        const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
+          id: alloc.id,
+          employeeId: alloc.user_id,
+          projectId: alloc.project_id,
+          weekId: alloc.week_id,
+          days: alloc.days
+        }));
+        
+        // Set state with data from Supabase
+        setEmployees(mappedEmployees.length ? mappedEmployees : sampleEmployees);
+        setProjects(mappedProjects.length ? mappedProjects : sampleProjects);
+        setAllocations(mappedAllocations.length ? mappedAllocations : sampleAllocations);
+        
+        // Calculate project date ranges from allocations
+        if (mappedAllocations.length && mappedProjects.length) {
+          updateProjectDateRanges(mappedProjects, mappedAllocations);
+        }
+        
+        console.log('Loaded from Supabase:', { 
+          employees: mappedEmployees, 
+          projects: mappedProjects, 
+          allocations: mappedAllocations 
+        });
+      } catch (error) {
+        console.error('Error loading data from Supabase:', error);
+        toast.error('Failed to load data');
+        
+        // Fall back to sample data if Supabase fails
+        setEmployees(sampleEmployees);
+        setProjects(sampleProjects);
+        setAllocations(sampleAllocations);
+      } finally {
+        setLoading(false);
+      }
     }
-    console.log('Loaded projects:', loadedProjects);
-    return loadedProjects;
-  });
+    
+    loadInitialData();
+  }, []);
   
-  const [allocations, setAllocations] = useState<Allocation[]>(() => {
-    console.log('Loading allocations');
-    const savedAllocations = localStorage.getItem('planner_allocations');
-    const loadedAllocations = savedAllocations ? JSON.parse(savedAllocations) : sampleAllocations;
-    console.log('Loaded allocations:', loadedAllocations);
-    return loadedAllocations;
-  });
-  
-  // Save to localStorage when data changes
-  useEffect(() => {
-    console.log('Saving employees to localStorage:', employees);
-    localStorage.setItem('planner_employees', JSON.stringify(employees));
-  }, [employees]);
-  
-  useEffect(() => {
-    // For projects, we need to handle Date objects specially
-    console.log('Saving projects to localStorage:', projects);
-    localStorage.setItem('planner_projects', JSON.stringify(projects));
-  }, [projects]);
-  
-  useEffect(() => {
-    console.log('Saving allocations to localStorage:', allocations);
-    localStorage.setItem('planner_allocations', JSON.stringify(allocations));
-  }, [allocations]);
+  // Helper function to update project date ranges based on allocations
+  const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
+    // Group allocations by project
+    const allocationsByProject = allocations.reduce((acc, alloc) => {
+      if (!acc[alloc.projectId]) {
+        acc[alloc.projectId] = [];
+      }
+      acc[alloc.projectId].push(alloc);
+      return acc;
+    }, {} as Record<string, Allocation[]>);
+    
+    // Update projects with calculated date ranges
+    setProjects(projects.map(project => {
+      const projectAllocations = allocationsByProject[project.id] || [];
+      if (projectAllocations.length === 0) return project;
+      
+      // Find min and max week IDs
+      // This is simplified and would need to be adjusted if using actual dates
+      const weekIds = projectAllocations.map(a => a.weekId);
+      const minWeekId = weekIds.sort()[0];
+      const maxWeekId = weekIds.sort().reverse()[0];
+      
+      // Find the corresponding week objects
+      const startWeek = weeks.find(w => w.id === minWeekId);
+      const endWeek = weeks.find(w => w.id === maxWeekId);
+      
+      return {
+        ...project,
+        startDate: startWeek?.startDate || project.startDate,
+        endDate: endWeek?.endDate || project.endDate
+      };
+    }));
+  };
 
   // Add a new employee
-  const addEmployee = useCallback((employee: Omit<Employee, 'id'>) => {
-    const newEmployee = {
-      ...employee,
-      id: `emp${Date.now()}`,
-    };
-    setEmployees(prev => [...prev, newEmployee]);
-    toast.success(`Added employee: ${newEmployee.name}`);
+  const addEmployee = useCallback(async (employee: Omit<Employee, 'id'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          name: employee.name,
+          role: employee.role,
+          email: `${employee.name.toLowerCase().replace(/\s+/g, '.')}@example.com`, // Placeholder email
+          image_url: employee.imageUrl
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      const newEmployee: Employee = {
+        id: data.id,
+        name: data.name,
+        role: data.role,
+        imageUrl: data.image_url
+      };
+      
+      setEmployees(prev => [...prev, newEmployee]);
+      toast.success(`Added employee: ${newEmployee.name}`);
+      return newEmployee;
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      toast.error('Failed to add employee');
+      return null;
+    }
   }, []);
 
   // Update an existing employee
-  const updateEmployee = useCallback((updatedEmployee: Employee) => {
-    setEmployees(prev => 
-      prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
-    );
-    toast.success(`Updated employee: ${updatedEmployee.name}`);
+  const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: updatedEmployee.name,
+          role: updatedEmployee.role,
+          image_url: updatedEmployee.imageUrl
+        })
+        .eq('id', updatedEmployee.id);
+        
+      if (error) throw error;
+      
+      setEmployees(prev => 
+        prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+      );
+      toast.success(`Updated employee: ${updatedEmployee.name}`);
+      return true;
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      toast.error('Failed to update employee');
+      return false;
+    }
   }, []);
 
   // Get an employee by ID
@@ -92,73 +210,308 @@ export const usePlannerStore = () => {
   }, [employees]);
 
   // Add a new project
-  const addProject = useCallback((project: Omit<Project, 'id'>) => {
-    const newProject = {
-      ...project,
-      id: `proj${Date.now()}`,
-    };
-    setProjects(prev => [...prev, newProject]);
-    toast.success(`Added project: ${newProject.name}`);
-  }, []);
-
-  // Update an existing project
-  const updateProject = useCallback((updatedProject: Project) => {
-    setProjects(prev => 
-      prev.map(proj => proj.id === updatedProject.id ? updatedProject : proj)
-    );
-    toast.success(`Updated project: ${updatedProject.name}`);
-  }, []);
-
-  // Add a new allocation
-  const addAllocation = useCallback((allocation: Omit<Allocation, 'id'>) => {
-    const newAllocation = {
-      ...allocation,
-      id: `alloc${Date.now()}`,
-    };
-    setAllocations(prev => [...prev, newAllocation]);
-    toast.success('Resource allocated successfully');
-  }, []);
-
-  // Update an existing allocation
-  const updateAllocation = useCallback((updatedAllocation: Allocation) => {
-    setAllocations(prev => 
-      prev.map(alloc => alloc.id === updatedAllocation.id ? updatedAllocation : alloc)
-    );
-    toast.success('Allocation updated');
-  }, []);
-
-  // Move an allocation to a different week
-  const moveAllocation = useCallback((dragItem: DragItem, weekId: string) => {
-    if (dragItem.sourceWeekId) {
-      // This is an existing allocation being moved
-      setAllocations(prev => 
-        prev.map(alloc => {
-          if (alloc.id === dragItem.id) {
-            return { ...alloc, weekId };
-          }
-          return alloc;
+  const addProject = useCallback(async (project: Omit<Project, 'id'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          name: project.name,
+          color: project.color,
+          lead_id: project.leadId
         })
-      );
-      toast.success('Resource moved successfully');
-    } else {
-      // This is a new allocation being created
-      const newAllocation: Allocation = {
-        id: `alloc${Date.now()}`,
-        employeeId: dragItem.employeeId,
-        projectId: dragItem.projectId,
-        weekId,
-        days: dragItem.days || 3, // Default to 3 days if not specified
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      const newProject: Project = {
+        id: data.id,
+        name: data.name,
+        color: data.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
+        startDate: project.startDate,
+        endDate: project.endDate,
+        leadId: data.lead_id
       };
-      setAllocations(prev => [...prev, newAllocation]);
-      toast.success('Resource allocated successfully');
+      
+      setProjects(prev => [...prev, newProject]);
+      toast.success(`Added project: ${newProject.name}`);
+      return newProject;
+    } catch (error) {
+      console.error('Error adding project:', error);
+      toast.error('Failed to add project');
+      return null;
     }
   }, []);
 
-  // Delete an allocation
-  const deleteAllocation = useCallback((id: string) => {
-    setAllocations(prev => prev.filter(alloc => alloc.id !== id));
-    toast.success('Allocation removed');
+  // Update an existing project
+  const updateProject = useCallback(async (updatedProject: Project) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          name: updatedProject.name,
+          color: updatedProject.color,
+          lead_id: updatedProject.leadId
+        })
+        .eq('id', updatedProject.id);
+        
+      if (error) throw error;
+      
+      setProjects(prev => 
+        prev.map(proj => proj.id === updatedProject.id ? updatedProject : proj)
+      );
+      toast.success(`Updated project: ${updatedProject.name}`);
+      return true;
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast.error('Failed to update project');
+      return false;
+    }
   }, []);
+
+  // Add a new allocation
+  const addAllocation = useCallback(async (allocation: Omit<Allocation, 'id'>) => {
+    try {
+      // First, find the corresponding week to get the date
+      const week = weeks.find(w => w.id === allocation.weekId);
+      if (!week) throw new Error('Week not found');
+      
+      // Get a date string (YYYY-MM-DD) from the week start date
+      const weekDate = week.startDate.toISOString().split('T')[0];
+      
+      // Optimistic update
+      const tempId = uuidv4();
+      const newAllocation: Allocation = {
+        ...allocation,
+        id: tempId
+      };
+      
+      setAllocations(prev => [...prev, newAllocation]);
+      
+      // Insert into Supabase
+      const { data, error } = await supabase
+        .from('allocations')
+        .insert({
+          user_id: allocation.employeeId,
+          project_id: allocation.projectId,
+          week_id: allocation.weekId,
+          week: weekDate,
+          days: allocation.days
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        // Rollback optimistic update
+        setAllocations(prev => prev.filter(a => a.id !== tempId));
+        throw error;
+      }
+      
+      // Update with actual ID from database
+      setAllocations(prev => prev.map(a => 
+        a.id === tempId ? { ...a, id: data.id } : a
+      ));
+      
+      toast.success('Resource allocated successfully');
+      console.log('Allocation added to Supabase:', data);
+      
+      // Update project date ranges
+      updateProjectDateRanges(projects, [...allocations, { ...allocation, id: data.id }]);
+      
+      return { ...allocation, id: data.id };
+    } catch (error) {
+      console.error('Error adding allocation:', error);
+      toast.error('Failed to add allocation');
+      return null;
+    }
+  }, [weeks, projects, allocations]);
+
+  // Update an existing allocation
+  const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
+    try {
+      // Optimistic update
+      setAllocations(prev => 
+        prev.map(alloc => alloc.id === updatedAllocation.id ? updatedAllocation : alloc)
+      );
+      
+      const { error } = await supabase
+        .from('allocations')
+        .update({
+          days: updatedAllocation.days
+        })
+        .eq('id', updatedAllocation.id);
+        
+      if (error) {
+        // Rollback on error
+        setAllocations(prev => {
+          const original = prev.find(a => a.id === updatedAllocation.id);
+          return prev.map(a => a.id === updatedAllocation.id && original ? original : a);
+        });
+        throw error;
+      }
+      
+      toast.success('Allocation updated');
+      console.log('Allocation updated in Supabase:', updatedAllocation);
+      
+      // Update project date ranges
+      updateProjectDateRanges(projects, allocations.map(a => 
+        a.id === updatedAllocation.id ? updatedAllocation : a
+      ));
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating allocation:', error);
+      toast.error('Failed to update allocation');
+      return false;
+    }
+  }, [projects, allocations]);
+
+  // Move an allocation to a different week
+  const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string) => {
+    try {
+      if (dragItem.sourceWeekId) {
+        // This is an existing allocation being moved
+        // Find the allocation in the current state
+        const existingAllocation = allocations.find(a => a.id === dragItem.id);
+        
+        if (!existingAllocation) {
+          throw new Error('Allocation not found');
+        }
+        
+        // Find the week to get the date
+        const week = weeks.find(w => w.id === weekId);
+        if (!week) throw new Error('Week not found');
+        
+        // Get a date string (YYYY-MM-DD) from the week start date
+        const weekDate = week.startDate.toISOString().split('T')[0];
+        
+        // Create updated allocation
+        const updatedAllocation: Allocation = {
+          ...existingAllocation,
+          weekId
+        };
+        
+        // Optimistic update
+        setAllocations(prev => 
+          prev.map(alloc => alloc.id === dragItem.id ? updatedAllocation : alloc)
+        );
+        
+        // Update in Supabase
+        const { error } = await supabase
+          .from('allocations')
+          .update({
+            week_id: weekId,
+            week: weekDate
+          })
+          .eq('id', dragItem.id);
+          
+        if (error) {
+          // Rollback optimistic update
+          setAllocations(prev => 
+            prev.map(alloc => alloc.id === dragItem.id ? existingAllocation : alloc)
+          );
+          throw error;
+        }
+        
+        toast.success('Resource moved successfully');
+        console.log('Allocation moved in Supabase:', updatedAllocation, 'to week:', weekId);
+        
+        // Update project date ranges
+        updateProjectDateRanges(projects, allocations.map(a => 
+          a.id === dragItem.id ? updatedAllocation : a
+        ));
+      } else {
+        // This is a new allocation being created
+        const week = weeks.find(w => w.id === weekId);
+        if (!week) throw new Error('Week not found');
+        
+        const weekDate = week.startDate.toISOString().split('T')[0];
+        
+        // Optimistic update with temporary ID
+        const tempId = uuidv4();
+        const newAllocation: Allocation = {
+          id: tempId,
+          employeeId: dragItem.employeeId,
+          projectId: dragItem.projectId,
+          weekId,
+          days: dragItem.days || 3, // Default to 3 days if not specified
+        };
+        
+        setAllocations(prev => [...prev, newAllocation]);
+        
+        // Insert into Supabase
+        const { data, error } = await supabase
+          .from('allocations')
+          .insert({
+            user_id: dragItem.employeeId,
+            project_id: dragItem.projectId,
+            week_id: weekId,
+            week: weekDate,
+            days: dragItem.days || 3
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          // Rollback optimistic update
+          setAllocations(prev => prev.filter(a => a.id !== tempId));
+          throw error;
+        }
+        
+        // Update with actual ID from database
+        setAllocations(prev => prev.map(a => 
+          a.id === tempId ? { ...a, id: data.id } : a
+        ));
+        
+        toast.success('Resource allocated successfully');
+        console.log('New allocation added to Supabase:', data);
+        
+        // Update project date ranges
+        updateProjectDateRanges(projects, [...allocations, { ...newAllocation, id: data.id }]);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error moving/creating allocation:', error);
+      toast.error('Failed to update allocation');
+      return false;
+    }
+  }, [allocations, weeks, projects]);
+
+  // Delete an allocation
+  const deleteAllocation = useCallback(async (id: string) => {
+    try {
+      // Find the allocation before deleting it
+      const allocationToDelete = allocations.find(a => a.id === id);
+      if (!allocationToDelete) throw new Error('Allocation not found');
+      
+      // Optimistic delete
+      setAllocations(prev => prev.filter(alloc => alloc.id !== id));
+      
+      const { error } = await supabase
+        .from('allocations')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        // Rollback optimistic delete
+        setAllocations(prev => [...prev, allocationToDelete]);
+        throw error;
+      }
+      
+      toast.success('Allocation removed');
+      console.log('Allocation deleted from Supabase:', id);
+      
+      // Update project date ranges
+      updateProjectDateRanges(projects, allocations.filter(a => a.id !== id));
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting allocation:', error);
+      toast.error('Failed to delete allocation');
+      return false;
+    }
+  }, [allocations, projects]);
 
   // Get all allocations for an employee
   const getEmployeeAllocations = useCallback((employeeId: string) => {
@@ -200,5 +553,6 @@ export const usePlannerStore = () => {
     getEmployeeById,
     getTotalAllocationDays,
     getProjectAllocations,
+    loading
   };
 };

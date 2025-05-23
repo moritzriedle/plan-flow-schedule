@@ -7,12 +7,17 @@ import EmployeeRow from './EmployeeRow';
 import ProjectsSidebar from './ProjectsSidebar';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { FilterIcon } from 'lucide-react';
+import { Button } from './ui/button';
+import { FilterIcon, UserPlus, FolderPlus, Loader2 } from 'lucide-react';
+import { AddEmployeeDialog } from './AddEmployeeDialog';
+import { AddProjectDialog } from './AddProjectDialog';
 
 const ResourcePlanner: React.FC = () => {
-  const { employees, weeks } = usePlanner();
+  const { employees, weeks, loading } = usePlanner();
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [addEmployeeDialogOpen, setAddEmployeeDialogOpen] = useState(false);
+  const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
   
   // Extract unique roles for filter dropdown
   const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
@@ -25,10 +30,21 @@ const ResourcePlanner: React.FC = () => {
     return matchesRole && matchesSearch;
   });
 
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="mt-2 text-gray-500">Loading resource planner...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex h-screen overflow-hidden bg-white rounded-lg shadow">
-        <ProjectsSidebar />
+        <ProjectsSidebar onAddProject={() => setAddProjectDialogOpen(true)} />
         
         <div className="flex-1 overflow-auto flex flex-col">
           {/* Filter bar */}
@@ -62,6 +78,25 @@ const ResourcePlanner: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
+              
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-8"
+                onClick={() => setAddEmployeeDialogOpen(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-1" />
+                Add Team Member
+              </Button>
+              
+              <Button 
+                size="sm"
+                className="h-8"
+                onClick={() => setAddProjectDialogOpen(true)}
+              >
+                <FolderPlus className="h-4 w-4 mr-1" />
+                Add Project
+              </Button>
             </div>
           </div>
           
@@ -97,6 +132,17 @@ const ResourcePlanner: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Dialogs */}
+      <AddEmployeeDialog 
+        open={addEmployeeDialogOpen} 
+        onOpenChange={setAddEmployeeDialogOpen} 
+      />
+      
+      <AddProjectDialog 
+        open={addProjectDialogOpen} 
+        onOpenChange={setAddProjectDialogOpen} 
+      />
     </DndProvider>
   );
 };
