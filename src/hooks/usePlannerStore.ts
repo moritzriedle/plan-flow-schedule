@@ -76,7 +76,7 @@ export const usePlannerStore = () => {
           id: alloc.id,
           employeeId: alloc.user_id,
           projectId: alloc.project_id,
-          weekId: alloc.week_id || `week-${alloc.week}`, // Use week_id if available, otherwise generate from week
+          weekId: `week-${alloc.week}`, // Generate weekId from week date
           days: alloc.days
         }));
         
@@ -272,12 +272,8 @@ export const usePlannerStore = () => {
   // Add a new allocation
   const addAllocation = useCallback(async (allocation: Omit<Allocation, 'id'>) => {
     try {
-      // First, find the corresponding week to get the date
-      const week = weeks.find(w => w.id === allocation.weekId);
-      if (!week) throw new Error('Week not found');
-      
-      // Get a date string (YYYY-MM-DD) from the week start date
-      const weekDate = week.startDate.toISOString().split('T')[0];
+      // Extract week date from weekId (format: "week-YYYY-MM-DD")
+      const weekDate = allocation.weekId.replace('week-', '');
       
       // Optimistic update
       const tempId = uuidv4();
@@ -294,7 +290,6 @@ export const usePlannerStore = () => {
         .insert({
           user_id: allocation.employeeId,
           project_id: allocation.projectId,
-          week_id: allocation.weekId,
           week: weekDate,
           days: allocation.days
         })
@@ -378,12 +373,8 @@ export const usePlannerStore = () => {
           throw new Error('Allocation not found');
         }
         
-        // Find the week to get the date
-        const week = weeks.find(w => w.id === weekId);
-        if (!week) throw new Error('Week not found');
-        
-        // Get a date string (YYYY-MM-DD) from the week start date
-        const weekDate = week.startDate.toISOString().split('T')[0];
+        // Extract week date from weekId (format: "week-YYYY-MM-DD")
+        const weekDate = weekId.replace('week-', '');
         
         // Create updated allocation
         const updatedAllocation: Allocation = {
@@ -400,7 +391,6 @@ export const usePlannerStore = () => {
         const { error } = await supabase
           .from('allocations')
           .update({
-            week_id: weekId,
             week: weekDate
           })
           .eq('id', dragItem.id);
@@ -422,10 +412,7 @@ export const usePlannerStore = () => {
         ));
       } else {
         // This is a new allocation being created
-        const week = weeks.find(w => w.id === weekId);
-        if (!week) throw new Error('Week not found');
-        
-        const weekDate = week.startDate.toISOString().split('T')[0];
+        const weekDate = weekId.replace('week-', '');
         
         // Optimistic update with temporary ID
         const tempId = uuidv4();
@@ -445,7 +432,6 @@ export const usePlannerStore = () => {
           .insert({
             user_id: dragItem.employeeId,
             project_id: dragItem.projectId,
-            week_id: weekId,
             week: weekDate,
             days: dragItem.days || 3
           })
