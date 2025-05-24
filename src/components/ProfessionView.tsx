@@ -34,7 +34,7 @@ interface ProfessionAllocation {
 
 export default function ProfessionView() {
   const [professions, setProfessions] = useState<{ id: string; title: string }[]>([]);
-  const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
+  const [selectedProfession, setSelectedProfession] = useState<string>("");
   const [allocations, setAllocations] = useState<ProfessionAllocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingAllocations, setLoadingAllocations] = useState(false);
@@ -71,49 +71,38 @@ export default function ProfessionView() {
     async function fetchProfessionAllocations() {
       setLoadingAllocations(true);
       try {
-        // Build query to fetch allocations by profession
+        // Use a direct query instead of the problematic RPC call
         const { data, error } = await supabase
-          .rpc('get_allocations_by_profession', {
-            profession_id: selectedProfession
-          })
-          .select('*');
-          
+          .from('allocations')
+          .select(`
+            days,
+            week,
+            users!inner(id, name, role, image_url),
+            projects!inner(id, name),
+            user_professions!inner(
+              professions!inner(id, title)
+            )
+          `)
+          .eq('user_professions.profession_id', selectedProfession)
+          .order('week');
+        
         if (error) {
-          console.error('RPC call failed, falling back to standard query');
-          // Fallback to complex join query
-          const { data: joinData, error: joinError } = await supabase
-            .from('allocations')
-            .select(`
-              id,
-              days,
-              week,
-              users!inner(id, name, role, image_url),
-              projects!inner(id, name),
-              user_professions!inner(
-                professions!inner(id, title)
-              )
-            `)
-            .eq('user_professions.professions.id', selectedProfession)
-            .order('week');
-          
-          if (joinError) throw joinError;
-          
-          // Transform join data to expected format
-          const transformedData = joinData?.map(item => ({
-            projectName: item.projects.name,
-            userName: item.users.name,
-            userRole: item.users.role,
-            userImageUrl: item.users.image_url,
-            profession: item.user_professions.professions.title,
-            week: item.week,
-            days: item.days
-          })) || [];
-          
-          setAllocations(transformedData);
-        } else {
-          // Process RPC data
-          setAllocations(data as ProfessionAllocation[]);
+          console.error('Query error:', error);
+          throw error;
         }
+        
+        // Transform the data to expected format
+        const transformedData = data?.map(item => ({
+          projectName: (item.projects as any).name,
+          userName: (item.users as any).name,
+          userRole: (item.users as any).role,
+          userImageUrl: (item.users as any).image_url,
+          profession: (item.user_professions as any).professions.title,
+          week: item.week,
+          days: item.days
+        })) || [];
+        
+        setAllocations(transformedData);
       } catch (error) {
         console.error('Error fetching allocations by profession:', error);
         setAllocations([]);
@@ -186,7 +175,7 @@ export default function ProfessionView() {
           <div className="mb-6 max-w-sm">
             <label className="block text-sm font-medium mb-1">Select Profession</label>
             <Select
-              value={selectedProfession || ""}
+              value={selectedProfession}
               onValueChange={setSelectedProfession}
             >
               <SelectTrigger>

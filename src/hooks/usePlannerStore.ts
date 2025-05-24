@@ -76,7 +76,7 @@ export const usePlannerStore = () => {
           id: alloc.id,
           employeeId: alloc.user_id,
           projectId: alloc.project_id,
-          weekId: alloc.week_id,
+          weekId: alloc.week_id || `week-${alloc.week}`, // Use week_id if available, otherwise generate from week
           days: alloc.days
         }));
         
@@ -540,6 +540,7 @@ export const usePlannerStore = () => {
     projects,
     allocations,
     weeks,
+    loading,
     addEmployee,
     updateEmployee,
     addProject,
@@ -552,7 +553,6 @@ export const usePlannerStore = () => {
     getProjectById,
     getEmployeeById,
     getTotalAllocationDays,
-    getProjectAllocations,
-    loading
+    getProjectAllocations
   };
 };

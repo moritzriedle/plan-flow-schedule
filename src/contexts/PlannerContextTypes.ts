@@ -7,14 +7,15 @@ export type PlannerContextType = {
   projects: Project[];
   allocations: Allocation[];
   weeks: Week[];
-  addEmployee: (employee: Omit<Employee, 'id'>) => void;
-  updateEmployee: (employee: Employee) => void;
-  addProject: (project: Omit<Project, 'id'>) => void;
-  updateProject: (project: Project) => void; // Added updateProject function
-  addAllocation: (allocation: Omit<Allocation, 'id'>) => void;
-  updateAllocation: (allocation: Allocation) => void;
-  moveAllocation: (dragItem: DragItem, weekId: string) => void;
-  deleteAllocation: (id: string) => void;
+  loading: boolean;
+  addEmployee: (employee: Omit<Employee, 'id'>) => Promise<Employee | null>;
+  updateEmployee: (employee: Employee) => Promise<boolean>;
+  addProject: (project: Omit<Project, 'id'>) => Promise<Project | null>;
+  updateProject: (project: Project) => Promise<boolean>;
+  addAllocation: (allocation: Omit<Allocation, 'id'>) => Promise<Allocation | null>;
+  updateAllocation: (allocation: Allocation) => Promise<boolean>;
+  moveAllocation: (dragItem: DragItem, weekId: string) => Promise<boolean>;
+  deleteAllocation: (id: string) => Promise<boolean>;
   getEmployeeAllocations: (employeeId: string) => Allocation[];
   getProjectById: (id: string) => Project | undefined;
   getEmployeeById: (id: string) => Employee | undefined;
