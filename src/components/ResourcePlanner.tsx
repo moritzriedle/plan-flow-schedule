@@ -5,6 +5,8 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePlanner } from '../contexts/PlannerContext';
 import EmployeeRow from './EmployeeRow';
 import ProjectsSidebar from './ProjectsSidebar';
+import TimeframeSelector from './TimeframeSelector';
+import { useTimeframeWeeks } from '../hooks/useTimeframeWeeks';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
@@ -13,7 +15,8 @@ import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { AddProjectDialog } from './AddProjectDialog';
 
 const ResourcePlanner: React.FC = () => {
-  const { employees, weeks, loading } = usePlanner();
+  const { employees, loading } = usePlanner();
+  const { timeframe, granularity, weeks, setTimeframe, setGranularity } = useTimeframeWeeks();
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [addEmployeeDialogOpen, setAddEmployeeDialogOpen] = useState(false);
@@ -49,7 +52,7 @@ const ResourcePlanner: React.FC = () => {
         <div className="flex-1 overflow-auto flex flex-col">
           {/* Filter bar */}
           <div className="p-4 border-b bg-gray-50">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <FilterIcon className="h-4 w-4 text-gray-500" />
                 <span className="font-medium text-sm">Filters:</span>
@@ -98,6 +101,16 @@ const ResourcePlanner: React.FC = () => {
                 Add Project
               </Button>
             </div>
+            
+            {/* Timeframe selector */}
+            <div className="mt-4 pt-4 border-t">
+              <TimeframeSelector
+                timeframe={timeframe}
+                granularity={granularity}
+                onTimeframeChange={setTimeframe}
+                onGranularityChange={setGranularity}
+              />
+            </div>
           </div>
           
           {/* Header with week labels */}
@@ -122,7 +135,7 @@ const ResourcePlanner: React.FC = () => {
           <div className="flex-1 overflow-auto">
             {filteredEmployees.length > 0 ? (
               filteredEmployees.map(employee => (
-                <EmployeeRow key={employee.id} employee={employee} />
+                <EmployeeRow key={employee.id} employee={employee} weeks={weeks} />
               ))
             ) : (
               <div className="p-8 text-center text-gray-500">

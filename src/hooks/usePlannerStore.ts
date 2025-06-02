@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Week, DragItem } from '../types';
 import { sampleEmployees, sampleProjects, sampleAllocations } from '../data/sampleData';
 import { toast } from '@/components/ui/sonner';
-import { startOfWeek } from 'date-fns';
+import { startOfWeek, format } from 'date-fns';
 import { generateWeeks } from '../utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,6 +27,28 @@ export const usePlannerStore = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Helper function to convert weekId to database date format
+  const weekIdToDate = (weekId: string): string => {
+    // Find the week object by weekId
+    const week = weeks.find(w => w.id === weekId);
+    if (week) {
+      // Format the start date as YYYY-MM-DD for the database
+      return format(week.startDate, 'yyyy-MM-dd');
+    }
+    
+    // Fallback: if weekId is in format "week-1", extract the number and calculate
+    const weekNumber = parseInt(weekId.replace('week-', ''));
+    if (!isNaN(weekNumber)) {
+      const baseDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const targetWeek = weeks[weekNumber - 1];
+      if (targetWeek) {
+        return format(targetWeek.startDate, 'yyyy-MM-dd');
+      }
+    }
+    
+    throw new Error(`Invalid weekId format: ${weekId}`);
+  };
   
   // Load data from Supabase on mount
   useEffect(() => {
@@ -81,7 +103,7 @@ export const usePlannerStore = () => {
           id: alloc.id,
           employeeId: alloc.user_id,
           projectId: alloc.project_id,
-          weekId: `week-${alloc.week}`,
+          weekId: `week-${format(new Date(alloc.week), 'w')}`,
           days: alloc.days
         }));
         
@@ -384,7 +406,7 @@ export const usePlannerStore = () => {
           throw new Error(`Cannot move sample allocation with ID: ${dragItem.id}`);
         }
         
-        const weekDate = weekId.replace('week-', '');
+        const weekDate = weekIdToDate(weekId);
         
         const updatedAllocation: Allocation = {
           ...existingAllocation,
@@ -417,7 +439,7 @@ export const usePlannerStore = () => {
         ));
       } else {
         // This is a new allocation being created from a project drag
-        const weekDate = weekId.replace('week-', '');
+        const weekDate = weekIdToDate(weekId);
         
         if (!dragItem.employeeId || !dragItem.projectId) {
           throw new Error('Missing required fields for new allocation');
@@ -467,7 +489,7 @@ export const usePlannerStore = () => {
       toast.error('Failed to update allocation: ' + (error as Error).message);
       return false;
     }
-  }, [allocations, projects]);
+  }, [allocations, projects, weeks]);
 
   // Delete an allocation
   const deleteAllocation = useCallback(async (id: string) => {

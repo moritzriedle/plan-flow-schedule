@@ -1,19 +1,18 @@
 
 import React, { useState } from 'react';
-import { Employee } from '@/types';
+import { Employee, Week } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import DroppableCell from './DroppableCell';
-import { usePlanner } from '@/contexts/PlannerContext';
 import { Button } from '@/components/ui/button';
 import EmployeeEditor from './EmployeeEditor';
 import { FileEdit } from 'lucide-react';
 
 interface EmployeeRowProps {
   employee: Employee;
+  weeks: Week[];
 }
 
-const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee }) => {
-  const { weeks } = usePlanner();
+const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, weeks }) => {
   const [editorOpen, setEditorOpen] = useState(false);
   
   // Get initials from name
