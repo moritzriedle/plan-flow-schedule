@@ -22,68 +22,66 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
-interface ProfessionAllocation {
+interface RoleAllocation {
   projectName: string;
   userName: string;
   userRole: string;
   userImageUrl: string | null;
-  profession: string;
   week: string;
   days: number;
 }
 
 export default function ProfessionView() {
-  const [professions, setProfessions] = useState<{ id: string; title: string }[]>([]);
-  const [selectedProfession, setSelectedProfession] = useState<string>("");
-  const [allocations, setAllocations] = useState<ProfessionAllocation[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [allocations, setAllocations] = useState<RoleAllocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingAllocations, setLoadingAllocations] = useState(false);
 
-  // Load professions
+  // Load unique roles from users
   useEffect(() => {
-    async function fetchProfessions() {
+    async function fetchRoles() {
       try {
         const { data, error } = await supabase
-          .from('professions')
-          .select('id, title')
-          .order('title');
+          .from('users')
+          .select('role')
+          .order('role');
           
         if (error) throw error;
         
-        setProfessions(data || []);
-        if (data && data.length > 0) {
-          setSelectedProfession(data[0].id);
+        // Get unique roles
+        const uniqueRoles = [...new Set(data?.map(user => user.role) || [])];
+        setRoles(uniqueRoles);
+        
+        if (uniqueRoles.length > 0) {
+          setSelectedRole(uniqueRoles[0]);
         }
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching professions:', error);
+        console.error('Error fetching roles:', error);
         setLoading(false);
       }
     }
     
-    fetchProfessions();
+    fetchRoles();
   }, []);
   
-  // Fetch allocations for selected profession
+  // Fetch allocations for selected role
   useEffect(() => {
-    if (!selectedProfession) return;
+    if (!selectedRole) return;
     
-    async function fetchProfessionAllocations() {
+    async function fetchRoleAllocations() {
       setLoadingAllocations(true);
       try {
-        // Use a direct query instead of the problematic RPC call
         const { data, error } = await supabase
           .from('allocations')
           .select(`
             days,
             week,
             users!inner(id, name, role, image_url),
-            projects!inner(id, name),
-            user_professions!inner(
-              professions!inner(id, title)
-            )
+            projects!inner(id, name)
           `)
-          .eq('user_professions.profession_id', selectedProfession)
+          .eq('users.role', selectedRole)
           .order('week');
         
         if (error) {
@@ -97,22 +95,21 @@ export default function ProfessionView() {
           userName: (item.users as any).name,
           userRole: (item.users as any).role,
           userImageUrl: (item.users as any).image_url,
-          profession: (item.user_professions as any).professions.title,
           week: item.week,
           days: item.days
         })) || [];
         
         setAllocations(transformedData);
       } catch (error) {
-        console.error('Error fetching allocations by profession:', error);
+        console.error('Error fetching allocations by role:', error);
         setAllocations([]);
       } finally {
         setLoadingAllocations(false);
       }
     }
     
-    fetchProfessionAllocations();
-  }, [selectedProfession]);
+    fetchRoleAllocations();
+  }, [selectedRole]);
   
   // Group allocations by week
   const allocationsByWeek = React.useMemo(() => {
@@ -123,7 +120,7 @@ export default function ProfessionView() {
       }
       acc[weekKey].push(allocation);
       return acc;
-    }, {} as Record<string, ProfessionAllocation[]>);
+    }, {} as Record<string, RoleAllocation[]>);
   }, [allocations]);
   
   // Sort weeks for display
@@ -138,7 +135,7 @@ export default function ProfessionView() {
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="mt-2 text-gray-500">Loading profession data...</p>
+          <p className="mt-2 text-gray-500">Loading role data...</p>
         </div>
       </div>
     );
@@ -156,35 +153,35 @@ export default function ProfessionView() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Resource Allocation by Profession</h1>
+        <h1 className="text-2xl font-bold mb-2">Resource Allocation by Role</h1>
         <p className="text-gray-500">
-          View resource allocations filtered by professional role
+          View resource allocations filtered by team member role
         </p>
       </div>
       
-      {professions.length === 0 ? (
+      {roles.length === 0 ? (
         <Card>
           <CardContent className="p-6">
             <p className="text-center text-gray-500">
-              No professions found. Please add professions to the system first.
+              No roles found. Please add team members to the system first.
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="mb-6 max-w-sm">
-            <label className="block text-sm font-medium mb-1">Select Profession</label>
+            <label className="block text-sm font-medium mb-1">Select Role</label>
             <Select
-              value={selectedProfession}
-              onValueChange={setSelectedProfession}
+              value={selectedRole}
+              onValueChange={setSelectedRole}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a profession" />
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                {professions.map(profession => (
-                  <SelectItem key={profession.id} value={profession.id}>
-                    {profession.title}
+                {roles.map(role => (
+                  <SelectItem key={role} value={role}>
+                    {role}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -215,7 +212,7 @@ export default function ProfessionView() {
             <Card>
               <CardContent className="p-6">
                 <p className="text-center text-gray-500">
-                  No allocations found for this profession.
+                  No allocations found for this role.
                 </p>
               </CardContent>
             </Card>

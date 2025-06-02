@@ -43,9 +43,18 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
     setIsProcessing(true);
     
     try {
-      console.log('Dropping item:', item, 'to week:', weekId);
-      await moveAllocation(item, weekId);
+      console.log('Dropping item:', item, 'to week:', weekId, 'for employee:', employeeId);
+      
+      // Ensure we have the correct employee ID for new allocations
+      const dragItemWithEmployee = {
+        ...item,
+        employeeId: employeeId // Always use the target cell's employee ID
+      };
+      
+      await moveAllocation(dragItemWithEmployee, weekId);
       console.log('Drop successful, allocation updated');
+    } catch (error) {
+      console.error('Drop failed:', error);
     } finally {
       setIsProcessing(false);
     }

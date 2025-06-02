@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Week, DragItem } from '../types';
 import { sampleEmployees, sampleProjects, sampleAllocations } from '../data/sampleData';
@@ -364,9 +363,10 @@ export const usePlannerStore = () => {
   // Move an allocation to a different week
   const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string) => {
     try {
+      console.log('moveAllocation called with:', { dragItem, weekId });
+      
       if (dragItem.sourceWeekId) {
         // This is an existing allocation being moved
-        // Find the allocation in the current state
         const existingAllocation = allocations.find(a => a.id === dragItem.id);
         
         if (!existingAllocation) {
@@ -411,8 +411,13 @@ export const usePlannerStore = () => {
           a.id === dragItem.id ? updatedAllocation : a
         ));
       } else {
-        // This is a new allocation being created
+        // This is a new allocation being created from a project drag
         const weekDate = weekId.replace('week-', '');
+        
+        // Ensure we have all required fields
+        if (!dragItem.employeeId || !dragItem.projectId) {
+          throw new Error('Missing required fields for new allocation');
+        }
         
         // Optimistic update with temporary ID
         const tempId = uuidv4();
@@ -439,6 +444,7 @@ export const usePlannerStore = () => {
           .single();
           
         if (error) {
+          console.error('Supabase insert error:', error);
           // Rollback optimistic update
           setAllocations(prev => prev.filter(a => a.id !== tempId));
           throw error;
@@ -459,10 +465,10 @@ export const usePlannerStore = () => {
       return true;
     } catch (error) {
       console.error('Error moving/creating allocation:', error);
-      toast.error('Failed to update allocation');
+      toast.error('Failed to update allocation: ' + (error as Error).message);
       return false;
     }
-  }, [allocations, weeks, projects]);
+  }, [allocations, projects]);
 
   // Delete an allocation
   const deleteAllocation = useCallback(async (id: string) => {
