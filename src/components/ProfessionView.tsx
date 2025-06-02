@@ -42,15 +42,23 @@ export default function ProfessionView() {
   useEffect(() => {
     async function fetchRoles() {
       try {
+        console.log('Fetching roles from users table...');
         const { data, error } = await supabase
           .from('users')
           .select('role')
           .order('role');
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching roles:', error);
+          throw error;
+        }
         
-        // Get unique roles
-        const uniqueRoles = [...new Set(data?.map(user => user.role) || [])];
+        console.log('Raw roles data:', data);
+        
+        // Get unique roles, filtering out null/empty values
+        const uniqueRoles = [...new Set(data?.map(user => user.role).filter(role => role && role.trim() !== '') || [])];
+        console.log('Unique roles found:', uniqueRoles);
+        
         setRoles(uniqueRoles);
         
         if (uniqueRoles.length > 0) {
@@ -73,32 +81,90 @@ export default function ProfessionView() {
     async function fetchRoleAllocations() {
       setLoadingAllocations(true);
       try {
-        const { data, error } = await supabase
+        console.log('Fetching allocations for role:', selectedRole);
+        
+        // First get users with the selected role
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, name, role, image_url')
+          .eq('role', selectedRole);
+          
+        if (usersError) {
+          console.error('Error fetching users:', usersError);
+          throw usersError;
+        }
+        
+        console.log('Users with role', selectedRole, ':', usersData);
+        
+        if (!usersData || usersData.length === 0) {
+          console.log('No users found with role:', selectedRole);
+          setAllocations([]);
+          setLoadingAllocations(false);
+          return;
+        }
+        
+        const userIds = usersData.map(user => user.id);
+        
+        // Then get allocations for these users
+        const { data: allocationsData, error: allocationsError } = await supabase
           .from('allocations')
           .select(`
             days,
             week,
-            users!inner(id, name, role, image_url),
-            projects!inner(id, name)
+            user_id,
+            project_id
           `)
-          .eq('users.role', selectedRole)
+          .in('user_id', userIds)
           .order('week');
         
-        if (error) {
-          console.error('Query error:', error);
-          throw error;
+        if (allocationsError) {
+          console.error('Error fetching allocations:', allocationsError);
+          throw allocationsError;
         }
         
-        // Transform the data to expected format
-        const transformedData = data?.map(item => ({
-          projectName: (item.projects as any).name,
-          userName: (item.users as any).name,
-          userRole: (item.users as any).role,
-          userImageUrl: (item.users as any).image_url,
-          week: item.week,
-          days: item.days
-        })) || [];
+        console.log('Raw allocations data:', allocationsData);
         
+        if (!allocationsData || allocationsData.length === 0) {
+          console.log('No allocations found for users with role:', selectedRole);
+          setAllocations([]);
+          setLoadingAllocations(false);
+          return;
+        }
+        
+        // Get project data
+        const projectIds = [...new Set(allocationsData.map(alloc => alloc.project_id))];
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('id, name')
+          .in('id', projectIds);
+          
+        if (projectsError) {
+          console.error('Error fetching projects:', projectsError);
+          throw projectsError;
+        }
+        
+        console.log('Projects data:', projectsData);
+        
+        // Create lookup maps
+        const usersMap = new Map(usersData.map(user => [user.id, user]));
+        const projectsMap = new Map(projectsData?.map(project => [project.id, project]) || []);
+        
+        // Transform the data
+        const transformedData = allocationsData.map(allocation => {
+          const user = usersMap.get(allocation.user_id);
+          const project = projectsMap.get(allocation.project_id);
+          
+          return {
+            projectName: project?.name || 'Unknown Project',
+            userName: user?.name || 'Unknown User',
+            userRole: user?.role || 'Unknown Role',
+            userImageUrl: user?.image_url || null,
+            week: allocation.week,
+            days: allocation.days
+          };
+        }).filter(item => item.projectName !== 'Unknown Project' && item.userName !== 'Unknown User');
+        
+        console.log('Transformed allocations data:', transformedData);
         setAllocations(transformedData);
       } catch (error) {
         console.error('Error fetching allocations by role:', error);

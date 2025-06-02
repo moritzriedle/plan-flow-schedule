@@ -58,7 +58,7 @@ const Index = () => {
           </TabsTrigger>
           <TabsTrigger value="profession" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            By Profession
+            By Role
           </TabsTrigger>
         </TabsList>
         
@@ -79,7 +79,7 @@ const Index = () => {
         </TabsContent>
         
         <TabsContent value="profession">
-          <Suspense fallback={<div>Loading Profession View...</div>}>
+          <Suspense fallback={<div>Loading Role View...</div>}>
             <ComponentErrorBoundary name="ProfessionView">
               <ProfessionView />
             </ComponentErrorBoundary>

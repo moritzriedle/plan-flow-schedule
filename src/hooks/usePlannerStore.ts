@@ -7,6 +7,12 @@ import { generateWeeks } from '../utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 
+// Helper function to validate UUID
+const isValidUUID = (str: string) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 export const usePlannerStore = () => {
   console.log('usePlannerStore initializing');
 
@@ -57,8 +63,8 @@ export const usePlannerStore = () => {
           id: project.id,
           name: project.name,
           color: project.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
-          startDate: new Date(),  // We'll calculate these from allocations later
-          endDate: new Date(),    // We'll calculate these from allocations later
+          startDate: new Date(),  
+          endDate: new Date(),    
           leadId: project.lead_id
         }));
         
@@ -75,11 +81,11 @@ export const usePlannerStore = () => {
           id: alloc.id,
           employeeId: alloc.user_id,
           projectId: alloc.project_id,
-          weekId: `week-${alloc.week}`, // Generate weekId from week date
+          weekId: `week-${alloc.week}`,
           days: alloc.days
         }));
         
-        // Set state with data from Supabase
+        // Only use sample data if no real data exists
         setEmployees(mappedEmployees.length ? mappedEmployees : sampleEmployees);
         setProjects(mappedProjects.length ? mappedProjects : sampleProjects);
         setAllocations(mappedAllocations.length ? mappedAllocations : sampleAllocations);
@@ -152,7 +158,7 @@ export const usePlannerStore = () => {
         .insert({
           name: employee.name,
           role: employee.role,
-          email: `${employee.name.toLowerCase().replace(/\s+/g, '.')}@example.com`, // Placeholder email
+          email: `${employee.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
           image_url: employee.imageUrl
         })
         .select()
@@ -271,10 +277,8 @@ export const usePlannerStore = () => {
   // Add a new allocation
   const addAllocation = useCallback(async (allocation: Omit<Allocation, 'id'>) => {
     try {
-      // Extract week date from weekId (format: "week-YYYY-MM-DD")
       const weekDate = allocation.weekId.replace('week-', '');
       
-      // Optimistic update
       const tempId = uuidv4();
       const newAllocation: Allocation = {
         ...allocation,
@@ -283,7 +287,6 @@ export const usePlannerStore = () => {
       
       setAllocations(prev => [...prev, newAllocation]);
       
-      // Insert into Supabase
       const { data, error } = await supabase
         .from('allocations')
         .insert({
@@ -296,12 +299,10 @@ export const usePlannerStore = () => {
         .single();
         
       if (error) {
-        // Rollback optimistic update
         setAllocations(prev => prev.filter(a => a.id !== tempId));
         throw error;
       }
       
-      // Update with actual ID from database
       setAllocations(prev => prev.map(a => 
         a.id === tempId ? { ...a, id: data.id } : a
       ));
@@ -309,7 +310,6 @@ export const usePlannerStore = () => {
       toast.success('Resource allocated successfully');
       console.log('Allocation added to Supabase:', data);
       
-      // Update project date ranges
       updateProjectDateRanges(projects, [...allocations, { ...allocation, id: data.id }]);
       
       return { ...allocation, id: data.id };
@@ -323,7 +323,6 @@ export const usePlannerStore = () => {
   // Update an existing allocation
   const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
     try {
-      // Optimistic update
       setAllocations(prev => 
         prev.map(alloc => alloc.id === updatedAllocation.id ? updatedAllocation : alloc)
       );
@@ -336,7 +335,6 @@ export const usePlannerStore = () => {
         .eq('id', updatedAllocation.id);
         
       if (error) {
-        // Rollback on error
         setAllocations(prev => {
           const original = prev.find(a => a.id === updatedAllocation.id);
           return prev.map(a => a.id === updatedAllocation.id && original ? original : a);
@@ -347,7 +345,6 @@ export const usePlannerStore = () => {
       toast.success('Allocation updated');
       console.log('Allocation updated in Supabase:', updatedAllocation);
       
-      // Update project date ranges
       updateProjectDateRanges(projects, allocations.map(a => 
         a.id === updatedAllocation.id ? updatedAllocation : a
       ));
@@ -365,6 +362,15 @@ export const usePlannerStore = () => {
     try {
       console.log('moveAllocation called with:', { dragItem, weekId });
       
+      // Validate that we have valid UUIDs before proceeding
+      if (!isValidUUID(dragItem.employeeId)) {
+        throw new Error(`Invalid employee ID: ${dragItem.employeeId}. Cannot create allocation with sample data.`);
+      }
+      
+      if (!isValidUUID(dragItem.projectId)) {
+        throw new Error(`Invalid project ID: ${dragItem.projectId}. Cannot create allocation with sample data.`);
+      }
+      
       if (dragItem.sourceWeekId) {
         // This is an existing allocation being moved
         const existingAllocation = allocations.find(a => a.id === dragItem.id);
@@ -373,21 +379,22 @@ export const usePlannerStore = () => {
           throw new Error('Allocation not found');
         }
         
-        // Extract week date from weekId (format: "week-YYYY-MM-DD")
+        // Validate existing allocation ID
+        if (!isValidUUID(dragItem.id)) {
+          throw new Error(`Cannot move sample allocation with ID: ${dragItem.id}`);
+        }
+        
         const weekDate = weekId.replace('week-', '');
         
-        // Create updated allocation
         const updatedAllocation: Allocation = {
           ...existingAllocation,
           weekId
         };
         
-        // Optimistic update
         setAllocations(prev => 
           prev.map(alloc => alloc.id === dragItem.id ? updatedAllocation : alloc)
         );
         
-        // Update in Supabase
         const { error } = await supabase
           .from('allocations')
           .update({
@@ -396,7 +403,6 @@ export const usePlannerStore = () => {
           .eq('id', dragItem.id);
           
         if (error) {
-          // Rollback optimistic update
           setAllocations(prev => 
             prev.map(alloc => alloc.id === dragItem.id ? existingAllocation : alloc)
           );
@@ -406,7 +412,6 @@ export const usePlannerStore = () => {
         toast.success('Resource moved successfully');
         console.log('Allocation moved in Supabase:', updatedAllocation, 'to week:', weekId);
         
-        // Update project date ranges
         updateProjectDateRanges(projects, allocations.map(a => 
           a.id === dragItem.id ? updatedAllocation : a
         ));
@@ -414,24 +419,21 @@ export const usePlannerStore = () => {
         // This is a new allocation being created from a project drag
         const weekDate = weekId.replace('week-', '');
         
-        // Ensure we have all required fields
         if (!dragItem.employeeId || !dragItem.projectId) {
           throw new Error('Missing required fields for new allocation');
         }
         
-        // Optimistic update with temporary ID
         const tempId = uuidv4();
         const newAllocation: Allocation = {
           id: tempId,
           employeeId: dragItem.employeeId,
           projectId: dragItem.projectId,
           weekId,
-          days: dragItem.days || 3, // Default to 3 days if not specified
+          days: dragItem.days || 3,
         };
         
         setAllocations(prev => [...prev, newAllocation]);
         
-        // Insert into Supabase
         const { data, error } = await supabase
           .from('allocations')
           .insert({
@@ -445,12 +447,10 @@ export const usePlannerStore = () => {
           
         if (error) {
           console.error('Supabase insert error:', error);
-          // Rollback optimistic update
           setAllocations(prev => prev.filter(a => a.id !== tempId));
           throw error;
         }
         
-        // Update with actual ID from database
         setAllocations(prev => prev.map(a => 
           a.id === tempId ? { ...a, id: data.id } : a
         ));
@@ -458,7 +458,6 @@ export const usePlannerStore = () => {
         toast.success('Resource allocated successfully');
         console.log('New allocation added to Supabase:', data);
         
-        // Update project date ranges
         updateProjectDateRanges(projects, [...allocations, { ...newAllocation, id: data.id }]);
       }
       
@@ -473,11 +472,9 @@ export const usePlannerStore = () => {
   // Delete an allocation
   const deleteAllocation = useCallback(async (id: string) => {
     try {
-      // Find the allocation before deleting it
       const allocationToDelete = allocations.find(a => a.id === id);
       if (!allocationToDelete) throw new Error('Allocation not found');
       
-      // Optimistic delete
       setAllocations(prev => prev.filter(alloc => alloc.id !== id));
       
       const { error } = await supabase
@@ -486,7 +483,6 @@ export const usePlannerStore = () => {
         .eq('id', id);
         
       if (error) {
-        // Rollback optimistic delete
         setAllocations(prev => [...prev, allocationToDelete]);
         throw error;
       }
@@ -494,7 +490,6 @@ export const usePlannerStore = () => {
       toast.success('Allocation removed');
       console.log('Allocation deleted from Supabase:', id);
       
-      // Update project date ranges
       updateProjectDateRanges(projects, allocations.filter(a => a.id !== id));
       
       return true;
