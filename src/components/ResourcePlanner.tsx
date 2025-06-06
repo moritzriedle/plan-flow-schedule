@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePlanner } from '../contexts/PlannerContext';
+import { useAuth } from '@/hooks/useAuth';
 import EmployeeRow from './EmployeeRow';
 import ProjectsSidebar from './ProjectsSidebar';
 import TimeframeSelector from './TimeframeSelector';
@@ -10,12 +11,14 @@ import { useTimeframeWeeks } from '../hooks/useTimeframeWeeks';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
-import { FilterIcon, UserPlus, FolderPlus, Loader2 } from 'lucide-react';
+import { FilterIcon, UserPlus, FolderPlus, Loader2, LogOut, User } from 'lucide-react';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { AddProjectDialog } from './AddProjectDialog';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const ResourcePlanner: React.FC = () => {
   const { employees, loading } = usePlanner();
+  const { profile, signOut } = useAuth();
   const { timeframe, granularity, weeks, setTimeframe, setGranularity } = useTimeframeWeeks();
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -32,6 +35,14 @@ const ResourcePlanner: React.FC = () => {
       employee.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
   });
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
+  };
 
   if (loading) {
     return (
@@ -50,6 +61,40 @@ const ResourcePlanner: React.FC = () => {
         <ProjectsSidebar onAddProject={() => setAddProjectDialogOpen(true)} />
         
         <div className="flex-1 overflow-auto flex flex-col">
+          {/* Top header with user info */}
+          <div className="px-4 py-3 border-b bg-white flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-gray-900">Resource Planner</h1>
+            
+            {profile && (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    {profile.image_url ? (
+                      <AvatarImage src={profile.image_url} alt={profile.name} />
+                    ) : (
+                      <AvatarFallback>{getInitials(profile.name)}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="text-sm">
+                    <div className="font-medium">{profile.name}</div>
+                    <div className="text-gray-500">
+                      {profile.role} {profile.is_admin && '(Admin)'}
+                    </div>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+          
           {/* Filter bar */}
           <div className="p-4 border-b bg-gray-50">
             <div className="flex items-center gap-4 flex-wrap">
@@ -82,24 +127,28 @@ const ResourcePlanner: React.FC = () => {
                 </SelectContent>
               </Select>
               
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="h-8"
-                onClick={() => setAddEmployeeDialogOpen(true)}
-              >
-                <UserPlus className="h-4 w-4 mr-1" />
-                Add Team Member
-              </Button>
-              
-              <Button 
-                size="sm"
-                className="h-8"
-                onClick={() => setAddProjectDialogOpen(true)}
-              >
-                <FolderPlus className="h-4 w-4 mr-1" />
-                Add Project
-              </Button>
+              {profile?.is_admin && (
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="h-8"
+                    onClick={() => setAddEmployeeDialogOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Add Team Member
+                  </Button>
+                  
+                  <Button 
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setAddProjectDialogOpen(true)}
+                  >
+                    <FolderPlus className="h-4 w-4 mr-1" />
+                    Add Project
+                  </Button>
+                </>
+              )}
             </div>
             
             {/* Timeframe selector */}
@@ -139,23 +188,37 @@ const ResourcePlanner: React.FC = () => {
               ))
             ) : (
               <div className="p-8 text-center text-gray-500">
-                No team members match the current filters
+                {employees.length === 0 ? (
+                  <div>
+                    <User className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    <p>No team members found</p>
+                    {profile?.is_admin && (
+                      <p className="text-sm mt-2">Add team members to get started</p>
+                    )}
+                  </div>
+                ) : (
+                  'No team members match the current filters'
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
       
-      {/* Dialogs */}
-      <AddEmployeeDialog 
-        open={addEmployeeDialogOpen} 
-        onOpenChange={setAddEmployeeDialogOpen} 
-      />
-      
-      <AddProjectDialog 
-        open={addProjectDialogOpen} 
-        onOpenChange={setAddProjectDialogOpen} 
-      />
+      {/* Dialogs - only show for admins */}
+      {profile?.is_admin && (
+        <>
+          <AddEmployeeDialog 
+            open={addEmployeeDialogOpen} 
+            onOpenChange={setAddEmployeeDialogOpen} 
+          />
+          
+          <AddProjectDialog 
+            open={addProjectDialogOpen} 
+            onOpenChange={setAddProjectDialogOpen} 
+          />
+        </>
+      )}
     </DndProvider>
   );
 };

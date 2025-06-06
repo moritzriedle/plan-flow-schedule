@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Week, DragItem } from '../types';
-import { sampleEmployees, sampleProjects, sampleAllocations } from '../data/sampleData';
+import { sampleProjects, sampleAllocations } from '../data/sampleData';
 import { toast } from '@/components/ui/sonner';
 import { startOfWeek, format } from 'date-fns';
 import { generateWeeks } from '../utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/hooks/useAuth';
 
 // Helper function to validate UUID
 const isValidUUID = (str: string) => {
@@ -15,6 +16,7 @@ const isValidUUID = (str: string) => {
 
 export const usePlannerStore = () => {
   console.log('usePlannerStore initializing');
+  const { user, profile } = useAuth();
 
   // Weeks don't change, so we can just generate them once
   const [weeks] = useState<Week[]>(() => {
@@ -52,24 +54,29 @@ export const usePlannerStore = () => {
   
   // Load data from Supabase on mount
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     async function loadInitialData() {
       setLoading(true);
       
       try {
-        // Fetch employees (users)
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
+        // Fetch employees (profiles)
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
           .select('*');
           
-        if (usersError) {
-          throw usersError;
+        if (profilesError) {
+          throw profilesError;
         }
         
-        const mappedEmployees: Employee[] = usersData.map(user => ({
-          id: user.id,
-          name: user.name,
-          role: user.role,
-          imageUrl: user.image_url
+        const mappedEmployees: Employee[] = profilesData.map(profile => ({
+          id: profile.id,
+          name: profile.name,
+          role: profile.role,
+          imageUrl: profile.image_url
         }));
         
         // Fetch projects
@@ -107,8 +114,8 @@ export const usePlannerStore = () => {
           days: alloc.days
         }));
         
-        // Only use sample data if no real data exists
-        setEmployees(mappedEmployees.length ? mappedEmployees : sampleEmployees);
+        // Use real data or fall back to sample data only if no real data exists
+        setEmployees(mappedEmployees.length ? mappedEmployees : []);
         setProjects(mappedProjects.length ? mappedProjects : sampleProjects);
         setAllocations(mappedAllocations.length ? mappedAllocations : sampleAllocations);
         
@@ -126,8 +133,8 @@ export const usePlannerStore = () => {
         console.error('Error loading data from Supabase:', error);
         toast.error('Failed to load data');
         
-        // Fall back to sample data if Supabase fails
-        setEmployees(sampleEmployees);
+        // Fall back to empty data if Supabase fails
+        setEmployees([]);
         setProjects(sampleProjects);
         setAllocations(sampleAllocations);
       } finally {
@@ -136,7 +143,7 @@ export const usePlannerStore = () => {
     }
     
     loadInitialData();
-  }, []);
+  }, [user]);
   
   // Helper function to update project date ranges based on allocations
   const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
@@ -172,15 +179,19 @@ export const usePlannerStore = () => {
     }));
   };
 
-  // Add a new employee
+  // Add a new employee (now creates a profile)
   const addEmployee = useCallback(async (employee: Omit<Employee, 'id'>) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can add team members');
+      return null;
+    }
+
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('profiles')
         .insert({
           name: employee.name,
           role: employee.role,
-          email: `${employee.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
           image_url: employee.imageUrl
         })
         .select()
@@ -196,20 +207,25 @@ export const usePlannerStore = () => {
       };
       
       setEmployees(prev => [...prev, newEmployee]);
-      toast.success(`Added employee: ${newEmployee.name}`);
+      toast.success(`Added team member: ${newEmployee.name}`);
       return newEmployee;
     } catch (error) {
       console.error('Error adding employee:', error);
-      toast.error('Failed to add employee');
+      toast.error('Failed to add team member');
       return null;
     }
-  }, []);
+  }, [user, profile]);
 
-  // Update an existing employee
+  // Update an existing employee (now updates profile)
   const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
+    if (!user || (!profile?.is_admin && updatedEmployee.id !== user.id)) {
+      toast.error('You can only update your own profile');
+      return false;
+    }
+
     try {
       const { error } = await supabase
-        .from('users')
+        .from('profiles')
         .update({
           name: updatedEmployee.name,
           role: updatedEmployee.role,
@@ -222,14 +238,14 @@ export const usePlannerStore = () => {
       setEmployees(prev => 
         prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
       );
-      toast.success(`Updated employee: ${updatedEmployee.name}`);
+      toast.success(`Updated profile: ${updatedEmployee.name}`);
       return true;
     } catch (error) {
       console.error('Error updating employee:', error);
-      toast.error('Failed to update employee');
+      toast.error('Failed to update profile');
       return false;
     }
-  }, []);
+  }, [user, profile]);
 
   // Get an employee by ID
   const getEmployeeById = useCallback((id: string) => {
@@ -238,6 +254,11 @@ export const usePlannerStore = () => {
 
   // Add a new project
   const addProject = useCallback(async (project: Omit<Project, 'id'>) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can add projects');
+      return null;
+    }
+
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -268,10 +289,15 @@ export const usePlannerStore = () => {
       toast.error('Failed to add project');
       return null;
     }
-  }, []);
+  }, [user, profile]);
 
   // Update an existing project
   const updateProject = useCallback(async (updatedProject: Project) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can update projects');
+      return false;
+    }
+
     try {
       const { error } = await supabase
         .from('projects')
@@ -294,12 +320,17 @@ export const usePlannerStore = () => {
       toast.error('Failed to update project');
       return false;
     }
-  }, []);
+  }, [user, profile]);
 
   // Add a new allocation
   const addAllocation = useCallback(async (allocation: Omit<Allocation, 'id'>) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can manage allocations');
+      return null;
+    }
+
     try {
-      const weekDate = allocation.weekId.replace('week-', '');
+      const weekDate = weekIdToDate(allocation.weekId);
       
       const tempId = uuidv4();
       const newAllocation: Allocation = {
@@ -340,10 +371,15 @@ export const usePlannerStore = () => {
       toast.error('Failed to add allocation');
       return null;
     }
-  }, [weeks, projects, allocations]);
+  }, [weeks, projects, allocations, user, profile]);
 
   // Update an existing allocation
   const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can update allocations');
+      return false;
+    }
+
     try {
       setAllocations(prev => 
         prev.map(alloc => alloc.id === updatedAllocation.id ? updatedAllocation : alloc)
@@ -377,20 +413,25 @@ export const usePlannerStore = () => {
       toast.error('Failed to update allocation');
       return false;
     }
-  }, [projects, allocations]);
+  }, [projects, allocations, user, profile]);
 
   // Move an allocation to a different week
   const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can move allocations');
+      return false;
+    }
+
     try {
       console.log('moveAllocation called with:', { dragItem, weekId });
       
       // Validate that we have valid UUIDs before proceeding
       if (!isValidUUID(dragItem.employeeId)) {
-        throw new Error(`Invalid employee ID: ${dragItem.employeeId}. Cannot create allocation with sample data.`);
+        throw new Error(`Invalid employee ID: ${dragItem.employeeId}. Cannot create allocation.`);
       }
       
       if (!isValidUUID(dragItem.projectId)) {
-        throw new Error(`Invalid project ID: ${dragItem.projectId}. Cannot create allocation with sample data.`);
+        throw new Error(`Invalid project ID: ${dragItem.projectId}. Cannot create allocation.`);
       }
       
       if (dragItem.sourceWeekId) {
@@ -403,7 +444,7 @@ export const usePlannerStore = () => {
         
         // Validate existing allocation ID
         if (!isValidUUID(dragItem.id)) {
-          throw new Error(`Cannot move sample allocation with ID: ${dragItem.id}`);
+          throw new Error(`Cannot move allocation with ID: ${dragItem.id}`);
         }
         
         const weekDate = weekIdToDate(weekId);
@@ -489,10 +530,15 @@ export const usePlannerStore = () => {
       toast.error('Failed to update allocation: ' + (error as Error).message);
       return false;
     }
-  }, [allocations, projects, weeks]);
+  }, [allocations, projects, weeks, user, profile]);
 
   // Delete an allocation
   const deleteAllocation = useCallback(async (id: string) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can delete allocations');
+      return false;
+    }
+
     try {
       const allocationToDelete = allocations.find(a => a.id === id);
       if (!allocationToDelete) throw new Error('Allocation not found');
@@ -520,7 +566,7 @@ export const usePlannerStore = () => {
       toast.error('Failed to delete allocation');
       return false;
     }
-  }, [allocations, projects]);
+  }, [allocations, projects, user, profile]);
 
   // Get all allocations for an employee
   const getEmployeeAllocations = useCallback((employeeId: string) => {
