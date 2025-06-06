@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Week, DragItem } from '../types';
 import { sampleProjects, sampleAllocations } from '../data/sampleData';
@@ -179,41 +180,17 @@ export const usePlannerStore = () => {
     }));
   };
 
-  // Add a new employee (now creates a profile)
+  // Add a new employee - Note: This now requires user registration first
   const addEmployee = useCallback(async (employee: Omit<Employee, 'id'>) => {
     if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can add team members');
+      toast.error('Only administrators can add team members. Team members must register with their @proglove.de or @proglove.com email address.');
       return null;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          name: employee.name,
-          role: employee.role,
-          image_url: employee.imageUrl
-        })
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      const newEmployee: Employee = {
-        id: data.id,
-        name: data.name,
-        role: data.role,
-        imageUrl: data.image_url
-      };
-      
-      setEmployees(prev => [...prev, newEmployee]);
-      toast.success(`Added team member: ${newEmployee.name}`);
-      return newEmployee;
-    } catch (error) {
-      console.error('Error adding employee:', error);
-      toast.error('Failed to add team member');
-      return null;
-    }
+    // Since we're using the profiles table which is tied to auth.users,
+    // we can't directly create employees anymore. They need to register first.
+    toast.error('Team members must register with their @proglove.de or @proglove.com email address. You cannot directly add team members.');
+    return null;
   }, [user, profile]);
 
   // Update an existing employee (now updates profile)
