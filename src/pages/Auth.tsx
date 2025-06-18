@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
+import { isPasswordValid } from '@/utils/passwordValidation';
 
 const Auth = () => {
   const { user, signIn, signUp, resetPassword, loading } = useAuth();
@@ -53,6 +55,10 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateEmail(email)) {
+      return;
+    }
+    
+    if (!isPasswordValid(password)) {
       return;
     }
     
@@ -200,6 +206,7 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                     />
+                    <PasswordStrengthIndicator password={password} />
                   </div>
                   
                   <div>
@@ -221,7 +228,7 @@ const Auth = () => {
                   <Button 
                     type="submit" 
                     className="w-full"
-                    disabled={isLoading || !validateEmail(email) || password !== confirmPassword}
+                    disabled={isLoading || !validateEmail(email) || !isPasswordValid(password) || password !== confirmPassword}
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign Up
