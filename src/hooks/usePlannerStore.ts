@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Week, DragItem } from '../types';
 import { sampleProjects, sampleAllocations } from '../data/sampleData';
@@ -519,9 +518,8 @@ export const usePlannerStore = () => {
           
         if (error) {
           console.error('Supabase insert error:', error);
-          setAllocations(prev => prev.filter(a => a.i
-
-        throw error;
+          setAllocations(prev => prev.filter(a => a.id !== tempId));
+          throw error;
         }
         
         setAllocations(prev => prev.map(a => 
