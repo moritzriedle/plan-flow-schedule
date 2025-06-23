@@ -60,9 +60,9 @@ const ResourcePlanner: React.FC = () => {
       <div className="flex h-screen overflow-hidden bg-white rounded-lg shadow">
         <ProjectsSidebar onAddProject={() => setAddProjectDialogOpen(true)} />
         
-        <div className="flex-1 overflow-auto flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Top header with user info */}
-          <div className="px-4 py-3 border-b bg-white flex items-center justify-between">
+          <div className="px-4 py-3 border-b bg-white flex items-center justify-between flex-shrink-0">
             <h1 className="text-xl font-semibold text-gray-900">Resource Planner</h1>
             
             {profile && (
@@ -96,7 +96,7 @@ const ResourcePlanner: React.FC = () => {
           </div>
           
           {/* Filter bar */}
-          <div className="p-4 border-b bg-gray-50">
+          <div className="p-4 border-b bg-gray-50 flex-shrink-0">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <FilterIcon className="h-4 w-4 text-gray-500" />
@@ -162,45 +162,50 @@ const ResourcePlanner: React.FC = () => {
             </div>
           </div>
           
-          {/* Header with week labels */}
-          <div className="flex border-b sticky top-0 z-10 bg-white shadow-sm">
-            <div className="w-64 flex-shrink-0 p-4 font-semibold bg-gray-50 border-r">
-              Team Members
-            </div>
-            
-            <div className="flex flex-1">
-              {weeks.map(week => (
-                <div 
-                  key={week.id}
-                  className="flex-1 min-w-[180px] p-4 text-center font-medium border-r"
-                >
-                  {week.label}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Employee rows */}
+          {/* Scrollable content area */}
           <div className="flex-1 overflow-auto">
-            {filteredEmployees.length > 0 ? (
-              filteredEmployees.map(employee => (
-                <EmployeeRow key={employee.id} employee={employee} weeks={weeks} />
-              ))
-            ) : (
-              <div className="p-8 text-center text-gray-500">
-                {employees.length === 0 ? (
-                  <div>
-                    <User className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                    <p>No team members found</p>
-                    {profile?.is_admin && (
-                      <p className="text-sm mt-2">Add team members to get started</p>
+            <div className="min-w-max">
+              {/* Header with week labels - now sticky */}
+              <div className="flex border-b sticky top-0 z-10 bg-white shadow-sm">
+                <div className="w-64 flex-shrink-0 p-4 font-semibold bg-gray-50 border-r">
+                  Team Members
+                </div>
+                
+                <div className="flex">
+                  {weeks.map(week => (
+                    <div 
+                      key={week.id}
+                      className="w-48 flex-shrink-0 p-4 text-center font-medium border-r"
+                    >
+                      {week.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Employee rows */}
+              <div>
+                {filteredEmployees.length > 0 ? (
+                  filteredEmployees.map(employee => (
+                    <EmployeeRow key={employee.id} employee={employee} weeks={weeks} />
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-gray-500">
+                    {employees.length === 0 ? (
+                      <div>
+                        <User className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                        <p>No team members found</p>
+                        {profile?.is_admin && (
+                          <p className="text-sm mt-2">Add team members to get started</p>
+                        )}
+                      </div>
+                    ) : (
+                      'No team members match the current filters'
                     )}
                   </div>
-                ) : (
-                  'No team members match the current filters'
                 )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

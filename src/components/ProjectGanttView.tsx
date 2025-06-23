@@ -13,6 +13,21 @@ import ProjectMonthDetails from './ProjectMonthDetails';
 const ProjectGanttView = () => {
   const { projects } = usePlanner();
   
+  // Handle case where projects array is empty
+  if (!projects.length) {
+    return (
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-4 border-b">
+          <h2 className="text-xl font-semibold">Project Timeline (Gantt View)</h2>
+          <p className="text-sm text-muted-foreground">Monthly timeline of all projects</p>
+        </div>
+        <div className="p-8 text-center text-gray-500">
+          <p>No projects available</p>
+        </div>
+      </div>
+    );
+  }
+  
   // Find overall min and max dates for all projects
   const minDate = new Date(Math.min(...projects.map(p => p.startDate.getTime())));
   const maxDate = new Date(Math.max(...projects.map(p => p.endDate.getTime())));
