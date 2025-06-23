@@ -64,7 +64,7 @@ export const usePlannerStore = () => {
       setLoading(true);
       
       try {
-        // Fetch employees (profiles)
+        // Fetch employees from profiles table (this is the correct table to use)
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('*');
@@ -115,10 +115,10 @@ export const usePlannerStore = () => {
           days: alloc.days
         }));
         
-        // Use real data or fall back to sample data only if no real data exists
-        setEmployees(mappedEmployees.length ? mappedEmployees : []);
+        // Use real data from the database
+        setEmployees(mappedEmployees);
         setProjects(mappedProjects.length ? mappedProjects : sampleProjects);
-        setAllocations(mappedAllocations.length ? mappedAllocations : sampleAllocations);
+        setAllocations(mappedAllocations);
         
         // Calculate project date ranges from allocations
         if (mappedAllocations.length && mappedProjects.length) {
@@ -137,7 +137,7 @@ export const usePlannerStore = () => {
         // Fall back to empty data if Supabase fails
         setEmployees([]);
         setProjects(sampleProjects);
-        setAllocations(sampleAllocations);
+        setAllocations([]);
       } finally {
         setLoading(false);
       }
@@ -163,7 +163,6 @@ export const usePlannerStore = () => {
       if (projectAllocations.length === 0) return project;
       
       // Find min and max week IDs
-      // This is simplified and would need to be adjusted if using actual dates
       const weekIds = projectAllocations.map(a => a.weekId);
       const minWeekId = weekIds.sort()[0];
       const maxWeekId = weekIds.sort().reverse()[0];
@@ -179,6 +178,27 @@ export const usePlannerStore = () => {
       };
     }));
   };
+
+  // Validate that user ID exists in profiles table
+  const validateUserId = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      
+      if (error || !data) {
+        console.error('User ID validation failed:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error validating user ID:', error);
+      return false;
+    }
+  }, []);
 
   // Add a new employee - Note: This now requires user registration first
   const addEmployee = useCallback(async (employee: Omit<Employee, 'id'>) => {
@@ -307,6 +327,12 @@ export const usePlannerStore = () => {
     }
 
     try {
+      // Validate that the user ID exists in profiles table
+      const isValidUser = await validateUserId(allocation.employeeId);
+      if (!isValidUser) {
+        throw new Error(`Invalid employee ID: ${allocation.employeeId}. Employee not found in profiles.`);
+      }
+
       const weekDate = weekIdToDate(allocation.weekId);
       
       const tempId = uuidv4();
@@ -345,10 +371,10 @@ export const usePlannerStore = () => {
       return { ...allocation, id: data.id };
     } catch (error) {
       console.error('Error adding allocation:', error);
-      toast.error('Failed to add allocation');
+      toast.error('Failed to add allocation: ' + (error as Error).message);
       return null;
     }
-  }, [weeks, projects, allocations, user, profile]);
+  }, [weeks, projects, allocations, user, profile, validateUserId]);
 
   // Update an existing allocation
   const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
@@ -409,6 +435,12 @@ export const usePlannerStore = () => {
       
       if (!isValidUUID(dragItem.projectId)) {
         throw new Error(`Invalid project ID: ${dragItem.projectId}. Cannot create allocation.`);
+      }
+      
+      // Validate that the user ID exists in profiles table
+      const isValidUser = await validateUserId(dragItem.employeeId);
+      if (!isValidUser) {
+        throw new Error(`Employee ID ${dragItem.employeeId} not found in profiles. Please ensure the employee is registered.`);
       }
       
       if (dragItem.sourceWeekId) {
@@ -487,8 +519,9 @@ export const usePlannerStore = () => {
           
         if (error) {
           console.error('Supabase insert error:', error);
-          setAllocations(prev => prev.filter(a => a.id !== tempId));
-          throw error;
+          setAllocations(prev => prev.filter(a => a.i
+
+        throw error;
         }
         
         setAllocations(prev => prev.map(a => 
@@ -507,7 +540,7 @@ export const usePlannerStore = () => {
       toast.error('Failed to update allocation: ' + (error as Error).message);
       return false;
     }
-  }, [allocations, projects, weeks, user, profile]);
+  }, [allocations, projects, weeks, user, profile, validateUserId]);
 
   // Delete an allocation
   const deleteAllocation = useCallback(async (id: string) => {

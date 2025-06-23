@@ -38,13 +38,13 @@ export default function ProfessionView() {
   const [loading, setLoading] = useState(true);
   const [loadingAllocations, setLoadingAllocations] = useState(false);
 
-  // Load unique roles from users
+  // Load unique roles from profiles table
   useEffect(() => {
     async function fetchRoles() {
       try {
-        console.log('Fetching roles from users table...');
+        console.log('Fetching roles from profiles table...');
         const { data, error } = await supabase
-          .from('users')
+          .from('profiles')
           .select('role')
           .order('role');
           
@@ -56,7 +56,7 @@ export default function ProfessionView() {
         console.log('Raw roles data:', data);
         
         // Get unique roles, filtering out null/empty values
-        const uniqueRoles = [...new Set(data?.map(user => user.role).filter(role => role && role.trim() !== '') || [])];
+        const uniqueRoles = [...new Set(data?.map(profile => profile.role).filter(role => role && role.trim() !== '') || [])];
         console.log('Unique roles found:', uniqueRoles);
         
         setRoles(uniqueRoles);
@@ -83,29 +83,29 @@ export default function ProfessionView() {
       try {
         console.log('Fetching allocations for role:', selectedRole);
         
-        // First get users with the selected role
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
+        // First get profiles with the selected role
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
           .select('id, name, role, image_url')
           .eq('role', selectedRole);
           
-        if (usersError) {
-          console.error('Error fetching users:', usersError);
-          throw usersError;
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          throw profilesError;
         }
         
-        console.log('Users with role', selectedRole, ':', usersData);
+        console.log('Profiles with role', selectedRole, ':', profilesData);
         
-        if (!usersData || usersData.length === 0) {
-          console.log('No users found with role:', selectedRole);
+        if (!profilesData || profilesData.length === 0) {
+          console.log('No profiles found with role:', selectedRole);
           setAllocations([]);
           setLoadingAllocations(false);
           return;
         }
         
-        const userIds = usersData.map(user => user.id);
+        const userIds = profilesData.map(profile => profile.id);
         
-        // Then get allocations for these users
+        // Then get allocations for these profiles
         const { data: allocationsData, error: allocationsError } = await supabase
           .from('allocations')
           .select(`
@@ -125,7 +125,7 @@ export default function ProfessionView() {
         console.log('Raw allocations data:', allocationsData);
         
         if (!allocationsData || allocationsData.length === 0) {
-          console.log('No allocations found for users with role:', selectedRole);
+          console.log('No allocations found for profiles with role:', selectedRole);
           setAllocations([]);
           setLoadingAllocations(false);
           return;
@@ -146,19 +146,19 @@ export default function ProfessionView() {
         console.log('Projects data:', projectsData);
         
         // Create lookup maps
-        const usersMap = new Map(usersData.map(user => [user.id, user]));
+        const profilesMap = new Map(profilesData.map(profile => [profile.id, profile]));
         const projectsMap = new Map(projectsData?.map(project => [project.id, project]) || []);
         
         // Transform the data
         const transformedData = allocationsData.map(allocation => {
-          const user = usersMap.get(allocation.user_id);
+          const profile = profilesMap.get(allocation.user_id);
           const project = projectsMap.get(allocation.project_id);
           
           return {
             projectName: project?.name || 'Unknown Project',
-            userName: user?.name || 'Unknown User',
-            userRole: user?.role || 'Unknown Role',
-            userImageUrl: user?.image_url || null,
+            userName: profile?.name || 'Unknown User',
+            userRole: profile?.role || 'Unknown Role',
+            userImageUrl: profile?.image_url || null,
             week: allocation.week,
             days: allocation.days
           };
