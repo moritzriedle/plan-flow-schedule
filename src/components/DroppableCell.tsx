@@ -53,7 +53,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granu
         employeeId: employeeId // Always use the target cell's employee ID
       };
       
-      await moveAllocation(dragItemWithEmployee, weekId, granularity);
+      await moveAllocation(dragItemWithEmployee, weekId);
       console.log('Drop successful, allocation updated');
     } catch (error) {
       console.error('Drop failed:', error);

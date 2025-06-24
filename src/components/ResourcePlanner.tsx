@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePlanner } from '../contexts/PlannerContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useTimeframeWeeks } from '../hooks/useTimeframeWeeks';
 import EmployeeRow from './EmployeeRow';
 import ProjectsSidebar from './ProjectsSidebar';
 import TimeframeSelector from './TimeframeSelector';
