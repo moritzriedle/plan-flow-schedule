@@ -9,9 +9,10 @@ import { Loader2 } from 'lucide-react';
 interface DroppableCellProps {
   employeeId: string;
   weekId: string;
+  granularity?: string;
 }
 
-const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => {
+const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granularity }) => {
   const { allocations, moveAllocation, getTotalAllocationDays } = usePlanner();
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -22,7 +23,8 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
   );
   
   const totalDays = getTotalAllocationDays(employeeId, weekId);
-  const isOverallocated = totalDays > 5;
+  const maxDays = granularity === 'biweekly' ? 10 : granularity === 'monthly' ? 20 : 5;
+  const isOverallocated = totalDays > maxDays;
 
   // Set up drop functionality
   const [{ isOverCurrent }, drop] = useDrop({
@@ -51,7 +53,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
         employeeId: employeeId // Always use the target cell's employee ID
       };
       
-      await moveAllocation(dragItemWithEmployee, weekId);
+      await moveAllocation(dragItemWithEmployee, weekId, granularity);
       console.log('Drop successful, allocation updated');
     } catch (error) {
       console.error('Drop failed:', error);
@@ -75,7 +77,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId }) => 
     >
       <div className="mb-1 flex justify-between items-center">
         <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>
-          {totalDays}/5 days
+          {totalDays}/{maxDays} days
         </span>
         {isOverallocated && (
           <span className="text-xs text-red-500 font-bold">!</span>

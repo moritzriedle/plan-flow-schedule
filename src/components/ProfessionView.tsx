@@ -41,6 +41,13 @@ interface RoleAllocation {
   week: string;
   days: number;
   userId: string;
+  projectId: string;
+}
+
+interface ProjectAllocation {
+  projectId: string;
+  projectName: string;
+  totalDays: number;
 }
 
 interface MonthlyCapacity {
@@ -55,6 +62,7 @@ interface MonthlyCapacity {
     imageUrl: string | null;
     allocatedDays: number;
     capacity: number;
+    projects: ProjectAllocation[];
   }[];
 }
 
@@ -189,6 +197,7 @@ export default function ProfessionView() {
             userRole: profile?.role || 'Unknown Role',
             userImageUrl: profile?.image_url || null,
             userId: allocation.user_id,
+            projectId: allocation.project_id,
             week: allocation.week,
             days: allocation.days
           };
@@ -198,7 +207,7 @@ export default function ProfessionView() {
         setAllocations(transformedAllocations);
         
         // Calculate monthly capacities
-        const capacities = calculateMonthlyCapacities(transformedAllocations, profilesData, months);
+        const capacities = calculateMonthlyCapacities(transformedAllocations, profilesData, months, projectsMap);
         setMonthlyCapacities(capacities);
         
       } catch (error) {
@@ -217,7 +226,8 @@ export default function ProfessionView() {
   const calculateMonthlyCapacities = (
     allocations: RoleAllocation[], 
     profiles: any[], 
-    months: Date[]
+    months: Date[],
+    projectsMap: Map<string, any>
   ): MonthlyCapacity[] => {
     return months.map(month => {
       const monthStart = startOfMonth(month);
@@ -235,23 +245,43 @@ export default function ProfessionView() {
       
       // Group by user and sum their allocations
       const userAllocations = new Map<string, number>();
+      const userProjectAllocations = new Map<string, Map<string, number>>();
+      
       monthAllocations.forEach(alloc => {
         const current = userAllocations.get(alloc.userId) || 0;
         userAllocations.set(alloc.userId, current + alloc.days);
+        
+        // Track project allocations per user
+        if (!userProjectAllocations.has(alloc.userId)) {
+          userProjectAllocations.set(alloc.userId, new Map());
+        }
+        const userProjects = userProjectAllocations.get(alloc.userId)!;
+        const currentProjectDays = userProjects.get(alloc.projectId) || 0;
+        userProjects.set(alloc.projectId, currentProjectDays + alloc.days);
       });
       
       const totalAllocated = Array.from(userAllocations.values()).reduce((sum, days) => sum + days, 0);
       const availableCapacity = totalCapacity - totalAllocated;
       const utilizationRate = totalCapacity > 0 ? (totalAllocated / totalCapacity) * 100 : 0;
       
-      // Create team member details
-      const teamMembers = profiles.map(profile => ({
-        id: profile.id,
-        name: profile.name,
-        imageUrl: profile.image_url,
-        allocatedDays: userAllocations.get(profile.id) || 0,
-        capacity: workingDaysPerMonth
-      }));
+      // Create team member details with project allocations
+      const teamMembers = profiles.map(profile => {
+        const userProjects = userProjectAllocations.get(profile.id) || new Map();
+        const projects: ProjectAllocation[] = Array.from(userProjects.entries()).map(([projectId, days]) => ({
+          projectId,
+          projectName: projectsMap.get(projectId)?.name || 'Unknown Project',
+          totalDays: days
+        }));
+        
+        return {
+          id: profile.id,
+          name: profile.name,
+          imageUrl: profile.image_url,
+          allocatedDays: userAllocations.get(profile.id) || 0,
+          capacity: workingDaysPerMonth,
+          projects
+        };
+      });
       
       return {
         month,
@@ -419,29 +449,47 @@ export default function ProfessionView() {
                       
                       <div className="mt-6">
                         <h4 className="font-medium mb-3">Team Member Allocations</h4>
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           {currentCapacity.teamMembers.map(member => (
-                            <div key={member.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                  {member.imageUrl ? (
-                                    <AvatarImage src={member.imageUrl} />
-                                  ) : (
-                                    <AvatarFallback>
-                                      {getInitials(member.name)}
-                                    </AvatarFallback>
-                                  )}
-                                </Avatar>
-                                <span className="font-medium">{member.name}</span>
+                            <div key={member.id} className="p-4 bg-gray-50 rounded-lg">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    {member.imageUrl ? (
+                                      <AvatarImage src={member.imageUrl} />
+                                    ) : (
+                                      <AvatarFallback>
+                                        {getInitials(member.name)}
+                                      </AvatarFallback>
+                                    )}
+                                  </Avatar>
+                                  <span className="font-medium">{member.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-600">
+                                    {member.allocatedDays}/{member.capacity} days
+                                  </span>
+                                  <Badge variant={member.allocatedDays > member.capacity * 0.8 ? "destructive" : "secondary"}>
+                                    {Math.round((member.allocatedDays / member.capacity) * 100)}%
+                                  </Badge>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600">
-                                  {member.allocatedDays}/{member.capacity} days
-                                </span>
-                                <Badge variant={member.allocatedDays > member.capacity * 0.8 ? "destructive" : "secondary"}>
-                                  {Math.round((member.allocatedDays / member.capacity) * 100)}%
-                                </Badge>
-                              </div>
+                              
+                              {member.projects.length > 0 && (
+                                <div className="mt-2">
+                                  <div className="text-sm font-medium text-gray-600 mb-2">Project Allocations:</div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {member.projects.map(project => (
+                                      <div key={project.projectId} className="flex items-center justify-between p-2 bg-white rounded border">
+                                        <span className="text-sm font-medium">{project.projectName}</span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {project.totalDays} days
+                                        </Badge>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

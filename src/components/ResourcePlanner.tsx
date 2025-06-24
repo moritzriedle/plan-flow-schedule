@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -7,7 +6,6 @@ import { useAuth } from '@/hooks/useAuth';
 import EmployeeRow from './EmployeeRow';
 import ProjectsSidebar from './ProjectsSidebar';
 import TimeframeSelector from './TimeframeSelector';
-import { useTimeframeWeeks } from '../hooks/useTimeframeWeeks';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
@@ -15,6 +13,7 @@ import { FilterIcon, UserPlus, FolderPlus, Loader2, LogOut, User } from 'lucide-
 import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { AddProjectDialog } from './AddProjectDialog';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import DroppableCell from './DroppableCell';
 
 const ResourcePlanner: React.FC = () => {
   const { employees, loading } = usePlanner();
@@ -187,7 +186,34 @@ const ResourcePlanner: React.FC = () => {
               <div>
                 {filteredEmployees.length > 0 ? (
                   filteredEmployees.map(employee => (
-                    <EmployeeRow key={employee.id} employee={employee} weeks={weeks} />
+                    <div key={employee.id} className="flex border-b hover:bg-gray-50">
+                      <div className="w-64 flex-shrink-0 p-4 border-r bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            {employee.imageUrl ? (
+                              <AvatarImage src={employee.imageUrl} alt={employee.name} />
+                            ) : (
+                              <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{employee.name}</div>
+                            <div className="text-sm text-gray-500">{employee.role}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex">
+                        {weeks.map(week => (
+                          <DroppableCell
+                            key={week.id}
+                            employeeId={employee.id}
+                            weekId={week.id}
+                            granularity={granularity}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <div className="p-8 text-center text-gray-500">

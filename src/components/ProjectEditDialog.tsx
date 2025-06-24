@@ -102,8 +102,8 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
                 <SelectValue placeholder="Select project lead" />
               </SelectTrigger>
               <SelectContent>
-                {/* Empty option to clear the selection */}
-                <SelectItem value="">No project lead</SelectItem>
+                {/* Use a placeholder value instead of empty string */}
+                <SelectItem value="none">No project lead</SelectItem>
                 {employees.map((employee) => (
                   <SelectItem key={employee.id} value={employee.id}>
                     {employee.name} ({employee.role})

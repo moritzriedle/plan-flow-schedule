@@ -1,8 +1,9 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Week, DragItem } from '../types';
 import { sampleProjects, sampleAllocations } from '../data/sampleData';
 import { toast } from '@/components/ui/sonner';
-import { startOfWeek, format } from 'date-fns';
+import { startOfWeek, format, parseISO } from 'date-fns';
 import { generateWeeks } from '../utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,6 +51,25 @@ export const usePlannerStore = () => {
     }
     
     throw new Error(`Invalid weekId format: ${weekId}`);
+  };
+
+  // Helper function to convert database date to weekId
+  const dateToWeekId = (dateString: string): string => {
+    const date = parseISO(dateString);
+    // Find the week that contains this date
+    const matchingWeek = weeks.find(week => {
+      const weekStart = week.startDate;
+      const weekEnd = week.endDate;
+      return date >= weekStart && date <= weekEnd;
+    });
+    
+    if (matchingWeek) {
+      return matchingWeek.id;
+    }
+    
+    // Fallback: generate a week ID based on the date
+    console.warn(`No matching week found for date: ${dateString}`);
+    return `week-${format(date, 'w')}`;
   };
   
   // Load data from Supabase on mount
@@ -110,7 +130,7 @@ export const usePlannerStore = () => {
           id: alloc.id,
           employeeId: alloc.user_id,
           projectId: alloc.project_id,
-          weekId: `week-${format(new Date(alloc.week), 'w')}`,
+          weekId: dateToWeekId(alloc.week), // Fix: properly convert database date to weekId
           days: alloc.days
         }));
         
@@ -143,7 +163,7 @@ export const usePlannerStore = () => {
     }
     
     loadInitialData();
-  }, [user]);
+  }, [user, weeks]);
   
   // Helper function to update project date ranges based on allocations
   const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
@@ -198,6 +218,18 @@ export const usePlannerStore = () => {
       return false;
     }
   }, []);
+
+  // Helper function to calculate default days based on granularity
+  const getDefaultDays = (granularity?: string): number => {
+    switch (granularity) {
+      case 'biweekly':
+        return 10; // 2 weeks * 5 days
+      case 'monthly':
+        return 20; // Approximate working days per month
+      default:
+        return 5; // Default for weekly
+    }
+  };
 
   // Add a new employee - Note: This now requires user registration first
   const addEmployee = useCallback(async (employee: Omit<Employee, 'id'>) => {
@@ -418,14 +450,14 @@ export const usePlannerStore = () => {
   }, [projects, allocations, user, profile]);
 
   // Move an allocation to a different week
-  const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string) => {
+  const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string, granularity?: string) => {
     if (!user || !profile?.is_admin) {
       toast.error('Only administrators can move allocations');
       return false;
     }
 
     try {
-      console.log('moveAllocation called with:', { dragItem, weekId });
+      console.log('moveAllocation called with:', { dragItem, weekId, granularity });
       
       // Validate that we have valid UUIDs before proceeding
       if (!isValidUUID(dragItem.employeeId)) {
@@ -494,13 +526,16 @@ export const usePlannerStore = () => {
           throw new Error('Missing required fields for new allocation');
         }
         
+        // Use granularity-based default days
+        const defaultDays = getDefaultDays(granularity);
+        
         const tempId = uuidv4();
         const newAllocation: Allocation = {
           id: tempId,
           employeeId: dragItem.employeeId,
           projectId: dragItem.projectId,
           weekId,
-          days: dragItem.days || 3,
+          days: dragItem.days || defaultDays,
         };
         
         setAllocations(prev => [...prev, newAllocation]);
@@ -511,7 +546,7 @@ export const usePlannerStore = () => {
             user_id: dragItem.employeeId,
             project_id: dragItem.projectId,
             week: weekDate,
-            days: dragItem.days || 3
+            days: dragItem.days || defaultDays
           })
           .select()
           .single();
