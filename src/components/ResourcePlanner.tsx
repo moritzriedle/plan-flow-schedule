@@ -8,15 +8,21 @@ import DroppableCell from './DroppableCell';
 import ProjectsSidebar from './ProjectsSidebar';
 import ProjectTimelineView from './ProjectTimelineView';
 import TimeframeSelector, { TimeframeOption, GranularityOption } from './TimeframeSelector';
+import { AddProjectDialog } from './AddProjectDialog';
+import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { useTimeframeWeeks } from '../hooks/useTimeframeWeeks';
 import { Project } from '../types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Plus, UserPlus } from 'lucide-react';
 
 const ResourcePlanner: React.FC = () => {
   const { employees, loading } = usePlanner();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
+  const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   
   const { timeframe, granularity, weeks, setTimeframe, setGranularity } = useTimeframeWeeks();
 
@@ -49,15 +55,42 @@ const ResourcePlanner: React.FC = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex h-screen bg-gray-50">
-        <ProjectsSidebar />
+        <div className="w-80 border-r bg-white p-4 overflow-y-auto">
+          <div className="mb-4">
+            <h3 className="font-semibold mb-2">Projects</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Drag projects to allocate resources or click for details
+            </p>
+            <Button 
+              onClick={() => setIsAddProjectDialogOpen(true)}
+              className="w-full mb-4"
+              variant="outline"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Project
+            </Button>
+          </div>
+          <ProjectsSidebar onProjectTimelineOpen={handleProjectTimelineOpen} />
+        </div>
+        
         <div className="flex-1 overflow-hidden">
           <div className="p-4 border-b bg-white space-y-4">
-            <TimeframeSelector
-              timeframe={timeframe}
-              granularity={granularity}
-              onTimeframeChange={setTimeframe}
-              onGranularityChange={setGranularity}
-            />
+            <div className="flex justify-between items-center">
+              <TimeframeSelector
+                timeframe={timeframe}
+                granularity={granularity}
+                onTimeframeChange={setTimeframe}
+                onGranularityChange={setGranularity}
+              />
+              
+              <Button 
+                onClick={() => setIsAddEmployeeDialogOpen(true)}
+                variant="outline"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Team Member
+              </Button>
+            </div>
             
             {/* Role Filter */}
             <div className="flex items-center gap-4">
@@ -151,6 +184,16 @@ const ResourcePlanner: React.FC = () => {
           setIsProjectTimelineOpen(false);
           setSelectedProject(null);
         }}
+      />
+
+      <AddProjectDialog 
+        open={isAddProjectDialogOpen} 
+        onOpenChange={setIsAddProjectDialogOpen} 
+      />
+
+      <AddEmployeeDialog 
+        open={isAddEmployeeDialogOpen} 
+        onOpenChange={setIsAddEmployeeDialogOpen} 
       />
     </DndProvider>
   );

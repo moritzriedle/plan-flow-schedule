@@ -38,7 +38,9 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
             <ol className="text-sm text-blue-800 space-y-1">
               <li>1. Share the application URL with new team members</li>
               <li>2. They need to register using their @proglove.de or @proglove.com email</li>
-              <li>3. Once registered, they will automatically appear in the team list</li>
+              <li>3. An email will be sent to them to set their password</li>
+              <li>4. Once registered, they will automatically appear in the team list</li>
+              <li>5. You can allocate projects to them even before they sign in</li>
             </ol>
           </div>
         </div>

@@ -14,7 +14,7 @@ import ProjectMonthDetails from './ProjectMonthDetails';
 const ProjectGanttView = () => {
   const { projects, employees, getProjectAllocations } = usePlanner();
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [expandedMonth, setExpandedMonth] = useState<Date | null>(startOfMonth(new Date())); // Default to current month
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   
   // Handle case where projects array is empty
   if (!projects.length) {
@@ -45,17 +45,10 @@ const ProjectGanttView = () => {
         });
       });
   
-  // Find overall min and max dates for filtered projects
-  const minDate = filteredProjects.length > 0 
-    ? new Date(Math.min(...filteredProjects.map(p => p.startDate.getTime())))
-    : new Date();
-  const maxDate = filteredProjects.length > 0
-    ? new Date(Math.max(...filteredProjects.map(p => p.endDate.getTime())))
-    : new Date();
-  
-  // Add a buffer month on both ends
-  const startDate = startOfMonth(addMonths(minDate, -1));
-  const endDate = endOfMonth(addMonths(maxDate, 1));
+  // Rolling 12-month view: current month to 11 months forward
+  const currentDate = new Date();
+  const startDate = startOfMonth(currentDate);
+  const endDate = endOfMonth(addMonths(currentDate, 11));
   
   // Generate an array of months for the header
   const months = eachMonthOfInterval({
@@ -63,12 +56,14 @@ const ProjectGanttView = () => {
     end: endDate
   });
 
-  const toggleExpandMonth = (month: Date) => {
-    if (expandedMonth && expandedMonth.getTime() === month.getTime()) {
-      setExpandedMonth(null);
+  const toggleExpandProject = (projectId: string) => {
+    const newExpanded = new Set(expandedProjects);
+    if (newExpanded.has(projectId)) {
+      newExpanded.delete(projectId);
     } else {
-      setExpandedMonth(month);
+      newExpanded.add(projectId);
     }
+    setExpandedProjects(newExpanded);
   };
 
   return (
@@ -119,38 +114,41 @@ const ProjectGanttView = () => {
           
           {/* Project Rows */}
           {filteredProjects.map(project => (
-            <ProjectGanttRow 
-              key={project.id} 
-              project={project} 
-              months={months}
-              expandedMonth={expandedMonth}
-              onToggleExpand={toggleExpandMonth}
-            />
-          ))}
-          
-          {/* Expanded month details - show for all projects */}
-          {expandedMonth && (
-            <div className="bg-gray-50 p-4 border-b">
-              {filteredProjects.map(project => {
-                const allocations = getProjectAllocations(project.id);
-                const monthAllocations = allocations.filter(alloc => {
-                  // Check if allocation falls within the expanded month
-                  const monthStart = startOfMonth(expandedMonth);
-                  const monthEnd = endOfMonth(expandedMonth);
-                  // This is a simplified check - in reality you'd need to map weekId to actual dates
-                  return true; // For now, show all allocations
-                });
-                
-                if (monthAllocations.length === 0) return null;
-                
-                return (
-                  <div key={project.id} className="mb-6">
-                    <ProjectMonthDetails project={project} month={expandedMonth} />
+            <React.Fragment key={project.id}>
+              <ProjectGanttRow 
+                project={project} 
+                months={months}
+                isExpanded={expandedProjects.has(project.id)}
+                onToggleExpand={() => toggleExpandProject(project.id)}
+              />
+              
+              {/* Expanded project details */}
+              {expandedProjects.has(project.id) && (
+                <div className="bg-gray-50 border-b">
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {months.map(month => {
+                        const allocations = getProjectAllocations(project.id);
+                        // Check if project has allocations in this month
+                        const hasAllocationsInMonth = allocations.some(alloc => {
+                          // This is a simplified check - ideally you'd map weekId to actual dates
+                          return true; // For now, show all months where project is active
+                        });
+                        
+                        if (!hasAllocationsInMonth) return null;
+                        
+                        return (
+                          <div key={month.getTime()}>
+                            <ProjectMonthDetails project={project} month={month} />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     </div>
@@ -160,14 +158,14 @@ const ProjectGanttView = () => {
 interface ProjectGanttRowProps {
   project: Project;
   months: Date[];
-  expandedMonth: Date | null;
-  onToggleExpand: (month: Date) => void;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }
 
 const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ 
   project, 
   months, 
-  expandedMonth, 
+  isExpanded,
   onToggleExpand 
 }) => {
   const { getProjectAllocations, getEmployeeById } = usePlanner();
@@ -205,59 +203,57 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                 )}
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0" 
-              onClick={() => setIsEditDialogOpen(true)}
-            >
-              <Edit className="h-4 w-4" />
-              <span className="sr-only">Edit project</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0" 
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                <Edit className="h-4 w-4" />
+                <span className="sr-only">Edit project</span>
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={onToggleExpand}
+              >
+                {isExpanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                <span className="sr-only">Toggle details</span>
+              </Button>
+            </div>
           </div>
         </div>
         
         <div className="flex flex-1">
           {months.map((month, index) => {
             const isActive = isActiveInMonth(month);
-            const isExpanded = expandedMonth && expandedMonth.getTime() === month.getTime();
             
             return (
               <div 
                 key={index} 
-                className={`flex-1 min-w-[100px] border-r relative ${isActive ? 'cursor-pointer' : ''}`}
+                className="flex-1 min-w-[100px] border-r relative"
               >
                 {isActive && (
                   <div
                     className="h-full w-full p-2 flex items-center justify-center"
                     style={{ backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.2)` }}
-                    onClick={() => isActive && onToggleExpand(month)}
                   >
-                    <div className="flex flex-col items-center">
-                      <Badge 
-                        variant="outline"
-                        style={{ 
-                          borderColor: `var(--project-${project.color})`,
-                          color: `var(--project-${project.color})`
-                        }}
-                      >
-                        active
-                      </Badge>
-                      
-                      {isActive && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 w-6 p-0 mt-1"
-                        >
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                    </div>
+                    <Badge 
+                      variant="outline"
+                      style={{ 
+                        borderColor: `var(--project-${project.color})`,
+                        color: `var(--project-${project.color})`
+                      }}
+                    >
+                      active
+                    </Badge>
                   </div>
                 )}
               </div>
