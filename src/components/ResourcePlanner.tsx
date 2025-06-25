@@ -70,7 +70,7 @@ const ResourcePlanner: React.FC = () => {
               Add Project
             </Button>
           </div>
-          <ProjectsSidebar onProjectTimelineOpen={handleProjectTimelineOpen} />
+          <ProjectsSidebar />
         </div>
         
         <div className="flex-1 overflow-hidden">
