@@ -7,11 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Project } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Edit } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProjectEditDialog from './ProjectEditDialog';
 import ProjectMonthDetails from './ProjectMonthDetails';
 
 const ProjectGanttView = () => {
-  const { projects } = usePlanner();
+  const { projects, employees, getProjectAllocations } = usePlanner();
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [expandedMonth, setExpandedMonth] = useState<Date | null>(startOfMonth(new Date())); // Default to current month
   
   // Handle case where projects array is empty
   if (!projects.length) {
@@ -28,9 +31,27 @@ const ProjectGanttView = () => {
     );
   }
   
-  // Find overall min and max dates for all projects
-  const minDate = new Date(Math.min(...projects.map(p => p.startDate.getTime())));
-  const maxDate = new Date(Math.max(...projects.map(p => p.endDate.getTime())));
+  // Get unique roles from employees
+  const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
+  
+  // Filter projects based on selected role
+  const filteredProjects = selectedRole === 'all' 
+    ? projects 
+    : projects.filter(project => {
+        const allocations = getProjectAllocations(project.id);
+        return allocations.some(alloc => {
+          const employee = employees.find(emp => emp.id === alloc.employeeId);
+          return employee && employee.role === selectedRole;
+        });
+      });
+  
+  // Find overall min and max dates for filtered projects
+  const minDate = filteredProjects.length > 0 
+    ? new Date(Math.min(...filteredProjects.map(p => p.startDate.getTime())))
+    : new Date();
+  const maxDate = filteredProjects.length > 0
+    ? new Date(Math.max(...filteredProjects.map(p => p.endDate.getTime())))
+    : new Date();
   
   // Add a buffer month on both ends
   const startDate = startOfMonth(addMonths(minDate, -1));
@@ -42,11 +63,41 @@ const ProjectGanttView = () => {
     end: endDate
   });
 
+  const toggleExpandMonth = (month: Date) => {
+    if (expandedMonth && expandedMonth.getTime() === month.getTime()) {
+      setExpandedMonth(null);
+    } else {
+      setExpandedMonth(month);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b">
-        <h2 className="text-xl font-semibold">Project Timeline (Gantt View)</h2>
-        <p className="text-sm text-muted-foreground">Monthly timeline of all projects</p>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-xl font-semibold">Project Timeline (Gantt View)</h2>
+            <p className="text-sm text-muted-foreground">Monthly timeline of all projects</p>
+          </div>
+          
+          {/* Role Filter */}
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium">Filter by Role:</label>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {uniqueRoles.map(role => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
       
       <div className="p-4 overflow-x-auto">
@@ -67,13 +118,39 @@ const ProjectGanttView = () => {
           </div>
           
           {/* Project Rows */}
-          {projects.map(project => (
+          {filteredProjects.map(project => (
             <ProjectGanttRow 
               key={project.id} 
               project={project} 
-              months={months} 
+              months={months}
+              expandedMonth={expandedMonth}
+              onToggleExpand={toggleExpandMonth}
             />
           ))}
+          
+          {/* Expanded month details - show for all projects */}
+          {expandedMonth && (
+            <div className="bg-gray-50 p-4 border-b">
+              {filteredProjects.map(project => {
+                const allocations = getProjectAllocations(project.id);
+                const monthAllocations = allocations.filter(alloc => {
+                  // Check if allocation falls within the expanded month
+                  const monthStart = startOfMonth(expandedMonth);
+                  const monthEnd = endOfMonth(expandedMonth);
+                  // This is a simplified check - in reality you'd need to map weekId to actual dates
+                  return true; // For now, show all allocations
+                });
+                
+                if (monthAllocations.length === 0) return null;
+                
+                return (
+                  <div key={project.id} className="mb-6">
+                    <ProjectMonthDetails project={project} month={expandedMonth} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -83,14 +160,19 @@ const ProjectGanttView = () => {
 interface ProjectGanttRowProps {
   project: Project;
   months: Date[];
+  expandedMonth: Date | null;
+  onToggleExpand: (month: Date) => void;
 }
 
-const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ project, months }) => {
-  const { getProjectAllocations, getTotalAllocationDays, getEmployeeById } = usePlanner();
+const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ 
+  project, 
+  months, 
+  expandedMonth, 
+  onToggleExpand 
+}) => {
+  const { getProjectAllocations, getEmployeeById } = usePlanner();
   const allocations = getProjectAllocations(project.id);
   const totalAllocation = allocations.reduce((sum, alloc) => sum + alloc.days, 0);
-  
-  const [expandedMonth, setExpandedMonth] = useState<Date | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Check if project is active in a given month
@@ -105,14 +187,6 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ project, months }) =>
 
   // Get project lead name
   const projectLead = project.leadId ? getEmployeeById(project.leadId) : null;
-
-  const toggleExpandMonth = (month: Date) => {
-    if (expandedMonth && expandedMonth.getTime() === month.getTime()) {
-      setExpandedMonth(null);
-    } else {
-      setExpandedMonth(month);
-    }
-  };
 
   return (
     <>
@@ -157,7 +231,7 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ project, months }) =>
                   <div
                     className="h-full w-full p-2 flex items-center justify-center"
                     style={{ backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.2)` }}
-                    onClick={() => isActive && toggleExpandMonth(month)}
+                    onClick={() => isActive && onToggleExpand(month)}
                   >
                     <div className="flex flex-col items-center">
                       <Badge 
@@ -191,13 +265,6 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({ project, months }) =>
           })}
         </div>
       </div>
-      
-      {/* Expanded month details */}
-      {expandedMonth && (
-        <div className="bg-gray-50 p-4 border-b">
-          <ProjectMonthDetails project={project} month={expandedMonth} />
-        </div>
-      )}
       
       {/* Project edit dialog */}
       <ProjectEditDialog 

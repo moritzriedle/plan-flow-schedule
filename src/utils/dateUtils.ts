@@ -1,12 +1,13 @@
 
-import { format, startOfWeek, endOfWeek, addWeeks } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addWeeks, getWeek } from 'date-fns';
 import { Week } from '../types';
 
 export const getWeekLabel = (date: Date): string => {
   const start = startOfWeek(date, { weekStartsOn: 1 });
   const end = endOfWeek(date, { weekStartsOn: 1 });
+  const weekNumber = getWeek(start, { weekStartsOn: 1 });
   
-  return `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
+  return `WW${weekNumber} ${format(start, 'MMM d')}-${format(end, 'd')}`;
 };
 
 export const generateWeeks = (startDate: Date, numWeeks: number): Week[] => {

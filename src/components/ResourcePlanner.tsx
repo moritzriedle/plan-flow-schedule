@@ -10,11 +10,13 @@ import ProjectTimelineView from './ProjectTimelineView';
 import TimeframeSelector, { TimeframeOption, GranularityOption } from './TimeframeSelector';
 import { useTimeframeWeeks } from '../hooks/useTimeframeWeeks';
 import { Project } from '../types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ResourcePlanner: React.FC = () => {
   const { employees, loading } = usePlanner();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>('all');
   
   const { timeframe, granularity, weeks, setTimeframe, setGranularity } = useTimeframeWeeks();
 
@@ -31,9 +33,17 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
+  // Get unique roles from employees
+  const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
+  
+  // Filter employees by selected role
+  const filteredEmployees = selectedRole === 'all' 
+    ? employees 
+    : employees.filter(emp => emp.role === selectedRole);
+
   // Calculate fixed column width for consistent alignment
-  const employeeColumnWidth = 200; // Fixed width for employee names
-  const weekColumnWidth = 150; // Fixed width for each week column
+  const employeeColumnWidth = 200;
+  const weekColumnWidth = 150;
   const totalWeeksWidth = weeks.length * weekColumnWidth;
 
   return (
@@ -41,13 +51,31 @@ const ResourcePlanner: React.FC = () => {
       <div className="flex h-screen bg-gray-50">
         <ProjectsSidebar />
         <div className="flex-1 overflow-hidden">
-          <div className="p-4 border-b bg-white">
+          <div className="p-4 border-b bg-white space-y-4">
             <TimeframeSelector
               timeframe={timeframe}
               granularity={granularity}
               onTimeframeChange={setTimeframe}
               onGranularityChange={setGranularity}
             />
+            
+            {/* Role Filter */}
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium">Filter by Role:</label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {uniqueRoles.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <div className="flex-1 overflow-auto">
@@ -82,7 +110,7 @@ const ResourcePlanner: React.FC = () => {
 
               {/* Employee Rows */}
               <div className="divide-y divide-gray-200">
-                {employees.map((employee) => (
+                {filteredEmployees.map((employee) => (
                   <div key={employee.id} className="flex hover:bg-gray-50/50">
                     {/* Employee Info Column */}
                     <div 

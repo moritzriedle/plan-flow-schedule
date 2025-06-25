@@ -95,7 +95,6 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
     }
   };
 
-  // Apply styles based on the drag state
   const opacity = isDragging ? 0.4 : 1;
 
   drag(ref);
@@ -103,7 +102,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
   return (
     <Card 
       ref={ref}
-      className={`allocation-item mb-2 p-2 border-l-4 bg-white shadow-sm hover:shadow-md ${
+      className={`allocation-item mb-1 p-1.5 border-l-4 bg-white shadow-sm hover:shadow-md ${
         isDragging ? 'opacity-40' : 'opacity-100'
       } ${isUpdating ? 'bg-gray-50' : ''}`}
       style={{ 
@@ -113,47 +112,47 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
       }}
     >
       <div className="flex justify-between items-center">
-        <div>
-          <div className="font-medium text-sm">{project.name}</div>
-          <div className="flex items-center gap-2 mt-1">
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-xs truncate">{project.name}</div>
+          <div className="flex items-center gap-1 mt-1">
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-5 w-5 rounded-full p-0"
+              className="h-4 w-4 rounded-full p-0"
               onClick={handleDecreaseDays}
               disabled={days <= 1 || isUpdating}
             >
-              <Minus className="h-3 w-3" />
+              <Minus className="h-2 w-2" />
             </Button>
             
             <Badge 
               variant="outline" 
-              className="px-2 py-0 h-5"
+              className="px-1 py-0 h-4 text-xs"
               style={{ 
                 color: `var(--project-${project.color})`,
                 borderColor: `var(--project-${project.color})`
               }}
             >
-              {days} {days === 1 ? 'day' : 'days'}
+              {days}d
             </Badge>
             
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-5 w-5 rounded-full p-0"
+              className="h-4 w-4 rounded-full p-0"
               onClick={handleIncreaseDays}
               disabled={days >= 5 || isUpdating}
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-2 w-2" />
             </Button>
           </div>
         </div>
         {isUpdating ? (
-          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+          <Loader2 className="h-3 w-3 animate-spin text-gray-400 flex-shrink-0" />
         ) : (
           <button 
             onClick={handleDelete}
-            className="text-gray-400 hover:text-red-500 transition-colors"
+            className="text-gray-400 hover:text-red-500 transition-colors text-xs flex-shrink-0 ml-1"
             disabled={isUpdating}
           >
             &times;
