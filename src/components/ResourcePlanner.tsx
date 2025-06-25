@@ -15,10 +15,8 @@ const ResourcePlanner: React.FC = () => {
   const { employees, loading } = usePlanner();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
-  const [timeframe, setTimeframe] = useState<TimeframeOption>('8weeks');
-  const [granularity, setGranularity] = useState<GranularityOption>('weekly');
   
-  const weeks = useTimeframeWeeks(timeframe, granularity);
+  const { timeframe, granularity, weeks, setTimeframe, setGranularity } = useTimeframeWeeks();
 
   const handleProjectTimelineOpen = (project: Project) => {
     setSelectedProject(project);
@@ -41,7 +39,7 @@ const ResourcePlanner: React.FC = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex h-screen bg-gray-50">
-        <ProjectsSidebar onProjectTimelineOpen={handleProjectTimelineOpen} />
+        <ProjectsSidebar />
         <div className="flex-1 overflow-hidden">
           <div className="p-4 border-b bg-white">
             <TimeframeSelector
@@ -91,7 +89,7 @@ const ResourcePlanner: React.FC = () => {
                       className="flex-shrink-0 border-r bg-white"
                       style={{ width: `${employeeColumnWidth}px` }}
                     >
-                      <EmployeeRow employee={employee} />
+                      <EmployeeRow employee={employee} weeks={weeks} />
                     </div>
                     
                     {/* Allocation Columns */}
