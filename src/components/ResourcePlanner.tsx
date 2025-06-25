@@ -168,7 +168,7 @@ const ResourcePlanner: React.FC = () => {
             <div className="min-w-max">
               {/* Header with week labels - now sticky */}
               <div className="flex border-b sticky top-0 z-10 bg-white shadow-sm">
-                <div className="w-64 flex-shrink-0 p-4 font-semibold bg-gray-50 border-r">
+                <div className="w-64 flex-shrink-0 p-4 font-semibold bg-gray-50 border-r sticky left-0 z-20">
                   Team Members
                 </div>
                 
@@ -176,7 +176,7 @@ const ResourcePlanner: React.FC = () => {
                   {weeks.map(week => (
                     <div 
                       key={week.id}
-                      className="w-48 flex-shrink-0 p-4 text-center font-medium border-r"
+                      className="w-48 flex-shrink-0 p-4 text-center font-medium border-r bg-white"
                     >
                       {week.label}
                     </div>
@@ -189,7 +189,7 @@ const ResourcePlanner: React.FC = () => {
                 {filteredEmployees.length > 0 ? (
                   filteredEmployees.map(employee => (
                     <div key={employee.id} className="flex border-b hover:bg-gray-50">
-                      <div className="w-64 flex-shrink-0 p-4 border-r bg-gray-50">
+                      <div className="w-64 flex-shrink-0 p-4 border-r bg-gray-50 sticky left-0 z-10">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             {employee.imageUrl ? (
@@ -208,7 +208,7 @@ const ResourcePlanner: React.FC = () => {
                       <div className="flex">
                         {weeks.map(week => (
                           <DroppableCell
-                            key={week.id}
+                            key={`${employee.id}-${week.id}`}
                             employeeId={employee.id}
                             weekId={week.id}
                             granularity={granularity}

@@ -23,7 +23,20 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granu
   );
   
   const totalDays = getTotalAllocationDays(employeeId, weekId);
-  const maxDays = granularity === 'biweekly' ? 10 : granularity === 'monthly' ? 20 : 5;
+  
+  // Calculate max days based on granularity
+  const getMaxDays = () => {
+    switch (granularity) {
+      case '2weeks':
+        return 10; // 2 weeks * 5 days
+      case 'monthly':
+        return 20; // ~4 weeks * 5 days
+      default:
+        return 5; // weekly - 1 week * 5 days
+    }
+  };
+  
+  const maxDays = getMaxDays();
   const isOverallocated = totalDays > maxDays;
 
   // Set up drop functionality
@@ -45,12 +58,28 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granu
     setIsProcessing(true);
     
     try {
-      console.log('Dropping item:', item, 'to week:', weekId, 'for employee:', employeeId);
+      console.log('Dropping item:', item, 'to week:', weekId, 'for employee:', employeeId, 'granularity:', granularity);
+      
+      // Calculate days based on granularity for new allocations
+      let allocationDays = item.days;
+      if (!item.sourceWeekId) { // New allocation from project drag
+        switch (granularity) {
+          case '2weeks':
+            allocationDays = 10;
+            break;
+          case 'monthly':
+            allocationDays = 20;
+            break;
+          default:
+            allocationDays = 5;
+        }
+      }
       
       // Ensure we have the correct employee ID for new allocations
       const dragItemWithEmployee = {
         ...item,
-        employeeId: employeeId // Always use the target cell's employee ID
+        employeeId: employeeId, // Always use the target cell's employee ID
+        days: allocationDays
       };
       
       await moveAllocation(dragItemWithEmployee, weekId);

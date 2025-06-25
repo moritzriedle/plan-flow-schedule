@@ -219,18 +219,6 @@ export const usePlannerStore = () => {
     }
   }, []);
 
-  // Helper function to calculate default days based on granularity
-  const getDefaultDays = (granularity?: string): number => {
-    switch (granularity) {
-      case 'biweekly':
-        return 10; // 2 weeks * 5 days
-      case 'monthly':
-        return 20; // Approximate working days per month
-      default:
-        return 5; // Default for weekly
-    }
-  };
-
   // Add a new employee - Note: This now requires user registration first
   const addEmployee = useCallback(async (employee: Omit<Employee, 'id'>) => {
     if (!user || !profile?.is_admin) {
@@ -449,15 +437,15 @@ export const usePlannerStore = () => {
     }
   }, [projects, allocations, user, profile]);
 
-  // Move an allocation to a different week
-  const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string, granularity?: string) => {
+  // Move an allocation to a different week or create new allocation
+  const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string) => {
     if (!user || !profile?.is_admin) {
       toast.error('Only administrators can move allocations');
       return false;
     }
 
     try {
-      console.log('moveAllocation called with:', { dragItem, weekId, granularity });
+      console.log('moveAllocation called with:', { dragItem, weekId });
       
       // Validate that we have valid UUIDs before proceeding
       if (!isValidUUID(dragItem.employeeId)) {
@@ -526,16 +514,13 @@ export const usePlannerStore = () => {
           throw new Error('Missing required fields for new allocation');
         }
         
-        // Use granularity-based default days
-        const defaultDays = getDefaultDays(granularity);
-        
         const tempId = uuidv4();
         const newAllocation: Allocation = {
           id: tempId,
           employeeId: dragItem.employeeId,
           projectId: dragItem.projectId,
           weekId,
-          days: dragItem.days || defaultDays,
+          days: dragItem.days || 5, // Default to 5 days if not specified
         };
         
         setAllocations(prev => [...prev, newAllocation]);
@@ -546,7 +531,7 @@ export const usePlannerStore = () => {
             user_id: dragItem.employeeId,
             project_id: dragItem.projectId,
             week: weekDate,
-            days: dragItem.days || defaultDays
+            days: dragItem.days || 5
           })
           .select()
           .single();
@@ -633,6 +618,58 @@ export const usePlannerStore = () => {
     return allocations.filter(alloc => alloc.projectId === projectId);
   }, [allocations]);
 
+  // New function to allocate team member to entire project timeline
+  const allocateToProjectTimeline = useCallback(async (
+    employeeId: string, 
+    projectId: string, 
+    daysPerWeek: 1 | 3 | 5
+  ) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can allocate resources');
+      return false;
+    }
+
+    try {
+      const project = getProjectById(projectId);
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      // Find all weeks that overlap with the project timeline
+      const projectWeeks = weeks.filter(week => {
+        return week.startDate <= project.endDate && week.endDate >= project.startDate;
+      });
+
+      if (projectWeeks.length === 0) {
+        throw new Error('No weeks found for project timeline');
+      }
+
+      // Create allocations for each week in the project timeline
+      const allocationsToCreate = projectWeeks.map(week => ({
+        employeeId,
+        projectId,
+        weekId: week.id,
+        days: daysPerWeek
+      }));
+
+      // Create all allocations
+      const createdAllocations = [];
+      for (const allocation of allocationsToCreate) {
+        const result = await addAllocation(allocation);
+        if (result) {
+          createdAllocations.push(result);
+        }
+      }
+
+      toast.success(`Allocated ${createdAllocations.length} weeks to project timeline`);
+      return true;
+    } catch (error) {
+      console.error('Error allocating to project timeline:', error);
+      toast.error('Failed to allocate to project timeline');
+      return false;
+    }
+  }, [weeks, getProjectById, addAllocation, user, profile]);
+
   return {
     employees,
     projects,
@@ -651,6 +688,7 @@ export const usePlannerStore = () => {
     getProjectById,
     getEmployeeById,
     getTotalAllocationDays,
-    getProjectAllocations
+    getProjectAllocations,
+    allocateToProjectTimeline
   };
 };
