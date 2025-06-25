@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChartContainer } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { DetailedAllocationDialog } from './DetailedAllocationDialog';
+import { addWeeks, eachWeekOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 
 interface ProjectTimelineViewProps {
   project: Project | null;
@@ -28,9 +30,10 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   isOpen, 
   onClose 
 }) => {
-  const { weeks, employees, getProjectAllocations, getEmployeeById, allocateToProjectTimeline } = usePlanner();
+  const { weeks, employees, getProjectAllocations, getEmployeeById, addAllocation } = usePlanner();
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [allocationDays, setAllocationDays] = useState<1 | 3 | 5>(5);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isAllocationDialogOpen, setIsAllocationDialogOpen] = useState(false);
   
   if (!project) return null;
 
@@ -98,169 +101,206 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
       .toUpperCase();
   };
 
-  const handleAllocateTimeline = async (employeeId: string) => {
-    await allocateToProjectTimeline(employeeId, project.id, allocationDays);
+  const handleAllocateClick = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setIsAllocationDialogOpen(true);
+  };
+
+  const handleDetailedAllocation = async (params: {
+    employeeId: string;
+    projectId: string;
+    startDate: Date;
+    endDate: Date;
+    daysPerWeek: number;
+  }) => {
+    const { employeeId, projectId, startDate, endDate, daysPerWeek } = params;
+    
+    // Generate all weeks between start and end date
+    const weekInterval = eachWeekOfInterval(
+      { start: startDate, end: endDate },
+      { weekStartsOn: 1 }
+    );
+    
+    // Create allocations for each week
+    for (const weekStart of weekInterval) {
+      // Find the corresponding week in our weeks array
+      const matchingWeek = weeks.find(week => {
+        const weekStartFormatted = startOfWeek(weekStart, { weekStartsOn: 1 });
+        return weekStartFormatted.getTime() === week.startDate.getTime();
+      });
+      
+      if (matchingWeek) {
+        await addAllocation({
+          employeeId,
+          projectId,
+          weekId: matchingWeek.id,
+          days: daysPerWeek
+        });
+      }
+    }
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
-        <SheetHeader className="pb-4 border-b">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-4 h-4 rounded" 
-              style={{ backgroundColor: `var(--project-${project.color})` }}
-            ></div>
-            <SheetTitle>{project.name} Timeline</SheetTitle>
-          </div>
-          <SheetDescription>
-            Showing resource allocation from {weeks[0]?.label} to {weeks[weeks.length-1]?.label}
-          </SheetDescription>
-        </SheetHeader>
-        
-        <div className="mt-6 space-y-6">
-          {/* Role Filter */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium">Filter by Role:</label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {uniqueRoles.map(role => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Timeline Allocation Tool */}
-          <div className="bg-gray-50 p-4 rounded-md">
-            <h3 className="text-lg font-medium mb-3">Allocate to Project Timeline</h3>
-            <div className="flex items-center gap-4 mb-3">
-              <label className="text-sm font-medium">Default Allocation:</label>
-              <Select value={allocationDays.toString()} onValueChange={(value) => setAllocationDays(parseInt(value) as 1 | 3 | 5)}>
-                <SelectTrigger className="w-40">
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
+          <SheetHeader className="pb-4 border-b">
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-4 h-4 rounded" 
+                style={{ backgroundColor: `var(--project-${project.color})` }}
+              ></div>
+              <SheetTitle>{project.name} Timeline</SheetTitle>
+            </div>
+            <SheetDescription>
+              Showing resource allocation from {weeks[0]?.label} to {weeks[weeks.length-1]?.label}
+            </SheetDescription>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-6">
+            {/* Role Filter */}
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium">Filter by Role:</label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger className="w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 day/week</SelectItem>
-                  <SelectItem value="3">3 days/week</SelectItem>
-                  <SelectItem value="5">5 days/week</SelectItem>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {uniqueRoles.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-sm text-gray-600 mb-3">
-              Select a team member below to allocate them to the entire project timeline with the chosen daily allocation.
-            </p>
-          </div>
-          
-          <h3 className="text-lg font-medium">Team Members</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {employees.map(employee => (
-              <div key={employee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                <div className="flex items-center">
-                  <Avatar className="h-8 w-8 mr-2">
-                    {employee.imageUrl ? (
-                      <AvatarImage src={employee.imageUrl} alt={employee.name} />
-                    ) : (
-                      <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div>
-                    <div className="font-medium text-sm">{employee.name}</div>
-                    <div className="text-xs text-gray-500">{employee.role}</div>
-                  </div>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleAllocateTimeline(employee.id)}
-                >
-                  Allocate
-                </Button>
-              </div>
-            ))}
-          </div>
-          
-          {filteredEmployees.length > 0 && (
-            <>
-              <h3 className="text-lg font-medium">Weekly Allocation Chart</h3>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    {filteredEmployees.map(employee => (
-                      <Bar 
-                        key={employee.id} 
-                        dataKey={employee.name} 
-                        stackId="a" 
-                        fill={`var(--project-${project.color})`} 
-                        opacity={0.8}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </>
-          )}
-          
-          <h3 className="text-lg font-medium">Detailed Breakdown</h3>
-          <div className="space-y-4">
-            {allocationsByWeek.map((weekData, index) => (
-              <div key={index} className="border rounded-md p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium">{weekData.week.label}</h4>
-                  <Badge variant="outline">
-                    {weekData.totalDays} {weekData.totalDays === 1 ? 'day' : 'days'} total
-                  </Badge>
-                </div>
-                
-                {weekData.allocations.length > 0 ? (
-                  <div className="space-y-2">
-                    {weekData.allocations.map((alloc, i) => (
-                      <div key={i} className="flex justify-between items-center text-sm">
-                        <div className="flex items-center">
-                          <Avatar className="h-6 w-6 mr-2">
-                            {alloc.employee.imageUrl ? (
-                              <AvatarImage src={alloc.employee.imageUrl} alt={alloc.employee.name} />
-                            ) : (
-                              <AvatarFallback>{getInitials(alloc.employee.name)}</AvatarFallback>
-                            )}
-                          </Avatar>
-                          <span>{alloc.employee.name}</span>
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            {alloc.employee.role}
-                          </Badge>
-                        </div>
-                        <span>{alloc.days} {alloc.days === 1 ? 'day' : 'days'}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">No resources allocated this week</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="mt-6 pt-4 border-t">
-          <SheetClose asChild>
-            <Button variant="outline" className="w-full">Close</Button>
-          </SheetClose>
-        </div>
-      </SheetContent>
-    </Sheet>
+            {/* Team Members Allocation */}
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="text-lg font-medium mb-3">Allocate Team Members</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Select team members to allocate to this project with detailed scheduling options.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {employees.map(employee => (
+                  <div key={employee.id} className="flex items-center justify-between p-3 bg-white rounded-md border">
+                    <div className="flex items-center">
+                      <Avatar className="h-8 w-8 mr-2">
+                        {employee.imageUrl ? (
+                          <AvatarImage src={employee.imageUrl} alt={employee.name} />
+                        ) : (
+                          <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div>
+                        <div className="font-medium text-sm">{employee.name}</div>
+                        <div className="text-xs text-gray-500">{employee.role}</div>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleAllocateClick(employee)}
+                    >
+                      Allocate
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {filteredEmployees.length > 0 && (
+              <>
+                <h3 className="text-lg font-medium">Weekly Allocation Chart</h3>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      {filteredEmployees.map(employee => (
+                        <Bar 
+                          key={employee.id} 
+                          dataKey={employee.name} 
+                          stackId="a" 
+                          fill={`var(--project-${project.color})`} 
+                          opacity={0.8}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
+            )}
+            
+            <h3 className="text-lg font-medium">Detailed Breakdown</h3>
+            <div className="space-y-4">
+              {allocationsByWeek.map((weekData, index) => (
+                <div key={index} className="border rounded-md p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">{weekData.week.label}</h4>
+                    <Badge variant="outline">
+                      {weekData.totalDays} {weekData.totalDays === 1 ? 'day' : 'days'} total
+                    </Badge>
+                  </div>
+                  
+                  {weekData.allocations.length > 0 ? (
+                    <div className="space-y-2">
+                      {weekData.allocations.map((alloc, i) => (
+                        <div key={i} className="flex justify-between items-center text-sm">
+                          <div className="flex items-center">
+                            <Avatar className="h-6 w-6 mr-2">
+                              {alloc.employee.imageUrl ? (
+                                <AvatarImage src={alloc.employee.imageUrl} alt={alloc.employee.name} />
+                              ) : (
+                                <AvatarFallback>{getInitials(alloc.employee.name)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <span>{alloc.employee.name}</span>
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {alloc.employee.role}
+                            </Badge>
+                          </div>
+                          <span>{alloc.days} {alloc.days === 1 ? 'day' : 'days'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No resources allocated this week</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t">
+            <SheetClose asChild>
+              <Button variant="outline" className="w-full">Close</Button>
+            </SheetClose>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Detailed Allocation Dialog */}
+      {selectedEmployee && (
+        <DetailedAllocationDialog
+          isOpen={isAllocationDialogOpen}
+          onClose={() => {
+            setIsAllocationDialogOpen(false);
+            setSelectedEmployee(null);
+          }}
+          employee={selectedEmployee}
+          project={project}
+          onAllocate={handleDetailedAllocation}
+        />
+      )}
+    </>
   );
 };
 
