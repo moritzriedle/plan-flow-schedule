@@ -21,4 +21,5 @@ export type PlannerContextType = {
   getEmployeeById: (id: string) => Employee | undefined;
   getTotalAllocationDays: (employeeId: string, weekId: string) => number;
   getProjectAllocations: (projectId: string) => Allocation[];
+  allocateToProjectTimeline: (employeeId: string, projectId: string, daysPerWeek: 1 | 3 | 5) => Promise<boolean>;
 };
