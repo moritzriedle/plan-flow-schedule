@@ -141,7 +141,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
               size="icon" 
               className="h-4 w-4 rounded-full p-0"
               onClick={handleIncreaseDays}
-              disabled={days >= 10 || isUpdating} {/* Max 10 days for sprint */}
+              disabled={days >= 10 || isUpdating}
             >
               <Plus className="h-2 w-2" />
             </Button>
