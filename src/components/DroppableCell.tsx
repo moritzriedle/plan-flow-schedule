@@ -8,35 +8,21 @@ import { Loader2 } from 'lucide-react';
 
 interface DroppableCellProps {
   employeeId: string;
-  weekId: string;
-  granularity?: string;
+  sprintId: string;
 }
 
-const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granularity }) => {
+const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) => {
   const { allocations, moveAllocation, getTotalAllocationDays } = usePlanner();
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Filter allocations for this employee and week
+  // Filter allocations for this employee and sprint
   const cellAllocations = allocations.filter(
-    alloc => alloc.employeeId === employeeId && alloc.weekId === weekId
+    alloc => alloc.employeeId === employeeId && alloc.sprintId === sprintId
   );
   
-  const totalDays = getTotalAllocationDays(employeeId, weekId);
-  
-  // Calculate max days based on granularity
-  const getMaxDays = () => {
-    switch (granularity) {
-      case '2weeks':
-        return 10; // 2 weeks * 5 days
-      case 'monthly':
-        return 20; // ~4 weeks * 5 days
-      default:
-        return 5; // weekly - 1 week * 5 days
-    }
-  };
-  
-  const maxDays = getMaxDays();
+  const totalDays = getTotalAllocationDays(employeeId, sprintId);
+  const maxDays = 10; // Sprint maximum is 10 days
   const isOverallocated = totalDays > maxDays;
 
   // Set up drop functionality
@@ -44,7 +30,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granu
     accept: 'ALLOCATION',
     drop: (item: DragItem) => {
       handleDrop(item);
-      return { weekId };
+      return { sprintId };
     },
     hover: () => {
       setIsOver(true);
@@ -58,31 +44,22 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granu
     setIsProcessing(true);
     
     try {
-      console.log('Dropping item:', item, 'to week:', weekId, 'for employee:', employeeId, 'granularity:', granularity);
+      console.log('Dropping item:', item, 'to sprint:', sprintId, 'for employee:', employeeId);
       
-      // Calculate days based on granularity for new allocations
+      // Calculate days for new allocations (default to 10 for sprints)
       let allocationDays = item.days;
-      if (!item.sourceWeekId) { // New allocation from project drag
-        switch (granularity) {
-          case '2weeks':
-            allocationDays = 10;
-            break;
-          case 'monthly':
-            allocationDays = 20;
-            break;
-          default:
-            allocationDays = 5;
-        }
+      if (!item.sourceSprintId) { // New allocation from project drag
+        allocationDays = 10;
       }
       
       // Ensure we have the correct employee ID for new allocations
       const dragItemWithEmployee = {
         ...item,
-        employeeId: employeeId, // Always use the target cell's employee ID
+        employeeId: employeeId,
         days: allocationDays
       };
       
-      await moveAllocation(dragItemWithEmployee, weekId);
+      await moveAllocation(dragItemWithEmployee, sprintId);
       console.log('Drop successful, allocation updated');
     } catch (error) {
       console.error('Drop failed:', error);
@@ -123,7 +100,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, weekId, granu
           employeeId={allocation.employeeId}
           projectId={allocation.projectId}
           days={allocation.days}
-          weekId={allocation.weekId}
+          sprintId={allocation.sprintId}
         />
       ))}
     </div>

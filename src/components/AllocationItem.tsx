@@ -13,7 +13,7 @@ interface AllocationItemProps {
   employeeId: string;
   projectId: string;
   days: number;
-  weekId: string;
+  sprintId: string;
 }
 
 const AllocationItem: React.FC<AllocationItemProps> = ({ 
@@ -21,7 +21,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
   employeeId, 
   projectId, 
   days, 
-  weekId 
+  sprintId 
 }) => {
   const { getProjectById, deleteAllocation, updateAllocation } = usePlanner();
   const project = getProjectById(projectId);
@@ -37,7 +37,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
       employeeId, 
       projectId, 
       days,
-      sourceWeekId: weekId 
+      sourceSprintId: sprintId 
     } as DragItem,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
@@ -59,7 +59,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
 
   const handleIncreaseDays = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (days < 5 && !isUpdating) {
+    if (days < 10 && !isUpdating) { // Max 10 days for sprint
       setIsUpdating(true);
       
       try {
@@ -67,7 +67,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
           id,
           employeeId,
           projectId,
-          weekId,
+          sprintId,
           days: days + 1
         });
       } finally {
@@ -86,7 +86,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
           id,
           employeeId,
           projectId,
-          weekId,
+          sprintId,
           days: days - 1
         });
       } finally {
@@ -141,7 +141,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
               size="icon" 
               className="h-4 w-4 rounded-full p-0"
               onClick={handleIncreaseDays}
-              disabled={days >= 5 || isUpdating}
+              disabled={days >= 10 || isUpdating} {/* Max 10 days for sprint */}
             >
               <Plus className="h-2 w-2" />
             </Button>

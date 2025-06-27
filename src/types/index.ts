@@ -12,15 +12,32 @@ export interface Project {
   color: 'blue' | 'purple' | 'pink' | 'orange' | 'green';
   startDate: Date;
   endDate: Date;
-  leadId?: string; // Adding project lead field
+  leadId?: string;
+}
+
+export interface Sprint {
+  id: string;
+  name: string;
+  startDate: Date;
+  endDate: Date;
+  workingDays: Date[];
 }
 
 export interface Allocation {
   id: string;
   employeeId: string;
   projectId: string;
-  weekId: string;
+  sprintId: string;
   days: number;
+}
+
+export interface DragItem {
+  type: 'ALLOCATION' | 'PROJECT';
+  id: string;
+  employeeId: string;
+  projectId: string;
+  days: number;
+  sourceSprintId?: string;
 }
 
 export interface Week {
@@ -29,12 +46,3 @@ export interface Week {
   endDate: Date;
   label: string;
 }
-
-export type DragItem = {
-  type: 'ALLOCATION';
-  id: string;
-  employeeId: string;
-  projectId: string;
-  days: number;
-  sourceWeekId?: string;
-};

@@ -7,12 +7,12 @@ import EmployeeRow from './EmployeeRow';
 import DroppableCell from './DroppableCell';
 import ProjectsSidebar from './ProjectsSidebar';
 import ProjectTimelineView from './ProjectTimelineView';
-import TimeframeSelector, { TimeframeOption, GranularityOption } from './TimeframeSelector';
+import TimeframeSelector from './TimeframeSelector';
+import MultiRoleSelector from './MultiRoleSelector';
 import { AddProjectDialog } from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
-import { useTimeframeWeeks } from '../hooks/useTimeframeWeeks';
+import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
 import { Project } from '../types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus, UserPlus } from 'lucide-react';
 
@@ -20,11 +20,11 @@ const ResourcePlanner: React.FC = () => {
   const { employees, loading } = usePlanner();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   
-  const { timeframe, granularity, weeks, setTimeframe, setGranularity } = useTimeframeWeeks();
+  const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
 
   const handleProjectTimelineOpen = (project: Project) => {
     setSelectedProject(project);
@@ -42,15 +42,15 @@ const ResourcePlanner: React.FC = () => {
   // Get unique roles from employees
   const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
   
-  // Filter employees by selected role
-  const filteredEmployees = selectedRole === 'all' 
+  // Filter employees by selected roles
+  const filteredEmployees = selectedRoles.length === 0 
     ? employees 
-    : employees.filter(emp => emp.role === selectedRole);
+    : employees.filter(emp => selectedRoles.includes(emp.role));
 
   // Calculate fixed column width for consistent alignment
   const employeeColumnWidth = 200;
-  const weekColumnWidth = 150;
-  const totalWeeksWidth = weeks.length * weekColumnWidth;
+  const sprintColumnWidth = 150;
+  const totalSprintsWidth = sprints.length * sprintColumnWidth;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -78,9 +78,7 @@ const ResourcePlanner: React.FC = () => {
             <div className="flex justify-between items-center">
               <TimeframeSelector
                 timeframe={timeframe}
-                granularity={granularity}
                 onTimeframeChange={setTimeframe}
-                onGranularityChange={setGranularity}
               />
               
               <Button 
@@ -95,19 +93,12 @@ const ResourcePlanner: React.FC = () => {
             {/* Role Filter */}
             <div className="flex items-center gap-4">
               <label className="text-sm font-medium">Filter by Role:</label>
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  {uniqueRoles.map(role => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiRoleSelector
+                roles={uniqueRoles}
+                selectedRoles={selectedRoles}
+                onRoleChange={setSelectedRoles}
+                placeholder="All Roles"
+              />
             </div>
           </div>
           
@@ -124,16 +115,19 @@ const ResourcePlanner: React.FC = () => {
                     Team Members
                   </div>
                   
-                  {/* Week Headers */}
-                  <div className="flex" style={{ width: `${totalWeeksWidth}px` }}>
-                    {weeks.map((week) => (
+                  {/* Sprint Headers */}
+                  <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
+                    {sprints.map((sprint) => (
                       <div
-                        key={week.id}
+                        key={sprint.id}
                         className="flex-shrink-0 p-2 text-center text-sm font-medium text-gray-700 border-r bg-gray-50"
-                        style={{ width: `${weekColumnWidth}px` }}
+                        style={{ width: `${sprintColumnWidth}px` }}
                       >
-                        <div className="truncate" title={week.label}>
-                          {week.label}
+                        <div className="truncate" title={sprint.name}>
+                          {sprint.name}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {sprint.workingDays.length} days
                         </div>
                       </div>
                     ))}
@@ -150,21 +144,20 @@ const ResourcePlanner: React.FC = () => {
                       className="flex-shrink-0 border-r bg-white"
                       style={{ width: `${employeeColumnWidth}px` }}
                     >
-                      <EmployeeRow employee={employee} weeks={weeks} />
+                      <EmployeeRow employee={employee} sprints={sprints} />
                     </div>
                     
                     {/* Allocation Columns */}
-                    <div className="flex" style={{ width: `${totalWeeksWidth}px` }}>
-                      {weeks.map((week) => (
+                    <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
+                      {sprints.map((sprint) => (
                         <div
-                          key={`${employee.id}-${week.id}`}
+                          key={`${employee.id}-${sprint.id}`}
                           className="flex-shrink-0"
-                          style={{ width: `${weekColumnWidth}px` }}
+                          style={{ width: `${sprintColumnWidth}px` }}
                         >
                           <DroppableCell
                             employeeId={employee.id}
-                            weekId={week.id}
-                            granularity={granularity}
+                            sprintId={sprint.id}
                           />
                         </div>
                       ))}
