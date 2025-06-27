@@ -12,27 +12,14 @@ interface ProjectMonthDetailsProps {
 }
 
 const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project, month }) => {
-  const { getProjectAllocations, getEmployeeById, weeks } = usePlanner();
+  const { getProjectAllocations, getEmployeeById, sprints } = usePlanner();
   
-  // Get all weeks in the month
+  // Get all sprints that overlap with the month
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
   
-  const monthWeeks = eachWeekOfInterval(
-    { start: monthStart, end: monthEnd },
-    { weekStartsOn: 1 }
-  ).map(weekStart => {
-    // Find matching week from our weeks array
-    const matchingWeek = weeks.find(week => {
-      const weekStartFormatted = startOfWeek(weekStart, { weekStartsOn: 1 });
-      return weekStartFormatted.getTime() === week.startDate.getTime();
-    });
-    
-    return {
-      weekStart,
-      weekEnd: endOfWeek(weekStart, { weekStartsOn: 1 }),
-      weekData: matchingWeek
-    };
+  const monthSprints = sprints.filter(sprint => {
+    return sprint.startDate <= monthEnd && sprint.endDate >= monthStart;
   });
   
   const allocations = getProjectAllocations(project.id);
@@ -53,20 +40,18 @@ const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project, mont
       </h4>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {monthWeeks.map((week, index) => {
-          if (!week.weekData) return null;
-          
-          const weekAllocations = allocations.filter(alloc => alloc.weekId === week.weekData!.id);
+        {monthSprints.map((sprint, index) => {
+          const sprintAllocations = allocations.filter(alloc => alloc.sprintId === sprint.id);
           
           return (
             <div key={index} className="border rounded-md p-3">
               <div className="font-medium text-sm mb-2">
-                {format(week.weekStart, 'MMM d')} - {format(week.weekEnd, 'd')}
+                {sprint.name}
               </div>
               
-              {weekAllocations.length > 0 ? (
+              {sprintAllocations.length > 0 ? (
                 <div className="space-y-2">
-                  {weekAllocations.map((alloc, i) => {
+                  {sprintAllocations.map((alloc, i) => {
                     const employee = getEmployeeById(alloc.employeeId);
                     if (!employee) return null;
                     

@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChartContainer } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DetailedAllocationDialog } from './DetailedAllocationDialog';
-import { addWeeks, eachWeekOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 
 interface ProjectTimelineViewProps {
   project: Project | null;
@@ -30,7 +29,7 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   isOpen, 
   onClose 
 }) => {
-  const { weeks, employees, getProjectAllocations, getEmployeeById, addAllocation } = usePlanner();
+  const { sprints, employees, getProjectAllocations, getEmployeeById, addAllocation } = usePlanner();
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isAllocationDialogOpen, setIsAllocationDialogOpen] = useState(false);
@@ -52,12 +51,12 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
     ? projectEmployees 
     : projectEmployees.filter(emp => emp.role === selectedRole);
   
-  // Group allocations by week
-  const allocationsByWeek = weeks.map(week => {
-    const weekAllocations = allocations.filter(a => a.weekId === week.id);
+  // Group allocations by sprint
+  const allocationsBySprint = sprints.map(sprint => {
+    const sprintAllocations = allocations.filter(a => a.sprintId === sprint.id);
     
-    // Group by employee for this week, filtered by role
-    const employeeAllocations = weekAllocations.reduce((acc, alloc) => {
+    // Group by employee for this sprint, filtered by role
+    const employeeAllocations = sprintAllocations.reduce((acc, alloc) => {
       const employee = getEmployeeById(alloc.employeeId);
       if (employee && (selectedRole === 'all' || employee.role === selectedRole)) {
         acc.push({
@@ -71,21 +70,21 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
     const totalDays = employeeAllocations.reduce((sum, alloc) => sum + alloc.days, 0);
     
     return {
-      week,
+      sprint,
       allocations: employeeAllocations,
       totalDays
     };
   });
   
   // Format data for chart
-  const chartData = allocationsByWeek.map(weekData => {
+  const chartData = allocationsBySprint.map(sprintData => {
     const data: any = {
-      name: weekData.week.label,
-      Total: weekData.totalDays,
+      name: sprintData.sprint.name,
+      Total: sprintData.totalDays,
     };
     
     // Add days for each employee
-    weekData.allocations.forEach(alloc => {
+    sprintData.allocations.forEach(alloc => {
       data[alloc.employee.name] = alloc.days;
     });
     
@@ -115,28 +114,22 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   }) => {
     const { employeeId, projectId, startDate, endDate, daysPerWeek } = params;
     
-    // Generate all weeks between start and end date
-    const weekInterval = eachWeekOfInterval(
-      { start: startDate, end: endDate },
-      { weekStartsOn: 1 }
-    );
+    // Find sprints that overlap with the date range
+    const overlappingSprints = sprints.filter(sprint => {
+      return sprint.startDate <= endDate && sprint.endDate >= startDate;
+    });
     
-    // Create allocations for each week
-    for (const weekStart of weekInterval) {
-      // Find the corresponding week in our weeks array
-      const matchingWeek = weeks.find(week => {
-        const weekStartFormatted = startOfWeek(weekStart, { weekStartsOn: 1 });
-        return weekStartFormatted.getTime() === week.startDate.getTime();
+    // Calculate days per sprint based on daysPerWeek (convert from weekly to sprint allocation)
+    const daysPerSprint = Math.min(daysPerWeek * 2, 10); // Sprint is 2 weeks, max 10 days
+    
+    // Create allocations for each overlapping sprint
+    for (const sprint of overlappingSprints) {
+      await addAllocation({
+        employeeId,
+        projectId,
+        sprintId: sprint.id,
+        days: daysPerSprint
       });
-      
-      if (matchingWeek) {
-        await addAllocation({
-          employeeId,
-          projectId,
-          weekId: matchingWeek.id,
-          days: daysPerWeek
-        });
-      }
     }
   };
 
@@ -153,7 +146,7 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
               <SheetTitle>{project.name} Timeline</SheetTitle>
             </div>
             <SheetDescription>
-              Showing resource allocation from {weeks[0]?.label} to {weeks[weeks.length-1]?.label}
+              Showing resource allocation across {sprints.length} sprints
             </SheetDescription>
           </SheetHeader>
           
@@ -213,7 +206,7 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
             
             {filteredEmployees.length > 0 && (
               <>
-                <h3 className="text-lg font-medium">Weekly Allocation Chart</h3>
+                <h3 className="text-lg font-medium">Sprint Allocation Chart</h3>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
@@ -241,18 +234,18 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
             
             <h3 className="text-lg font-medium">Detailed Breakdown</h3>
             <div className="space-y-4">
-              {allocationsByWeek.map((weekData, index) => (
+              {allocationsBySprint.map((sprintData, index) => (
                 <div key={index} className="border rounded-md p-3">
                   <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">{weekData.week.label}</h4>
+                    <h4 className="font-medium">{sprintData.sprint.name}</h4>
                     <Badge variant="outline">
-                      {weekData.totalDays} {weekData.totalDays === 1 ? 'day' : 'days'} total
+                      {sprintData.totalDays} {sprintData.totalDays === 1 ? 'day' : 'days'} total
                     </Badge>
                   </div>
                   
-                  {weekData.allocations.length > 0 ? (
+                  {sprintData.allocations.length > 0 ? (
                     <div className="space-y-2">
-                      {weekData.allocations.map((alloc, i) => (
+                      {sprintData.allocations.map((alloc, i) => (
                         <div key={i} className="flex justify-between items-center text-sm">
                           <div className="flex items-center">
                             <Avatar className="h-6 w-6 mr-2">
@@ -272,7 +265,7 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">No resources allocated this week</p>
+                    <p className="text-sm text-gray-500">No resources allocated this sprint</p>
                   )}
                 </div>
               ))}

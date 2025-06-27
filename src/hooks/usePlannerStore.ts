@@ -1,10 +1,9 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { Employee, Project, Allocation, Week, DragItem } from '../types';
+import { Employee, Project, Allocation, Sprint, DragItem } from '../types';
 import { sampleProjects, sampleAllocations } from '../data/sampleData';
 import { toast } from '@/components/ui/sonner';
 import { startOfWeek, format, parseISO } from 'date-fns';
-import { generateWeeks } from '../utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,57 +18,52 @@ export const usePlannerStore = () => {
   console.log('usePlannerStore initializing');
   const { user, profile } = useAuth();
 
-  // Weeks don't change, so we can just generate them once
-  const [weeks] = useState<Week[]>(() => {
-    console.log('Generating weeks');
-    return generateWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 8);
-  });
-  
   // State for data from Supabase
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Helper function to convert weekId to database date format
-  const weekIdToDate = (weekId: string): string => {
-    // Find the week object by weekId
-    const week = weeks.find(w => w.id === weekId);
-    if (week) {
+  // Helper function to convert sprintId to database date format
+  const sprintIdToDate = (sprintId: string): string => {
+    // Find the sprint object by sprintId
+    const sprint = sprints.find(s => s.id === sprintId);
+    if (sprint) {
       // Format the start date as YYYY-MM-DD for the database
-      return format(week.startDate, 'yyyy-MM-dd');
+      return format(sprint.startDate, 'yyyy-MM-dd');
     }
     
-    // Fallback: if weekId is in format "week-1", extract the number and calculate
-    const weekNumber = parseInt(weekId.replace('week-', ''));
-    if (!isNaN(weekNumber)) {
+    // Fallback: if sprintId is in format "sprint-1", extract the number and calculate
+    const sprintNumber = parseInt(sprintId.replace('sprint-', ''));
+    if (!isNaN(sprintNumber)) {
       const baseDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-      const targetWeek = weeks[weekNumber - 1];
-      if (targetWeek) {
-        return format(targetWeek.startDate, 'yyyy-MM-dd');
-      }
+      // Each sprint is 2 weeks apart
+      const sprintStartDate = new Date(baseDate);
+      sprintStartDate.setDate(baseDate.getDate() + (sprintNumber - 1) * 14);
+      return format(sprintStartDate, 'yyyy-MM-dd');
     }
     
-    throw new Error(`Invalid weekId format: ${weekId}`);
+    throw new Error(`Invalid sprintId format: ${sprintId}`);
   };
 
-  // Helper function to convert database date to weekId
-  const dateToWeekId = (dateString: string): string => {
+  // Helper function to convert database date to sprintId
+  const dateToSprintId = (dateString: string): string => {
     const date = parseISO(dateString);
-    // Find the week that contains this date
-    const matchingWeek = weeks.find(week => {
-      const weekStart = week.startDate;
-      const weekEnd = week.endDate;
-      return date >= weekStart && date <= weekEnd;
+    // Find the sprint that contains this date
+    const matchingSprint = sprints.find(sprint => {
+      const sprintStart = sprint.startDate;
+      const sprintEnd = sprint.endDate;
+      return date >= sprintStart && date <= sprintEnd;
     });
     
-    if (matchingWeek) {
-      return matchingWeek.id;
+    if (matchingSprint) {
+      return matchingSprint.id;
     }
     
-    // Fallback: generate a week ID based on the date
-    console.warn(`No matching week found for date: ${dateString}`);
-    return `week-${format(date, 'w')}`;
+    // Fallback: generate a sprint ID based on the date
+    console.warn(`No matching sprint found for date: ${dateString}`);
+    return `sprint-1`;
   };
   
   // Load data from Supabase on mount
@@ -130,7 +124,7 @@ export const usePlannerStore = () => {
           id: alloc.id,
           employeeId: alloc.user_id,
           projectId: alloc.project_id,
-          weekId: dateToWeekId(alloc.week), // Fix: properly convert database date to weekId
+          sprintId: dateToSprintId(alloc.week),
           days: alloc.days
         }));
         
@@ -163,7 +157,7 @@ export const usePlannerStore = () => {
     }
     
     loadInitialData();
-  }, [user, weeks]);
+  }, [user, sprints]);
   
   // Helper function to update project date ranges based on allocations
   const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
@@ -181,19 +175,19 @@ export const usePlannerStore = () => {
       const projectAllocations = allocationsByProject[project.id] || [];
       if (projectAllocations.length === 0) return project;
       
-      // Find min and max week IDs
-      const weekIds = projectAllocations.map(a => a.weekId);
-      const minWeekId = weekIds.sort()[0];
-      const maxWeekId = weekIds.sort().reverse()[0];
+      // Find min and max sprint IDs
+      const sprintIds = projectAllocations.map(a => a.sprintId);
+      const minSprintId = sprintIds.sort()[0];
+      const maxSprintId = sprintIds.sort().reverse()[0];
       
-      // Find the corresponding week objects
-      const startWeek = weeks.find(w => w.id === minWeekId);
-      const endWeek = weeks.find(w => w.id === maxWeekId);
+      // Find the corresponding sprint objects
+      const startSprint = sprints.find(s => s.id === minSprintId);
+      const endSprint = sprints.find(s => s.id === maxSprintId);
       
       return {
         ...project,
-        startDate: startWeek?.startDate || project.startDate,
-        endDate: endWeek?.endDate || project.endDate
+        startDate: startSprint?.startDate || project.startDate,
+        endDate: endSprint?.endDate || project.endDate
       };
     }));
   };
@@ -352,7 +346,7 @@ export const usePlannerStore = () => {
         throw new Error(`Invalid employee ID: ${allocation.employeeId}. Employee not found in profiles.`);
       }
 
-      const weekDate = weekIdToDate(allocation.weekId);
+      const sprintDate = sprintIdToDate(allocation.sprintId);
       
       const tempId = uuidv4();
       const newAllocation: Allocation = {
@@ -367,7 +361,7 @@ export const usePlannerStore = () => {
         .insert({
           user_id: allocation.employeeId,
           project_id: allocation.projectId,
-          week: weekDate,
+          week: sprintDate,
           days: allocation.days
         })
         .select()
@@ -393,7 +387,7 @@ export const usePlannerStore = () => {
       toast.error('Failed to add allocation: ' + (error as Error).message);
       return null;
     }
-  }, [weeks, projects, allocations, user, profile, validateUserId]);
+  }, [sprints, projects, allocations, user, profile, validateUserId]);
 
   // Update an existing allocation
   const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
@@ -437,15 +431,15 @@ export const usePlannerStore = () => {
     }
   }, [projects, allocations, user, profile]);
 
-  // Move an allocation to a different week or create new allocation
-  const moveAllocation = useCallback(async (dragItem: DragItem, weekId: string) => {
+  // Move an allocation to a different sprint or create new allocation
+  const moveAllocation = useCallback(async (dragItem: DragItem, sprintId: string) => {
     if (!user || !profile?.is_admin) {
       toast.error('Only administrators can move allocations');
       return false;
     }
 
     try {
-      console.log('moveAllocation called with:', { dragItem, weekId });
+      console.log('moveAllocation called with:', { dragItem, sprintId });
       
       // Validate that we have valid UUIDs before proceeding
       if (!isValidUUID(dragItem.employeeId)) {
@@ -462,7 +456,7 @@ export const usePlannerStore = () => {
         throw new Error(`Employee ID ${dragItem.employeeId} not found in profiles. Please ensure the employee is registered.`);
       }
       
-      if (dragItem.sourceWeekId) {
+      if (dragItem.sourceSprintId) {
         // This is an existing allocation being moved
         const existingAllocation = allocations.find(a => a.id === dragItem.id);
         
@@ -475,11 +469,11 @@ export const usePlannerStore = () => {
           throw new Error(`Cannot move allocation with ID: ${dragItem.id}`);
         }
         
-        const weekDate = weekIdToDate(weekId);
+        const sprintDate = sprintIdToDate(sprintId);
         
         const updatedAllocation: Allocation = {
           ...existingAllocation,
-          weekId
+          sprintId
         };
         
         setAllocations(prev => 
@@ -489,7 +483,7 @@ export const usePlannerStore = () => {
         const { error } = await supabase
           .from('allocations')
           .update({
-            week: weekDate
+            week: sprintDate
           })
           .eq('id', dragItem.id);
           
@@ -501,14 +495,14 @@ export const usePlannerStore = () => {
         }
         
         toast.success('Resource moved successfully');
-        console.log('Allocation moved in Supabase:', updatedAllocation, 'to week:', weekId);
+        console.log('Allocation moved in Supabase:', updatedAllocation, 'to sprint:', sprintId);
         
         updateProjectDateRanges(projects, allocations.map(a => 
           a.id === dragItem.id ? updatedAllocation : a
         ));
       } else {
         // This is a new allocation being created from a project drag
-        const weekDate = weekIdToDate(weekId);
+        const sprintDate = sprintIdToDate(sprintId);
         
         if (!dragItem.employeeId || !dragItem.projectId) {
           throw new Error('Missing required fields for new allocation');
@@ -519,8 +513,8 @@ export const usePlannerStore = () => {
           id: tempId,
           employeeId: dragItem.employeeId,
           projectId: dragItem.projectId,
-          weekId,
-          days: dragItem.days || 5, // Default to 5 days if not specified
+          sprintId,
+          days: dragItem.days || 10, // Default to 10 days for sprint
         };
         
         setAllocations(prev => [...prev, newAllocation]);
@@ -530,8 +524,8 @@ export const usePlannerStore = () => {
           .insert({
             user_id: dragItem.employeeId,
             project_id: dragItem.projectId,
-            week: weekDate,
-            days: dragItem.days || 5
+            week: sprintDate,
+            days: dragItem.days || 10
           })
           .select()
           .single();
@@ -558,7 +552,7 @@ export const usePlannerStore = () => {
       toast.error('Failed to update allocation: ' + (error as Error).message);
       return false;
     }
-  }, [allocations, projects, weeks, user, profile, validateUserId]);
+  }, [allocations, projects, sprints, user, profile, validateUserId]);
 
   // Delete an allocation
   const deleteAllocation = useCallback(async (id: string) => {
@@ -606,10 +600,10 @@ export const usePlannerStore = () => {
     return projects.find(project => project.id === id);
   }, [projects]);
 
-  // Get total days allocated for an employee in a specific week
-  const getTotalAllocationDays = useCallback((employeeId: string, weekId: string) => {
+  // Get total days allocated for an employee in a specific sprint
+  const getTotalAllocationDays = useCallback((employeeId: string, sprintId: string) => {
     return allocations
-      .filter(alloc => alloc.employeeId === employeeId && alloc.weekId === weekId)
+      .filter(alloc => alloc.employeeId === employeeId && alloc.sprintId === sprintId)
       .reduce((total, alloc) => total + alloc.days, 0);
   }, [allocations]);
 
@@ -635,21 +629,24 @@ export const usePlannerStore = () => {
         throw new Error('Project not found');
       }
 
-      // Find all weeks that overlap with the project timeline
-      const projectWeeks = weeks.filter(week => {
-        return week.startDate <= project.endDate && week.endDate >= project.startDate;
+      // Find all sprints that overlap with the project timeline
+      const projectSprints = sprints.filter(sprint => {
+        return sprint.startDate <= project.endDate && sprint.endDate >= project.startDate;
       });
 
-      if (projectWeeks.length === 0) {
-        throw new Error('No weeks found for project timeline');
+      if (projectSprints.length === 0) {
+        throw new Error('No sprints found for project timeline');
       }
 
-      // Create allocations for each week in the project timeline
-      const allocationsToCreate = projectWeeks.map(week => ({
+      // Convert weekly days to sprint days (multiply by 2 since sprint is 2 weeks)
+      const daysPerSprint = Math.min(daysPerWeek * 2, 10);
+
+      // Create allocations for each sprint in the project timeline
+      const allocationsToCreate = projectSprints.map(sprint => ({
         employeeId,
         projectId,
-        weekId: week.id,
-        days: daysPerWeek
+        sprintId: sprint.id,
+        days: daysPerSprint
       }));
 
       // Create all allocations
@@ -661,20 +658,21 @@ export const usePlannerStore = () => {
         }
       }
 
-      toast.success(`Allocated ${createdAllocations.length} weeks to project timeline`);
+      toast.success(`Allocated ${createdAllocations.length} sprints to project timeline`);
       return true;
     } catch (error) {
       console.error('Error allocating to project timeline:', error);
       toast.error('Failed to allocate to project timeline');
       return false;
     }
-  }, [weeks, getProjectById, addAllocation, user, profile]);
+  }, [sprints, getProjectById, addAllocation, user, profile]);
 
   return {
     employees,
     projects,
     allocations,
-    weeks,
+    sprints,
+    setSprints,
     loading,
     addEmployee,
     updateEmployee,

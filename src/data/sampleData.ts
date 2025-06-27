@@ -56,10 +56,10 @@ export const sampleProjects: Project[] = [
 
 // Sample allocation data
 export const sampleAllocations: Allocation[] = [
-  { id: 'alloc1', employeeId: 'emp1', projectId: 'proj1', weekId: 'week-1', days: 3 },
-  { id: 'alloc2', employeeId: 'emp1', projectId: 'proj2', weekId: 'week-2', days: 2 },
-  { id: 'alloc3', employeeId: 'emp2', projectId: 'proj2', weekId: 'week-1', days: 5 },
-  { id: 'alloc4', employeeId: 'emp3', projectId: 'proj3', weekId: 'week-1', days: 4 },
-  { id: 'alloc5', employeeId: 'emp4', projectId: 'proj4', weekId: 'week-1', days: 5 },
-  { id: 'alloc6', employeeId: 'emp5', projectId: 'proj5', weekId: 'week-2', days: 3 },
+  { id: 'alloc1', employeeId: 'emp1', projectId: 'proj1', sprintId: 'sprint-1', days: 8 },
+  { id: 'alloc2', employeeId: 'emp1', projectId: 'proj2', sprintId: 'sprint-2', days: 6 },
+  { id: 'alloc3', employeeId: 'emp2', projectId: 'proj2', sprintId: 'sprint-1', days: 10 },
+  { id: 'alloc4', employeeId: 'emp3', projectId: 'proj3', sprintId: 'sprint-1', days: 9 },
+  { id: 'alloc5', employeeId: 'emp4', projectId: 'proj4', sprintId: 'sprint-1', days: 10 },
+  { id: 'alloc6', employeeId: 'emp5', projectId: 'proj5', sprintId: 'sprint-2', days: 7 },
 ];
