@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Employee, Project, Allocation, Sprint, DragItem } from '../types';
 import { sampleProjects, sampleAllocations } from '../data/sampleData';
@@ -7,6 +6,7 @@ import { startOfWeek, format, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/hooks/useAuth';
+import { generateSprints } from '@/utils/sprintUtils';
 
 // Helper function to validate UUID
 const isValidUUID = (str: string) => {
@@ -22,7 +22,10 @@ export const usePlannerStore = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
-  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>(() => {
+    // Initialize with default sprints
+    return generateSprints(new Date(), 12);
+  });
   const [loading, setLoading] = useState(true);
   
   // Helper function to convert sprintId to database date format
