@@ -12,6 +12,7 @@ import MultiRoleSelector from './MultiRoleSelector';
 import { AddProjectDialog } from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
+import { getSprintDateRange } from '../utils/sprintUtils';
 import { Project } from '../types';
 import { Button } from '@/components/ui/button';
 import { Plus, UserPlus } from 'lucide-react';
@@ -123,8 +124,11 @@ const ResourcePlanner: React.FC = () => {
                         className="flex-shrink-0 p-2 text-center text-sm font-medium text-gray-700 border-r bg-gray-50"
                         style={{ width: `${sprintColumnWidth}px` }}
                       >
-                        <div className="truncate" title={sprint.name}>
+                        <div className="truncate font-semibold" title={sprint.name}>
                           {sprint.name}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          {getSprintDateRange(sprint)}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {sprint.workingDays.length} days
