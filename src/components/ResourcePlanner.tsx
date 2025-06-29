@@ -9,27 +9,40 @@ import ProjectsSidebar from './ProjectsSidebar';
 import ProjectTimelineView from './ProjectTimelineView';
 import TimeframeSelector from './TimeframeSelector';
 import MultiRoleSelector from './MultiRoleSelector';
+import EmployeeEditor from './EmployeeEditor';
 import { AddProjectDialog } from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
 import { getSprintDateRange, isSprintActive } from '../utils/sprintUtils';
-import { Project } from '../types';
+import { Project, Employee } from '../types';
 import { Button } from '@/components/ui/button';
 import { Plus, UserPlus } from 'lucide-react';
 
 const ResourcePlanner: React.FC = () => {
-  const { employees = [], loading } = usePlanner(); // Default to empty array
+  const { employees = [], loading } = usePlanner();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isEmployeeEditorOpen, setIsEmployeeEditorOpen] = useState(false);
   
   const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
 
   const handleProjectTimelineOpen = (project: Project) => {
     setSelectedProject(project);
     setIsProjectTimelineOpen(true);
+  };
+
+  const handleEmployeeEdit = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setIsEmployeeEditorOpen(true);
+  };
+
+  const handleEmployeeEditorClose = () => {
+    setSelectedEmployee(null);
+    setIsEmployeeEditorOpen(false);
   };
 
   if (loading) {
@@ -40,13 +53,13 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
-  // Get unique roles from employees with safety check
-  const uniqueRoles = employees && employees.length > 0 
-    ? Array.from(new Set(employees.map(emp => emp.role).filter(Boolean)))
+  // Get unique roles from employees with safety checks
+  const uniqueRoles = Array.isArray(employees) && employees.length > 0 
+    ? Array.from(new Set(employees.filter(emp => emp && emp.role).map(emp => emp.role)))
     : [];
   
   // Filter employees by selected roles with safety checks
-  const filteredEmployees = (employees && employees.length > 0) 
+  const filteredEmployees = Array.isArray(employees) && employees.length > 0
     ? (selectedRoles.length === 0 
         ? employees 
         : employees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
@@ -161,7 +174,11 @@ const ResourcePlanner: React.FC = () => {
                       className="flex-shrink-0 border-r bg-white"
                       style={{ width: `${employeeColumnWidth}px` }}
                     >
-                      <EmployeeRow employee={employee} sprints={sprints} />
+                      <EmployeeRow 
+                        employee={employee} 
+                        sprints={sprints}
+                        onEmployeeEdit={handleEmployeeEdit}
+                      />
                     </div>
                     
                     {/* Allocation Columns */}
@@ -194,6 +211,8 @@ const ResourcePlanner: React.FC = () => {
           setIsProjectTimelineOpen(false);
           setSelectedProject(null);
         }}
+        selectedRoles={selectedRoles}
+        onRoleChange={setSelectedRoles}
       />
 
       <AddProjectDialog 
@@ -205,6 +224,14 @@ const ResourcePlanner: React.FC = () => {
         open={isAddEmployeeDialogOpen} 
         onOpenChange={setIsAddEmployeeDialogOpen} 
       />
+
+      {selectedEmployee && (
+        <EmployeeEditor
+          employee={selectedEmployee}
+          isOpen={isEmployeeEditorOpen}
+          onClose={handleEmployeeEditorClose}
+        />
+      )}
     </DndProvider>
   );
 };

@@ -1,509 +1,114 @@
+import React, { useState } from 'react';
+import { usePlanner } from '../contexts/PlannerContext';
+import MultiRoleSelector from './MultiRoleSelector';
+import { startOfMonth, addMonths, format } from 'date-fns';
 
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
-} from '@/components/ui/pagination';
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, addMonths } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+const ProfessionView: React.FC = () => {
+  const { employees = [], allocations, projects, sprints } = usePlanner();
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
-interface RoleAllocation {
-  projectName: string;
-  userName: string;
-  userRole: string;
-  userImageUrl: string | null;
-  week: string;
-  days: number;
-  userId: string;
-  projectId: string;
-}
+  // Get unique roles with safety checks
+  const uniqueRoles = Array.isArray(employees) && employees.length > 0 
+    ? Array.from(new Set(employees.filter(emp => emp && emp.role).map(emp => emp.role)))
+    : [];
 
-interface ProjectAllocation {
-  projectId: string;
-  projectName: string;
-  totalDays: number;
-}
+  // Filter employees by selected roles
+  const filteredEmployees = Array.isArray(employees) && employees.length > 0
+    ? (selectedRoles.length === 0 
+        ? employees 
+        : employees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
+    : [];
 
-interface MonthlyCapacity {
-  month: Date;
-  totalAllocated: number;
-  totalCapacity: number;
-  availableCapacity: number;
-  utilizationRate: number;
-  teamMembers: {
-    id: string;
-    name: string;
-    imageUrl: string | null;
-    allocatedDays: number;
-    capacity: number;
-    projects: ProjectAllocation[];
-  }[];
-}
-
-export default function ProfessionView() {
-  const [roles, setRoles] = useState<string[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>("");
-  const [allocations, setAllocations] = useState<RoleAllocation[]>([]);
-  const [monthlyCapacities, setMonthlyCapacities] = useState<MonthlyCapacity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingAllocations, setLoadingAllocations] = useState(false);
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
-  
-  // Generate months for the last 6 months and next 6 months
-  const months = eachMonthOfInterval({
-    start: addMonths(new Date(), -6),
-    end: addMonths(new Date(), 6)
-  });
-
-  // Load unique roles from profiles table
-  useEffect(() => {
-    async function fetchRoles() {
-      try {
-        console.log('Fetching roles from profiles table...');
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .order('role');
-          
-        if (error) {
-          console.error('Error fetching roles:', error);
-          throw error;
-        }
-        
-        console.log('Raw roles data:', data);
-        
-        // Get unique roles, filtering out null/empty values
-        const uniqueRoles = [...new Set(data?.map(profile => profile.role).filter(role => role && role.trim() !== '') || [])];
-        console.log('Unique roles found:', uniqueRoles);
-        
-        setRoles(uniqueRoles);
-        
-        if (uniqueRoles.length > 0) {
-          setSelectedRole(uniqueRoles[0]);
-        }
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching roles:', error);
-        setLoading(false);
-      }
-    }
-    
-    fetchRoles();
-  }, []);
-  
-  // Fetch allocations and calculate capacities for selected role
-  useEffect(() => {
-    if (!selectedRole) return;
-    
-    async function fetchRoleData() {
-      setLoadingAllocations(true);
-      try {
-        console.log('Fetching data for role:', selectedRole);
-        
-        // First get profiles with the selected role
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, name, role, image_url')
-          .eq('role', selectedRole);
-          
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-          throw profilesError;
-        }
-        
-        console.log('Profiles with role', selectedRole, ':', profilesData);
-        
-        if (!profilesData || profilesData.length === 0) {
-          console.log('No profiles found with role:', selectedRole);
-          setAllocations([]);
-          setMonthlyCapacities([]);
-          setLoadingAllocations(false);
-          return;
-        }
-        
-        const userIds = profilesData.map(profile => profile.id);
-        
-        // Then get allocations for these profiles
-        const { data: allocationsData, error: allocationsError } = await supabase
-          .from('allocations')
-          .select(`
-            days,
-            week,
-            user_id,
-            project_id
-          `)
-          .in('user_id', userIds)
-          .order('week');
-        
-        if (allocationsError) {
-          console.error('Error fetching allocations:', allocationsError);
-          throw allocationsError;
-        }
-        
-        console.log('Raw allocations data:', allocationsData);
-        
-        // Get project data
-        const projectIds = [...new Set(allocationsData?.map(alloc => alloc.project_id) || [])];
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('projects')
-          .select('id, name')
-          .in('id', projectIds);
-          
-        if (projectsError) {
-          console.error('Error fetching projects:', projectsError);
-          throw projectsError;
-        }
-        
-        console.log('Projects data:', projectsData);
-        
-        // Create lookup maps
-        const profilesMap = new Map(profilesData.map(profile => [profile.id, profile]));
-        const projectsMap = new Map(projectsData?.map(project => [project.id, project]) || []);
-        
-        // Transform allocations data
-        const transformedAllocations = allocationsData?.map(allocation => {
-          const profile = profilesMap.get(allocation.user_id);
-          const project = projectsMap.get(allocation.project_id);
-          
-          return {
-            projectName: project?.name || 'Unknown Project',
-            userName: profile?.name || 'Unknown User',
-            userRole: profile?.role || 'Unknown Role',
-            userImageUrl: profile?.image_url || null,
-            userId: allocation.user_id,
-            projectId: allocation.project_id,
-            week: allocation.week,
-            days: allocation.days
-          };
-        }).filter(item => item.projectName !== 'Unknown Project' && item.userName !== 'Unknown User') || [];
-        
-        console.log('Transformed allocations data:', transformedAllocations);
-        setAllocations(transformedAllocations);
-        
-        // Calculate monthly capacities
-        const capacities = calculateMonthlyCapacities(transformedAllocations, profilesData, months, projectsMap);
-        setMonthlyCapacities(capacities);
-        
-      } catch (error) {
-        console.error('Error fetching role data:', error);
-        setAllocations([]);
-        setMonthlyCapacities([]);
-      } finally {
-        setLoadingAllocations(false);
-      }
-    }
-    
-    fetchRoleData();
-  }, [selectedRole]);
-  
-  // Calculate monthly capacity data
-  const calculateMonthlyCapacities = (
-    allocations: RoleAllocation[], 
-    profiles: any[], 
-    months: Date[],
-    projectsMap: Map<string, any>
-  ): MonthlyCapacity[] => {
-    return months.map(month => {
-      const monthStart = startOfMonth(month);
-      const monthEnd = endOfMonth(month);
-      
-      // Assuming 20 working days per month per person
-      const workingDaysPerMonth = 20;
-      const totalCapacity = profiles.length * workingDaysPerMonth;
-      
-      // Calculate allocations for this month
-      const monthAllocations = allocations.filter(alloc => {
-        const allocDate = new Date(alloc.week);
-        return allocDate >= monthStart && allocDate <= monthEnd;
-      });
-      
-      // Group by user and sum their allocations
-      const userAllocations = new Map<string, number>();
-      const userProjectAllocations = new Map<string, Map<string, number>>();
-      
-      monthAllocations.forEach(alloc => {
-        const current = userAllocations.get(alloc.userId) || 0;
-        userAllocations.set(alloc.userId, current + alloc.days);
-        
-        // Track project allocations per user
-        if (!userProjectAllocations.has(alloc.userId)) {
-          userProjectAllocations.set(alloc.userId, new Map());
-        }
-        const userProjects = userProjectAllocations.get(alloc.userId)!;
-        const currentProjectDays = userProjects.get(alloc.projectId) || 0;
-        userProjects.set(alloc.projectId, currentProjectDays + alloc.days);
-      });
-      
-      const totalAllocated = Array.from(userAllocations.values()).reduce((sum, days) => sum + days, 0);
-      const availableCapacity = totalCapacity - totalAllocated;
-      const utilizationRate = totalCapacity > 0 ? (totalAllocated / totalCapacity) * 100 : 0;
-      
-      // Create team member details with project allocations
-      const teamMembers = profiles.map(profile => {
-        const userProjects = userProjectAllocations.get(profile.id) || new Map();
-        const projects: ProjectAllocation[] = Array.from(userProjects.entries()).map(([projectId, days]) => ({
-          projectId,
-          projectName: projectsMap.get(projectId)?.name || 'Unknown Project',
-          totalDays: days
-        }));
-        
-        return {
-          id: profile.id,
-          name: profile.name,
-          imageUrl: profile.image_url,
-          allocatedDays: userAllocations.get(profile.id) || 0,
-          capacity: workingDaysPerMonth,
-          projects
-        };
-      });
-      
-      return {
-        month,
-        totalAllocated,
-        totalCapacity,
-        availableCapacity,
-        utilizationRate: Math.round(utilizationRate),
-        teamMembers
-      };
-    });
-  };
-
-  const currentMonth = months[currentMonthIndex];
-  const currentCapacity = monthlyCapacities[currentMonthIndex];
-
-  // Get initials from name
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase();
-  };
-
-  const nextMonth = () => {
-    if (currentMonthIndex < months.length - 1) {
-      setCurrentMonthIndex(currentMonthIndex + 1);
-    }
-  };
-
-  const prevMonth = () => {
-    if (currentMonthIndex > 0) {
-      setCurrentMonthIndex(currentMonthIndex - 1);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="mt-2 text-gray-500">Loading role data...</p>
-        </div>
-      </div>
-    );
+  // Generate months starting from June 2025
+  const startDate = new Date(2025, 5, 1); // June 2025 (month is 0-indexed)
+  const months = [];
+  for (let i = 0; i < 12; i++) {
+    months.push(addMonths(startDate, i));
   }
 
+  // Helper function to get allocations for a specific employee and month
+  const getAllocationDaysForMonth = (employeeId: string, month: Date): number => {
+    const year = month.getFullYear();
+    const monthIndex = month.getMonth();
+  
+    // Filter allocations for the employee
+    const employeeAllocations = allocations.filter(alloc => alloc.employeeId === employeeId);
+  
+    let totalDays = 0;
+  
+    // Iterate through each allocation to check if it falls within the specified month
+    employeeAllocations.forEach(allocation => {
+      const sprint = sprints.find(s => s.id === allocation.sprintId);
+      if (sprint) {
+        const sprintYear = sprint.startDate.getFullYear();
+        const sprintMonth = sprint.startDate.getMonth();
+  
+        // Check if the sprint falls within the specified month
+        if (sprintYear === year && sprintMonth === monthIndex) {
+          totalDays += allocation.days;
+        }
+      }
+    });
+  
+    return totalDays;
+  };
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Resource Allocation by Role</h1>
-        <p className="text-gray-500">
-          View resource allocations and capacity planning filtered by team member role
-        </p>
+    <div className="p-4 space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Resource Allocation by Role</h2>
+        
+        {/* Role Filter */}
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium">Filter by Role:</label>
+          <MultiRoleSelector
+            roles={uniqueRoles}
+            selectedRoles={selectedRoles}
+            onRoleChange={setSelectedRoles}
+            placeholder="All Roles"
+          />
+        </div>
       </div>
-      
-      {roles.length === 0 ? (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-center text-gray-500">
-              No roles found. Please add team members to the system first.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="mb-6 max-w-sm">
-            <label className="block text-sm font-medium mb-1">Select Role</label>
-            <Select
-              value={selectedRole}
-              onValueChange={setSelectedRole}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                {roles.map(role => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+      <div className="overflow-auto">
+        <div className="min-w-max">
+          {/* Month Headers */}
+          <div className="flex border-b-2 border-gray-200 bg-gray-50">
+            <div className="w-48 p-3 font-semibold border-r">Team Member</div>
+            {months.map((month) => (
+              <div key={month.toISOString()} className="w-24 p-2 text-center text-sm font-medium border-r">
+                {format(month, 'MMM yyyy')}
+              </div>
+            ))}
           </div>
-          
-          {loadingAllocations ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-6 w-48" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {[1, 2].map(j => (
-                        <div key={j} className="flex items-center gap-2">
-                          <Skeleton className="h-8 w-8 rounded-full" />
-                          <Skeleton className="h-4 w-48" />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Monthly Capacity Overview */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Monthly Capacity Overview</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={prevMonth}
-                        disabled={currentMonthIndex === 0}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="font-medium min-w-[120px] text-center">
-                        {currentMonth ? format(currentMonth, 'MMM yyyy') : 'Loading...'}
+
+          {/* Employee Rows */}
+          {filteredEmployees.map((employee) => (
+            <div key={employee.id} className="flex border-b hover:bg-gray-50">
+              <div className="w-48 p-3 border-r">
+                <div className="font-medium">{employee.name}</div>
+                <div className="text-sm text-gray-500">{employee.role}</div>
+              </div>
+              {months.map((month) => {
+                const monthlyAllocation = getAllocationDaysForMonth(employee.id, month);
+                return (
+                  <div key={month.toISOString()} className="w-24 p-2 text-center border-r">
+                    {monthlyAllocation > 0 ? (
+                      <span className="text-sm font-medium text-blue-600">
+                        {monthlyAllocation}d
                       </span>
-                      <Button 
-                        variant="outline"
-                        size="sm" 
-                        onClick={nextMonth}
-                        disabled={currentMonthIndex === months.length - 1}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">-</span>
+                    )}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {currentCapacity ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{currentCapacity.totalCapacity}</div>
-                          <div className="text-sm text-gray-500">Total Capacity (days)</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">{currentCapacity.totalAllocated}</div>
-                          <div className="text-sm text-gray-500">Allocated (days)</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-orange-600">{currentCapacity.availableCapacity}</div>
-                          <div className="text-sm text-gray-500">Available (days)</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">{currentCapacity.utilizationRate}%</div>
-                          <div className="text-sm text-gray-500">Utilization Rate</div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium">Capacity Utilization</span>
-                          <span className="text-sm text-gray-500">{currentCapacity.utilizationRate}%</span>
-                        </div>
-                        <Progress value={currentCapacity.utilizationRate} className="h-2" />
-                      </div>
-                      
-                      <div className="mt-6">
-                        <h4 className="font-medium mb-3">Team Member Allocations</h4>
-                        <div className="space-y-4">
-                          {currentCapacity.teamMembers.map(member => (
-                            <div key={member.id} className="p-4 bg-gray-50 rounded-lg">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-8 w-8">
-                                    {member.imageUrl ? (
-                                      <AvatarImage src={member.imageUrl} />
-                                    ) : (
-                                      <AvatarFallback>
-                                        {getInitials(member.name)}
-                                      </AvatarFallback>
-                                    )}
-                                  </Avatar>
-                                  <span className="font-medium">{member.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-600">
-                                    {member.allocatedDays}/{member.capacity} days
-                                  </span>
-                                  <Badge variant={member.allocatedDays > member.capacity * 0.8 ? "destructive" : "secondary"}>
-                                    {Math.round((member.allocatedDays / member.capacity) * 100)}%
-                                  </Badge>
-                                </div>
-                              </div>
-                              
-                              {member.projects.length > 0 && (
-                                <div className="mt-2">
-                                  <div className="text-sm font-medium text-gray-600 mb-2">Project Allocations:</div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {member.projects.map(project => (
-                                      <div key={project.projectId} className="flex items-center justify-between p-2 bg-white rounded border">
-                                        <span className="text-sm font-medium">{project.projectName}</span>
-                                        <Badge variant="outline" className="text-xs">
-                                          {project.totalDays} days
-                                        </Badge>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-center text-gray-500">No capacity data available</p>
-                  )}
-                </CardContent>
-              </Card>
+                );
+              })}
             </div>
-          )}
-        </>
-      )}
+          ))}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default ProfessionView;

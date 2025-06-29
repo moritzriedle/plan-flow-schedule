@@ -13,34 +13,36 @@ interface MultiRoleSelectorProps {
 }
 
 const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
-  roles = [], // Default to empty array to prevent iteration errors
-  selectedRoles = [], // Default to empty array
+  roles = [],
+  selectedRoles = [],
   onRoleChange,
   placeholder = "Select roles..."
 }) => {
   const [open, setOpen] = React.useState(false);
-  const [tempSelectedRoles, setTempSelectedRoles] = React.useState<string[]>(selectedRoles);
+  const [tempSelectedRoles, setTempSelectedRoles] = React.useState<string[]>([...selectedRoles]);
 
   // Update temp selection when props change
   React.useEffect(() => {
-    setTempSelectedRoles(selectedRoles);
+    setTempSelectedRoles([...selectedRoles]);
   }, [selectedRoles]);
 
   const handleRoleToggle = (role: string) => {
-    if (tempSelectedRoles.includes(role)) {
-      setTempSelectedRoles(tempSelectedRoles.filter(r => r !== role));
-    } else {
-      setTempSelectedRoles([...tempSelectedRoles, role]);
-    }
+    setTempSelectedRoles(prev => {
+      if (prev.includes(role)) {
+        return prev.filter(r => r !== role);
+      } else {
+        return [...prev, role];
+      }
+    });
   };
 
   const handleApply = () => {
-    onRoleChange(tempSelectedRoles);
+    onRoleChange([...tempSelectedRoles]);
     setOpen(false);
   };
 
   const handleCancel = () => {
-    setTempSelectedRoles(selectedRoles);
+    setTempSelectedRoles([...selectedRoles]);
     setOpen(false);
   };
 
@@ -49,6 +51,9 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
     if (selectedRoles.length === 1) return selectedRoles[0];
     return `${selectedRoles.length} roles selected`;
   };
+
+  // Safety check to ensure roles is an array
+  const safeRoles = Array.isArray(roles) ? roles : [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -68,7 +73,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
           <CommandInput placeholder="Search roles..." />
           <CommandEmpty>No roles found.</CommandEmpty>
           <CommandGroup>
-            {roles.map((role) => (
+            {safeRoles.map((role) => (
               <CommandItem
                 key={role}
                 onSelect={() => handleRoleToggle(role)}
