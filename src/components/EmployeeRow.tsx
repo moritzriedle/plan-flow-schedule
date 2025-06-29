@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Employee, Sprint } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { edit } from 'lucide-react';
+import { Edit } from 'lucide-react';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -64,7 +65,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
             className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
             onClick={handleEditClick}
           >
-            <edit className="h-3 w-3" />
+            <Edit className="h-3 w-3" />
           </Button>
         )}
       </div>

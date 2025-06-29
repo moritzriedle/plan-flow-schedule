@@ -53,8 +53,9 @@ const ProjectItem: React.FC<{
 };
 
 const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({ onAddProject }) => {
-  const { projects, getProjectById } = usePlanner();
+  const { projects, getProjectById, employees = [] } = usePlanner();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   
   const selectedProject = selectedProjectId ? getProjectById(selectedProjectId) : null;
 
@@ -122,6 +123,8 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({ onAddProject }) => {
         project={selectedProject as Project}
         isOpen={!!selectedProjectId}
         onClose={() => setSelectedProjectId(null)}
+        selectedRoles={selectedRoles}
+        onRoleChange={setSelectedRoles}
       />
     </>
   );
