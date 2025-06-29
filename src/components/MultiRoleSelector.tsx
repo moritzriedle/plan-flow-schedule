@@ -13,19 +13,35 @@ interface MultiRoleSelectorProps {
 }
 
 const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
-  roles,
-  selectedRoles,
+  roles = [], // Default to empty array to prevent iteration errors
+  selectedRoles = [], // Default to empty array
   onRoleChange,
   placeholder = "Select roles..."
 }) => {
   const [open, setOpen] = React.useState(false);
+  const [tempSelectedRoles, setTempSelectedRoles] = React.useState<string[]>(selectedRoles);
+
+  // Update temp selection when props change
+  React.useEffect(() => {
+    setTempSelectedRoles(selectedRoles);
+  }, [selectedRoles]);
 
   const handleRoleToggle = (role: string) => {
-    if (selectedRoles.includes(role)) {
-      onRoleChange(selectedRoles.filter(r => r !== role));
+    if (tempSelectedRoles.includes(role)) {
+      setTempSelectedRoles(tempSelectedRoles.filter(r => r !== role));
     } else {
-      onRoleChange([...selectedRoles, role]);
+      setTempSelectedRoles([...tempSelectedRoles, role]);
     }
+  };
+
+  const handleApply = () => {
+    onRoleChange(tempSelectedRoles);
+    setOpen(false);
+  };
+
+  const handleCancel = () => {
+    setTempSelectedRoles(selectedRoles);
+    setOpen(false);
   };
 
   const getDisplayText = () => {
@@ -59,13 +75,30 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
               >
                 <Check
                   className={`mr-2 h-4 w-4 ${
-                    selectedRoles.includes(role) ? "opacity-100" : "opacity-0"
+                    tempSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
                   }`}
                 />
                 {role}
               </CommandItem>
             ))}
           </CommandGroup>
+          <div className="p-2 border-t flex gap-2">
+            <Button
+              size="sm"
+              onClick={handleApply}
+              className="flex-1"
+            >
+              Apply
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCancel}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          </div>
         </Command>
       </PopoverContent>
     </Popover>

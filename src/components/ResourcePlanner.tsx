@@ -12,13 +12,13 @@ import MultiRoleSelector from './MultiRoleSelector';
 import { AddProjectDialog } from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
-import { getSprintDateRange } from '../utils/sprintUtils';
+import { getSprintDateRange, isSprintActive } from '../utils/sprintUtils';
 import { Project } from '../types';
 import { Button } from '@/components/ui/button';
 import { Plus, UserPlus } from 'lucide-react';
 
 const ResourcePlanner: React.FC = () => {
-  const { employees, loading } = usePlanner();
+  const { employees = [], loading } = usePlanner(); // Default to empty array
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -40,13 +40,17 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
-  // Get unique roles from employees
-  const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
+  // Get unique roles from employees with safety check
+  const uniqueRoles = employees && employees.length > 0 
+    ? Array.from(new Set(employees.map(emp => emp.role).filter(Boolean)))
+    : [];
   
-  // Filter employees by selected roles
-  const filteredEmployees = selectedRoles.length === 0 
-    ? employees 
-    : employees.filter(emp => selectedRoles.includes(emp.role));
+  // Filter employees by selected roles with safety checks
+  const filteredEmployees = (employees && employees.length > 0) 
+    ? (selectedRoles.length === 0 
+        ? employees 
+        : employees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
+    : [];
 
   // Calculate fixed column width for consistent alignment
   const employeeColumnWidth = 200;
@@ -121,18 +125,27 @@ const ResourcePlanner: React.FC = () => {
                     {sprints.map((sprint) => (
                       <div
                         key={sprint.id}
-                        className="flex-shrink-0 p-2 text-center text-sm font-medium text-gray-700 border-r bg-gray-50"
+                        className={`flex-shrink-0 p-2 text-center text-sm font-medium border-r ${
+                          isSprintActive(sprint) 
+                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            : 'text-gray-700 bg-gray-50'
+                        }`}
                         style={{ width: `${sprintColumnWidth}px` }}
                       >
                         <div className="truncate font-semibold" title={sprint.name}>
                           {sprint.name}
                         </div>
-                        <div className="text-xs text-gray-600 mt-1">
+                        <div className="text-xs mt-1">
                           {getSprintDateRange(sprint)}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {sprint.workingDays.length} days
                         </div>
+                        {isSprintActive(sprint) && (
+                          <div className="text-xs font-bold text-blue-600 mt-1">
+                            ACTIVE
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

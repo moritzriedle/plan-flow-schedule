@@ -10,10 +10,9 @@ export const getSprintLabel = (sprintNumber: number, startDate: Date): string =>
 // Calculate sprint number based on the year and the specific sprint cycle
 const calculateSprintNumber = (startDate: Date): number => {
   const year = getYear(startDate);
-  const currentYear = new Date().getFullYear();
   
-  // Reference: Sprint 13 starts on July 23rd, 2024 (Monday)
-  const referenceDate = new Date(2024, 6, 23); // July 23rd, 2024
+  // Reference: Sprint 13 starts on June 23rd, 2024 (Monday)
+  const referenceDate = new Date(2024, 5, 23); // June 23rd, 2024 (month is 0-indexed)
   const referenceSprintNumber = 13;
   
   if (year === 2024) {
@@ -46,8 +45,8 @@ const calculateSprintNumber = (startDate: Date): number => {
 export const generateSprints = (startDate: Date, numSprints: number): Sprint[] => {
   const sprints: Sprint[] = [];
   
-  // Start with Sprint 13 on July 23rd, 2024 as reference
-  const referenceDate = new Date(2024, 6, 23); // July 23rd, 2024 (Monday)
+  // Start with Sprint 13 on June 23rd, 2024 as reference
+  const referenceDate = new Date(2024, 5, 23); // June 23rd, 2024 (Monday)
   
   // Find the current sprint based on today's date
   const today = new Date();
@@ -57,10 +56,8 @@ export const generateSprints = (startDate: Date, numSprints: number): Sprint[] =
   const weeksSinceReference = Math.floor((today.getTime() - referenceDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
   const sprintsSinceReference = Math.floor(weeksSinceReference / 2);
   
-  // Adjust start date to show sprints around current date
-  const sprintsToShowBefore = Math.floor(numSprints / 3); // Show some sprints before current
-  const adjustedStartSprint = sprintsSinceReference - sprintsToShowBefore;
-  currentSprintStart = addWeeks(referenceDate, adjustedStartSprint * 2);
+  // Start from current sprint (no past sprints)
+  currentSprintStart = addWeeks(referenceDate, sprintsSinceReference * 2);
   
   for (let i = 0; i < numSprints; i++) {
     const sprintStartDate = addWeeks(currentSprintStart, i * 2);
@@ -97,4 +94,10 @@ export const generateSprints = (startDate: Date, numSprints: number): Sprint[] =
 // Helper function to get sprint date range display
 export const getSprintDateRange = (sprint: Sprint): string => {
   return `${format(sprint.startDate, 'MMM d')} - ${format(sprint.endDate, 'MMM d')}`;
+};
+
+// Helper function to check if a sprint is currently active
+export const isSprintActive = (sprint: Sprint): boolean => {
+  const today = new Date();
+  return today >= sprint.startDate && today <= sprint.endDate;
 };

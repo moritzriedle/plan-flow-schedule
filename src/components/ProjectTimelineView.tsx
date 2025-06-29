@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChartContainer } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DetailedAllocationDialog } from './DetailedAllocationDialog';
+import { getSprintDateRange } from '../utils/sprintUtils';
 
 interface ProjectTimelineViewProps {
   project: Project | null;
@@ -29,7 +30,7 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   isOpen, 
   onClose 
 }) => {
-  const { sprints, employees, getProjectAllocations, getEmployeeById, addAllocation } = usePlanner();
+  const { sprints, employees = [], getProjectAllocations, getEmployeeById, addAllocation } = usePlanner();
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isAllocationDialogOpen, setIsAllocationDialogOpen] = useState(false);
@@ -38,18 +39,20 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
 
   const allocations = getProjectAllocations(project.id);
   
-  // Get unique roles from employees who have allocations on this project
+  // Get unique roles from employees who have allocations on this project with safety checks
   const projectEmployeeIds = Array.from(new Set(allocations.map(a => a.employeeId)));
   const projectEmployees = projectEmployeeIds
     .map(id => getEmployeeById(id))
     .filter(Boolean) as Employee[];
   
-  const uniqueRoles = Array.from(new Set(projectEmployees.map(emp => emp.role)));
+  const uniqueRoles = projectEmployees && projectEmployees.length > 0
+    ? Array.from(new Set(projectEmployees.map(emp => emp.role).filter(Boolean)))
+    : [];
   
   // Filter employees by selected role
   const filteredEmployees = selectedRole === 'all' 
     ? projectEmployees 
-    : projectEmployees.filter(emp => emp.role === selectedRole);
+    : projectEmployees.filter(emp => emp && emp.role === selectedRole);
   
   // Group allocations by sprint
   const allocationsBySprint = sprints.map(sprint => {
@@ -79,7 +82,7 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   // Format data for chart
   const chartData = allocationsBySprint.map(sprintData => {
     const data: any = {
-      name: sprintData.sprint.name,
+      name: `${sprintData.sprint.name} (${getSprintDateRange(sprintData.sprint)})`,
       Total: sprintData.totalDays,
     };
     
@@ -237,7 +240,10 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
               {allocationsBySprint.map((sprintData, index) => (
                 <div key={index} className="border rounded-md p-3">
                   <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">{sprintData.sprint.name}</h4>
+                    <div>
+                      <h4 className="font-medium">{sprintData.sprint.name}</h4>
+                      <p className="text-sm text-gray-600">{getSprintDateRange(sprintData.sprint)}</p>
+                    </div>
                     <Badge variant="outline">
                       {sprintData.totalDays} {sprintData.totalDays === 1 ? 'day' : 'days'} total
                     </Badge>
