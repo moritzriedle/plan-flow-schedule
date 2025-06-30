@@ -1,9 +1,9 @@
-
 export interface Employee {
   id: string;
   name: string;
   role: string;
   imageUrl?: string;
+  vacationDates?: string[]; // Array of date strings in YYYY-MM-DD format
 }
 
 export interface Project {
@@ -13,6 +13,7 @@ export interface Project {
   startDate: Date;
   endDate: Date;
   leadId?: string;
+  ticketReference?: string;
 }
 
 export interface Sprint {

@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Employee } from '@/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { ROLE_OPTIONS } from '@/constants/roles';
+import VacationDateSelector from './VacationDateSelector';
 
 interface EmployeeEditorProps {
   employee: Employee;
@@ -23,6 +26,7 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
   const [name, setName] = useState(employee.name);
   const [role, setRole] = useState(employee.role);
   const [imageUrl, setImageUrl] = useState(employee.imageUrl || '');
+  const [vacationDates, setVacationDates] = useState(employee.vacationDates || []);
 
   // Get initials from name
   const getInitials = (name: string) => {
@@ -39,7 +43,8 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
       ...employee,
       name,
       role,
-      imageUrl: imageUrl || undefined
+      imageUrl: imageUrl || undefined,
+      vacationDates
     });
     toast.success("Employee details updated");
     onClose();
@@ -47,7 +52,7 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent>
+      <SheetContent className="w-96">
         <SheetHeader>
           <SheetTitle>Edit Team Member</SheetTitle>
         </SheetHeader>
@@ -80,13 +85,18 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
           
           <div className="space-y-2">
             <label htmlFor="role" className="text-sm font-medium">Role</label>
-            <Input 
-              id="role" 
-              value={role} 
-              onChange={(e) => setRole(e.target.value)} 
-              placeholder="Enter professional role"
-              required
-            />
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((roleOption) => (
+                  <SelectItem key={roleOption} value={roleOption}>
+                    {roleOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
@@ -98,6 +108,14 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
               placeholder="https://example.com/image.jpg (optional)"
             />
             <p className="text-xs text-gray-500">Leave empty to use initials</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Vacation Dates</label>
+            <VacationDateSelector
+              selectedDates={vacationDates}
+              onDatesChange={setVacationDates}
+            />
           </div>
           
           <SheetFooter className="pt-4">

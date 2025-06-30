@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { DragItem } from '../types';
@@ -23,7 +22,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
   days, 
   sprintId 
 }) => {
-  const { getProjectById, deleteAllocation, updateAllocation } = usePlanner();
+  const { getProjectById, deleteAllocation, updateAllocation, getAvailableDays, getTotalAllocationDays } = usePlanner();
   const project = getProjectById(projectId);
   const [isUpdating, setIsUpdating] = useState(false);
   
@@ -46,6 +45,9 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
 
   if (!project) return null;
 
+  const availableDays = getAvailableDays(employeeId, sprintId);
+  const totalAllocated = getTotalAllocationDays(employeeId, sprintId);
+
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsUpdating(true);
@@ -59,7 +61,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
 
   const handleIncreaseDays = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (days < 10 && !isUpdating) { // Max 10 days for sprint
+    if (days < availableDays && totalAllocated < availableDays && !isUpdating) {
       setIsUpdating(true);
       
       try {
@@ -141,7 +143,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
               size="icon" 
               className="h-4 w-4 rounded-full p-0"
               onClick={handleIncreaseDays}
-              disabled={days >= 10 || isUpdating}
+              disabled={days >= availableDays || totalAllocated >= availableDays || isUpdating}
             >
               <Plus className="h-2 w-2" />
             </Button>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDrop } from 'react-dnd';
 import { DragItem } from '../types';
@@ -12,7 +11,7 @@ interface DroppableCellProps {
 }
 
 const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) => {
-  const { allocations, moveAllocation, getTotalAllocationDays } = usePlanner();
+  const { allocations, moveAllocation, getTotalAllocationDays, getAvailableDays } = usePlanner();
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -22,8 +21,8 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
   );
   
   const totalDays = getTotalAllocationDays(employeeId, sprintId);
-  const maxDays = 10; // Sprint maximum is 10 days
-  const isOverallocated = totalDays > maxDays;
+  const availableDays = getAvailableDays(employeeId, sprintId);
+  const isOverallocated = totalDays > availableDays;
 
   // Set up drop functionality
   const [{ isOverCurrent }, drop] = useDrop({
@@ -83,7 +82,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
     >
       <div className="mb-1 flex justify-between items-center">
         <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>
-          {totalDays}/{maxDays} days
+          {totalDays}/{availableDays} days
         </span>
         {isOverallocated && (
           <span className="text-xs text-red-500 font-bold">!</span>
@@ -92,6 +91,12 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
           <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
         )}
       </div>
+      
+      {availableDays < 10 && (
+        <div className="text-xs text-orange-500 mb-1">
+          {10 - availableDays} vacation days
+        </div>
+      )}
       
       {cellAllocations.map((allocation) => (
         <AllocationItem

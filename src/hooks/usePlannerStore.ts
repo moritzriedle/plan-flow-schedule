@@ -93,7 +93,8 @@ export const usePlannerStore = () => {
           id: profile.id,
           name: profile.name,
           role: profile.role,
-          imageUrl: profile.image_url
+          imageUrl: profile.image_url,
+          vacationDates: profile.vacation_dates || []
         }));
         
         // Fetch projects
@@ -111,7 +112,8 @@ export const usePlannerStore = () => {
           color: project.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
           startDate: new Date(),  
           endDate: new Date(),    
-          leadId: project.lead_id
+          leadId: project.lead_id,
+          ticketReference: project.ticket_reference
         }));
         
         // Fetch allocations
@@ -242,7 +244,8 @@ export const usePlannerStore = () => {
         .update({
           name: updatedEmployee.name,
           role: updatedEmployee.role,
-          image_url: updatedEmployee.imageUrl
+          image_url: updatedEmployee.imageUrl,
+          vacation_dates: updatedEmployee.vacationDates || []
         })
         .eq('id', updatedEmployee.id);
         
@@ -278,7 +281,8 @@ export const usePlannerStore = () => {
         .insert({
           name: project.name,
           color: project.color,
-          lead_id: project.leadId
+          lead_id: project.leadId,
+          ticket_reference: project.ticketReference
         })
         .select()
         .single();
@@ -291,7 +295,8 @@ export const usePlannerStore = () => {
         color: data.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
         startDate: project.startDate,
         endDate: project.endDate,
-        leadId: data.lead_id
+        leadId: data.lead_id,
+        ticketReference: data.ticket_reference
       };
       
       setProjects(prev => [...prev, newProject]);
@@ -317,7 +322,8 @@ export const usePlannerStore = () => {
         .update({
           name: updatedProject.name,
           color: updatedProject.color,
-          lead_id: updatedProject.leadId
+          lead_id: updatedProject.leadId,
+          ticket_reference: updatedProject.ticketReference
         })
         .eq('id', updatedProject.id);
         
@@ -670,6 +676,23 @@ export const usePlannerStore = () => {
     }
   }, [sprints, getProjectById, addAllocation, user, profile]);
 
+  // Helper function to calculate available days for an employee in a sprint (accounting for vacation)
+  const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
+    const employee = getEmployeeById(employeeId);
+    if (!employee || !employee.vacationDates) return 10; // Default sprint days
+    
+    const sprint = sprints.find(s => s.id === sprintId);
+    if (!sprint) return 10;
+    
+    // Count vacation days that fall within the sprint
+    const vacationDaysInSprint = employee.vacationDates.filter(vacationDate => {
+      const date = new Date(vacationDate);
+      return date >= sprint.startDate && date <= sprint.endDate;
+    }).length;
+    
+    return Math.max(0, 10 - vacationDaysInSprint);
+  }, [employees, sprints, getEmployeeById]);
+
   return {
     employees,
     projects,
@@ -690,6 +713,7 @@ export const usePlannerStore = () => {
     getEmployeeById,
     getTotalAllocationDays,
     getProjectAllocations,
-    allocateToProjectTimeline
+    allocateToProjectTimeline,
+    getAvailableDays
   };
 };
