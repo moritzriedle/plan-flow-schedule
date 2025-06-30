@@ -3,21 +3,18 @@ import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePlanner } from '../contexts/PlannerContext';
-import EmployeeRow from './EmployeeRow';
-import DroppableCell from './DroppableCell';
 import ProjectsSidebar from './ProjectsSidebar';
 import ProjectTimelineView from './ProjectTimelineView';
-import TimeframeSelector from './TimeframeSelector';
-import MultiRoleSelector from './MultiRoleSelector';
 import EmployeeEditor from './EmployeeEditor';
 import { AddProjectDialog } from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { DetailedAllocationDialog } from './DetailedAllocationDialog';
+import ResourcePlannerHeader from './ResourcePlannerHeader';
+import ResourcePlannerGrid from './ResourcePlannerGrid';
 import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
-import { getSprintDateRange, isSprintActive } from '../utils/sprintUtils';
 import { Project, Employee } from '../types';
 import { Button } from '@/components/ui/button';
-import { Plus, UserPlus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ROLE_OPTIONS } from '@/constants/roles';
 
 const ResourcePlanner: React.FC = () => {
@@ -88,8 +85,8 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
-  // Convert ROLE_OPTIONS from readonly to mutable array
-  const availableRoles = [...ROLE_OPTIONS];
+  // Convert ROLE_OPTIONS to mutable array and ensure it's always an array
+  const availableRoles = Array.isArray(ROLE_OPTIONS) ? [...ROLE_OPTIONS] : [];
   
   // Filter employees by selected roles with safety checks
   const safeEmployees = Array.isArray(employees) ? employees : [];
@@ -98,12 +95,6 @@ const ResourcePlanner: React.FC = () => {
         ? safeEmployees 
         : safeEmployees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
     : [];
-
-  // Calculate fixed column width for consistent alignment
-  const employeeColumnWidth = 200;
-  const sprintColumnWidth = 150;
-  const safeSprints = Array.isArray(sprints) ? sprints : [];
-  const totalSprintsWidth = safeSprints.length * sprintColumnWidth;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -130,115 +121,21 @@ const ResourcePlanner: React.FC = () => {
         </div>
         
         <div className="flex-1 overflow-hidden">
-          <div className="p-4 border-b bg-white space-y-4">
-            <div className="flex justify-between items-center">
-              <TimeframeSelector
-                timeframe={timeframe}
-                onTimeframeChange={setTimeframe}
-              />
-              
-              <Button 
-                onClick={() => setIsAddEmployeeDialogOpen(true)}
-                variant="outline"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Team Member
-              </Button>
-            </div>
-            
-            {/* Role Filter */}
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium">Filter by Role:</label>
-              <MultiRoleSelector
-                roles={availableRoles}
-                selectedRoles={selectedRoles}
-                onRoleChange={setSelectedRoles}
-                placeholder="All Roles"
-              />
-            </div>
-          </div>
+          <ResourcePlannerHeader
+            timeframe={timeframe}
+            onTimeframeChange={setTimeframe}
+            selectedRoles={selectedRoles}
+            onRoleChange={setSelectedRoles}
+            availableRoles={availableRoles}
+            onAddProject={() => setIsAddProjectDialogOpen(true)}
+            onAddEmployee={() => setIsAddEmployeeDialogOpen(true)}
+          />
           
-          <div className="flex-1 overflow-auto">
-            <div className="min-w-max">
-              {/* Fixed Header Row */}
-              <div className="sticky top-0 z-10 bg-white border-b-2 border-gray-200 shadow-sm">
-                <div className="flex">
-                  {/* Employee Column Header */}
-                  <div 
-                    className="flex-shrink-0 p-4 font-semibold text-gray-700 border-r bg-gray-50"
-                    style={{ width: `${employeeColumnWidth}px` }}
-                  >
-                    Team Members
-                  </div>
-                  
-                  {/* Sprint Headers */}
-                  <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
-                    {safeSprints.map((sprint) => (
-                      <div
-                        key={sprint.id}
-                        className={`flex-shrink-0 p-2 text-center text-sm font-medium border-r ${
-                          isSprintActive(sprint) 
-                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                            : 'text-gray-700 bg-gray-50'
-                        }`}
-                        style={{ width: `${sprintColumnWidth}px` }}
-                      >
-                        <div className="truncate font-semibold" title={sprint.name}>
-                          {sprint.name}
-                        </div>
-                        <div className="text-xs mt-1">
-                          {getSprintDateRange(sprint)}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {sprint.workingDays?.length || 0} days
-                        </div>
-                        {isSprintActive(sprint) && (
-                          <div className="text-xs font-bold text-blue-600 mt-1">
-                            ACTIVE
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Employee Rows */}
-              <div className="divide-y divide-gray-200">
-                {filteredEmployees.map((employee) => (
-                  <div key={employee.id} className="flex hover:bg-gray-50/50">
-                    {/* Employee Info Column */}
-                    <div 
-                      className="flex-shrink-0 border-r bg-white"
-                      style={{ width: `${employeeColumnWidth}px` }}
-                    >
-                      <EmployeeRow 
-                        employee={employee} 
-                        sprints={safeSprints}
-                        onEmployeeEdit={handleEmployeeEdit}
-                      />
-                    </div>
-                    
-                    {/* Allocation Columns */}
-                    <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
-                      {safeSprints.map((sprint) => (
-                        <div
-                          key={`${employee.id}-${sprint.id}`}
-                          className="flex-shrink-0"
-                          style={{ width: `${sprintColumnWidth}px` }}
-                        >
-                          <DroppableCell
-                            employeeId={employee.id}
-                            sprintId={sprint.id}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <ResourcePlannerGrid
+            filteredEmployees={filteredEmployees}
+            sprints={Array.isArray(sprints) ? sprints : []}
+            onEmployeeEdit={handleEmployeeEdit}
+          />
         </div>
       </div>
 

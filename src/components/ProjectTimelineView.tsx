@@ -23,26 +23,29 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   selectedRoles,
   onRoleChange
 }) => {
-  const { employees = [], allocations, sprints } = usePlanner();
+  const { employees = [], allocations = [], sprints = [] } = usePlanner();
 
   if (!project) return null;
 
-  // Convert ROLE_OPTIONS from readonly to mutable array
-  const availableRoles = [...ROLE_OPTIONS];
+  // Convert ROLE_OPTIONS to mutable array with safety check
+  const availableRoles = Array.isArray(ROLE_OPTIONS) ? [...ROLE_OPTIONS] : [];
 
-  // Filter employees by selected roles
-  const filteredEmployees = Array.isArray(employees) && employees.length > 0
+  // Filter employees by selected roles with comprehensive safety checks
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const filteredEmployees = safeEmployees.length > 0
     ? (selectedRoles.length === 0 
-        ? employees 
-        : employees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
+        ? safeEmployees 
+        : safeEmployees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
     : [];
 
-  // Get project allocations
-  const projectAllocations = allocations.filter(alloc => alloc.projectId === project.id);
+  // Get project allocations with safety checks
+  const safeAllocations = Array.isArray(allocations) ? allocations : [];
+  const projectAllocations = safeAllocations.filter(alloc => alloc && alloc.projectId === project.id);
   
   // Get unique sprints for this project
   const projectSprintIds = Array.from(new Set(projectAllocations.map(alloc => alloc.sprintId)));
-  const projectSprints = sprints.filter(sprint => projectSprintIds.includes(sprint.id)).sort((a, b) => 
+  const safeSprints = Array.isArray(sprints) ? sprints : [];
+  const projectSprints = safeSprints.filter(sprint => sprint && projectSprintIds.includes(sprint.id)).sort((a, b) => 
     a.startDate.getTime() - b.startDate.getTime()
   );
 

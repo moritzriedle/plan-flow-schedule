@@ -6,17 +6,18 @@ import { startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, format } from '
 import { ROLE_OPTIONS } from '@/constants/roles';
 
 const ProfessionView: React.FC = () => {
-  const { employees = [], allocations, projects, sprints } = usePlanner();
+  const { employees = [], allocations = [], projects = [], sprints = [] } = usePlanner();
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
-  // Convert ROLE_OPTIONS from readonly to mutable array
-  const availableRoles = [...ROLE_OPTIONS];
+  // Convert ROLE_OPTIONS to mutable array with safety check
+  const availableRoles = Array.isArray(ROLE_OPTIONS) ? [...ROLE_OPTIONS] : [];
 
-  // Filter employees by selected roles
-  const filteredEmployees = Array.isArray(employees) && employees.length > 0
+  // Filter employees by selected roles with comprehensive safety checks
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const filteredEmployees = safeEmployees.length > 0
     ? (selectedRoles.length === 0 
-        ? employees 
-        : employees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
+        ? safeEmployees 
+        : safeEmployees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
     : [];
 
   // Generate months starting from June 2025
@@ -40,21 +41,23 @@ const ProfessionView: React.FC = () => {
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
   
-    // Filter allocations for the employee
-    const employeeAllocations = allocations.filter(alloc => alloc.employeeId === employeeId);
+    // Filter allocations for the employee with safety checks
+    const safeAllocations = Array.isArray(allocations) ? allocations : [];
+    const employeeAllocations = safeAllocations.filter(alloc => alloc && alloc.employeeId === employeeId);
   
     let totalDays = 0;
   
     // Iterate through each allocation to check if it falls within the specified month
     employeeAllocations.forEach(allocation => {
-      const sprint = sprints.find(s => s.id === allocation.sprintId);
-      if (sprint) {
+      const safeSprints = Array.isArray(sprints) ? sprints : [];
+      const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
+      if (sprint && sprint.startDate) {
         const sprintYear = sprint.startDate.getFullYear();
         const sprintMonth = sprint.startDate.getMonth();
   
         // Check if the sprint falls within the specified month
         if (sprintYear === year && sprintMonth === monthIndex) {
-          totalDays += allocation.days;
+          totalDays += allocation.days || 0;
         }
       }
     });

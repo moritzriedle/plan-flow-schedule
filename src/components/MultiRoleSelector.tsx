@@ -21,6 +21,11 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   const [open, setOpen] = React.useState(false);
 
   const handleRoleToggle = (role: string) => {
+    if (!Array.isArray(selectedRoles)) {
+      onRoleChange([role]);
+      return;
+    }
+    
     const newSelectedRoles = selectedRoles.includes(role)
       ? selectedRoles.filter(r => r !== role)
       : [...selectedRoles, role];
@@ -33,17 +38,22 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   };
 
   const handleSelectAll = () => {
+    if (!Array.isArray(roles) || roles.length === 0) {
+      onRoleChange([]);
+      return;
+    }
     onRoleChange([...roles]);
   };
 
   const getDisplayText = () => {
-    if (selectedRoles.length === 0) return placeholder;
+    if (!Array.isArray(selectedRoles) || selectedRoles.length === 0) return placeholder;
     if (selectedRoles.length === 1) return selectedRoles[0];
     return `${selectedRoles.length} roles selected`;
   };
 
-  // Safety check to ensure roles is an array
+  // Safety check to ensure roles is an array and has content
   const safeRoles = Array.isArray(roles) ? roles : [];
+  const safeSelectedRoles = Array.isArray(selectedRoles) ? selectedRoles : [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -70,7 +80,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
                 variant="ghost"
                 onClick={handleSelectAll}
                 className="flex-1 text-xs"
-                disabled={selectedRoles.length === safeRoles.length}
+                disabled={safeSelectedRoles.length === safeRoles.length}
               >
                 Select All
               </Button>
@@ -79,7 +89,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
                 variant="ghost"
                 onClick={handleClearAll}
                 className="flex-1 text-xs"
-                disabled={selectedRoles.length === 0}
+                disabled={safeSelectedRoles.length === 0}
               >
                 Clear All
               </Button>
@@ -94,7 +104,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
               >
                 <Check
                   className={`mr-2 h-4 w-4 ${
-                    selectedRoles.includes(role) ? "opacity-100" : "opacity-0"
+                    safeSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
                   }`}
                 />
                 <span className="truncate">{role}</span>
