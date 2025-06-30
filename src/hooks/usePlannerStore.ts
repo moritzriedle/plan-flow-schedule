@@ -94,7 +94,7 @@ export const usePlannerStore = () => {
           name: profile.name,
           role: profile.role,
           imageUrl: profile.image_url || undefined,
-          vacationDates: Array.isArray(profile.vacation_dates) ? profile.vacation_dates as string[] : []
+          vacationDates: Array.isArray((profile as any).vacation_dates) ? (profile as any).vacation_dates as string[] : []
         }));
         
         // Fetch projects
@@ -113,7 +113,7 @@ export const usePlannerStore = () => {
           startDate: new Date(),  
           endDate: new Date(),    
           leadId: project.lead_id || undefined,
-          ticketReference: project.ticket_reference || undefined
+          ticketReference: (project as any).ticket_reference || undefined
         }));
         
         // Fetch allocations
@@ -246,7 +246,7 @@ export const usePlannerStore = () => {
           role: updatedEmployee.role,
           image_url: updatedEmployee.imageUrl,
           vacation_dates: updatedEmployee.vacationDates || []
-        })
+        } as any)
         .eq('id', updatedEmployee.id);
         
       if (error) throw error;
@@ -283,7 +283,7 @@ export const usePlannerStore = () => {
           color: project.color,
           lead_id: project.leadId,
           ticket_reference: project.ticketReference
-        })
+        } as any)
         .select()
         .single();
         
@@ -296,7 +296,7 @@ export const usePlannerStore = () => {
         startDate: project.startDate,
         endDate: project.endDate,
         leadId: data.lead_id,
-        ticketReference: data.ticket_reference
+        ticketReference: (data as any).ticket_reference
       };
       
       setProjects(prev => [...prev, newProject]);
@@ -324,7 +324,7 @@ export const usePlannerStore = () => {
           color: updatedProject.color,
           lead_id: updatedProject.leadId,
           ticket_reference: updatedProject.ticketReference
-        })
+        } as any)
         .eq('id', updatedProject.id);
         
       if (error) throw error;
