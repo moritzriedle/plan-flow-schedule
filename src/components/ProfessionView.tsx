@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { usePlanner } from '../contexts/PlannerContext';
 import MultiRoleSelector from './MultiRoleSelector';
-import { startOfMonth, addMonths, format } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, format } from 'date-fns';
 import { ROLE_OPTIONS } from '@/constants/roles';
 
 const ProfessionView: React.FC = () => {
@@ -22,8 +23,17 @@ const ProfessionView: React.FC = () => {
   const startDate = new Date(2025, 5, 1); // June 2025 (month is 0-indexed)
   const months = [];
   for (let i = 0; i < 12; i++) {
-    months.push(addMonths(startDate, i));
+    const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+    months.push(monthStart);
   }
+
+  // Calculate working days in a month (Monday to Friday)
+  const getWorkingDaysInMonth = (month: Date): number => {
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+    const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    return allDays.filter(day => !isWeekend(day)).length;
+  };
 
   // Helper function to get allocations for a specific employee and month
   const getAllocationDaysForMonth = (employeeId: string, month: Date): number => {
@@ -52,6 +62,15 @@ const ProfessionView: React.FC = () => {
     return totalDays;
   };
 
+  // Calculate utilization percentage
+  const getUtilizationPercentage = (employeeId: string, month: Date): number => {
+    const allocatedDays = getAllocationDaysForMonth(employeeId, month);
+    const workingDays = getWorkingDaysInMonth(month);
+    
+    if (workingDays === 0) return 0;
+    return Math.round((allocatedDays / workingDays) * 100);
+  };
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex justify-between items-center">
@@ -75,8 +94,11 @@ const ProfessionView: React.FC = () => {
           <div className="flex border-b-2 border-gray-200 bg-gray-50">
             <div className="w-48 p-3 font-semibold border-r">Team Member</div>
             {months.map((month) => (
-              <div key={month.toISOString()} className="w-24 p-2 text-center text-sm font-medium border-r">
-                {format(month, 'MMM yyyy')}
+              <div key={month.toISOString()} className="w-32 p-2 text-center text-sm font-medium border-r">
+                <div>{format(month, 'MMM yyyy')}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {getWorkingDaysInMonth(month)} working days
+                </div>
               </div>
             ))}
           </div>
@@ -90,14 +112,34 @@ const ProfessionView: React.FC = () => {
               </div>
               {months.map((month) => {
                 const monthlyAllocation = getAllocationDaysForMonth(employee.id, month);
+                const utilizationPercentage = getUtilizationPercentage(employee.id, month);
+                const workingDays = getWorkingDaysInMonth(month);
+                
                 return (
-                  <div key={month.toISOString()} className="w-24 p-2 text-center border-r">
+                  <div key={month.toISOString()} className="w-32 p-2 text-center border-r">
                     {monthlyAllocation > 0 ? (
-                      <span className="text-sm font-medium text-blue-600">
-                        {monthlyAllocation}d
-                      </span>
+                      <div>
+                        <span className="text-sm font-medium text-blue-600">
+                          {monthlyAllocation}d
+                        </span>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {utilizationPercentage}% of {workingDays}d
+                        </div>
+                        <div className={`text-xs mt-1 ${
+                          utilizationPercentage > 100 ? 'text-red-500' : 
+                          utilizationPercentage > 80 ? 'text-orange-500' : 
+                          'text-green-500'
+                        }`}>
+                          {utilizationPercentage > 100 ? 'Overallocated' : 
+                           utilizationPercentage > 80 ? 'High load' : 
+                           'Available'}
+                        </div>
+                      </div>
                     ) : (
-                      <span className="text-xs text-gray-400">-</span>
+                      <div>
+                        <span className="text-xs text-gray-400">-</span>
+                        <div className="text-xs text-green-500 mt-1">Available</div>
+                      </div>
                     )}
                   </div>
                 );

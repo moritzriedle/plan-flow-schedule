@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -11,6 +12,7 @@ import MultiRoleSelector from './MultiRoleSelector';
 import EmployeeEditor from './EmployeeEditor';
 import { AddProjectDialog } from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
+import { DetailedAllocationDialog } from './DetailedAllocationDialog';
 import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
 import { getSprintDateRange, isSprintActive } from '../utils/sprintUtils';
 import { Project, Employee } from '../types';
@@ -19,7 +21,7 @@ import { Plus, UserPlus } from 'lucide-react';
 import { ROLE_OPTIONS } from '@/constants/roles';
 
 const ResourcePlanner: React.FC = () => {
-  const { employees = [], loading } = usePlanner();
+  const { employees = [], loading, allocateToProjectTimeline } = usePlanner();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -27,6 +29,9 @@ const ResourcePlanner: React.FC = () => {
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isEmployeeEditorOpen, setIsEmployeeEditorOpen] = useState(false);
+  const [isDetailedAllocationOpen, setIsDetailedAllocationOpen] = useState(false);
+  const [allocationEmployee, setAllocationEmployee] = useState<Employee | null>(null);
+  const [allocationProject, setAllocationProject] = useState<Project | null>(null);
   
   const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
 
@@ -45,6 +50,36 @@ const ResourcePlanner: React.FC = () => {
     setIsEmployeeEditorOpen(false);
   };
 
+  const handleDetailedAllocation = (employee: Employee, project: Project) => {
+    setAllocationEmployee(employee);
+    setAllocationProject(project);
+    setIsDetailedAllocationOpen(true);
+  };
+
+  const handleAllocationComplete = async (params: {
+    employeeId: string;
+    projectId: string;
+    startDate: Date;
+    endDate: Date;
+    daysPerWeek: number;
+  }) => {
+    const daysPerWeekMap: { [key: number]: 1 | 3 | 5 } = {
+      1: 1,
+      2: 1,
+      3: 3,
+      4: 3,
+      5: 5
+    };
+    
+    const mappedDaysPerWeek = daysPerWeekMap[params.daysPerWeek] || 5;
+    
+    await allocateToProjectTimeline(
+      params.employeeId,
+      params.projectId,
+      mappedDaysPerWeek
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -57,16 +92,18 @@ const ResourcePlanner: React.FC = () => {
   const availableRoles = [...ROLE_OPTIONS];
   
   // Filter employees by selected roles with safety checks
-  const filteredEmployees = Array.isArray(employees) && employees.length > 0
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const filteredEmployees = safeEmployees.length > 0
     ? (selectedRoles.length === 0 
-        ? employees 
-        : employees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
+        ? safeEmployees 
+        : safeEmployees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
     : [];
 
   // Calculate fixed column width for consistent alignment
   const employeeColumnWidth = 200;
   const sprintColumnWidth = 150;
-  const totalSprintsWidth = sprints.length * sprintColumnWidth;
+  const safeSprints = Array.isArray(sprints) ? sprints : [];
+  const totalSprintsWidth = safeSprints.length * sprintColumnWidth;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -86,7 +123,10 @@ const ResourcePlanner: React.FC = () => {
               Add Project
             </Button>
           </div>
-          <ProjectsSidebar />
+          <ProjectsSidebar 
+            onProjectTimelineOpen={handleProjectTimelineOpen}
+            onDetailedAllocation={handleDetailedAllocation}
+          />
         </div>
         
         <div className="flex-1 overflow-hidden">
@@ -133,7 +173,7 @@ const ResourcePlanner: React.FC = () => {
                   
                   {/* Sprint Headers */}
                   <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
-                    {sprints.map((sprint) => (
+                    {safeSprints.map((sprint) => (
                       <div
                         key={sprint.id}
                         className={`flex-shrink-0 p-2 text-center text-sm font-medium border-r ${
@@ -150,7 +190,7 @@ const ResourcePlanner: React.FC = () => {
                           {getSprintDateRange(sprint)}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {sprint.workingDays.length} days
+                          {sprint.workingDays?.length || 0} days
                         </div>
                         {isSprintActive(sprint) && (
                           <div className="text-xs font-bold text-blue-600 mt-1">
@@ -174,14 +214,14 @@ const ResourcePlanner: React.FC = () => {
                     >
                       <EmployeeRow 
                         employee={employee} 
-                        sprints={sprints}
+                        sprints={safeSprints}
                         onEmployeeEdit={handleEmployeeEdit}
                       />
                     </div>
                     
                     {/* Allocation Columns */}
                     <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
-                      {sprints.map((sprint) => (
+                      {safeSprints.map((sprint) => (
                         <div
                           key={`${employee.id}-${sprint.id}`}
                           className="flex-shrink-0"
@@ -228,6 +268,20 @@ const ResourcePlanner: React.FC = () => {
           employee={selectedEmployee}
           isOpen={isEmployeeEditorOpen}
           onClose={handleEmployeeEditorClose}
+        />
+      )}
+
+      {allocationEmployee && allocationProject && (
+        <DetailedAllocationDialog
+          isOpen={isDetailedAllocationOpen}
+          onClose={() => {
+            setIsDetailedAllocationOpen(false);
+            setAllocationEmployee(null);
+            setAllocationProject(null);
+          }}
+          employee={allocationEmployee}
+          project={allocationProject}
+          onAllocate={handleAllocationComplete}
         />
       )}
     </DndProvider>

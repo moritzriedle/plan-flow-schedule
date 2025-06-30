@@ -51,17 +51,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer profile fetch to avoid auth state callback issues
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+          await fetchProfile(session.user.id);
         } else {
           setProfile(null);
         }
@@ -70,15 +69,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        setTimeout(() => {
-          fetchProfile(session.user.id);
-        }, 0);
+        fetchProfile(session.user.id);
       }
       
       setLoading(false);
@@ -89,9 +86,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, name?: string, role?: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      // Use the current domain for redirect URL
+      const redirectUrl = window.location.origin;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -104,13 +102,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (error) {
+        console.error('Sign up error:', error);
         toast.error(error.message);
       } else {
-        toast.success('Check your email for the confirmation link!');
+        console.log('Sign up successful:', data);
+        toast.success('Please check your email for the confirmation link!');
       }
       
       return { error };
     } catch (error) {
+      console.error('Unexpected sign up error:', error);
       const errorMessage = 'An unexpected error occurred during sign up';
       toast.error(errorMessage);
       return { error: { message: errorMessage } };

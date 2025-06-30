@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Project } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import MultiRoleSelector from './MultiRoleSelector';
+import TicketReferenceInput from './TicketReferenceInput';
 import { getSprintDateRange } from '../utils/sprintUtils';
 import { ROLE_OPTIONS } from '@/constants/roles';
 
@@ -48,7 +50,17 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>{project.name} - Timeline View</DialogTitle>
+          <DialogTitle className="flex items-center gap-4">
+            <span>{project.name} - Timeline View</span>
+            {project.ticketReference && (
+              <div className="text-sm">
+                <TicketReferenceInput
+                  value={project.ticketReference}
+                  onChange={() => {}} // Read-only in this view
+                />
+              </div>
+            )}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
