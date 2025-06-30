@@ -93,8 +93,8 @@ export const usePlannerStore = () => {
           id: profile.id,
           name: profile.name,
           role: profile.role,
-          imageUrl: profile.image_url,
-          vacationDates: profile.vacation_dates || []
+          imageUrl: profile.image_url || undefined,
+          vacationDates: Array.isArray(profile.vacation_dates) ? profile.vacation_dates as string[] : []
         }));
         
         // Fetch projects
@@ -112,8 +112,8 @@ export const usePlannerStore = () => {
           color: project.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
           startDate: new Date(),  
           endDate: new Date(),    
-          leadId: project.lead_id,
-          ticketReference: project.ticket_reference
+          leadId: project.lead_id || undefined,
+          ticketReference: project.ticket_reference || undefined
         }));
         
         // Fetch allocations
@@ -678,7 +678,7 @@ export const usePlannerStore = () => {
 
   // Helper function to calculate available days for an employee in a sprint (accounting for vacation)
   const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
-    const employee = getEmployeeById(employeeId);
+    const employee = employees.find(emp => emp.id === employeeId);
     if (!employee || !employee.vacationDates) return 10; // Default sprint days
     
     const sprint = sprints.find(s => s.id === sprintId);
@@ -691,7 +691,7 @@ export const usePlannerStore = () => {
     }).length;
     
     return Math.max(0, 10 - vacationDaysInSprint);
-  }, [employees, sprints, getEmployeeById]);
+  }, [employees, sprints]);
 
   return {
     employees,
