@@ -19,31 +19,21 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   placeholder = "Select roles..."
 }) => {
   const [open, setOpen] = React.useState(false);
-  const [tempSelectedRoles, setTempSelectedRoles] = React.useState<string[]>([...selectedRoles]);
-
-  // Update temp selection when props change
-  React.useEffect(() => {
-    setTempSelectedRoles([...selectedRoles]);
-  }, [selectedRoles]);
 
   const handleRoleToggle = (role: string) => {
-    setTempSelectedRoles(prev => {
-      if (prev.includes(role)) {
-        return prev.filter(r => r !== role);
-      } else {
-        return [...prev, role];
-      }
-    });
+    const newSelectedRoles = selectedRoles.includes(role)
+      ? selectedRoles.filter(r => r !== role)
+      : [...selectedRoles, role];
+    
+    onRoleChange(newSelectedRoles);
   };
 
-  const handleApply = () => {
-    onRoleChange([...tempSelectedRoles]);
-    setOpen(false);
+  const handleClearAll = () => {
+    onRoleChange([]);
   };
 
-  const handleCancel = () => {
-    setTempSelectedRoles([...selectedRoles]);
-    setOpen(false);
+  const handleSelectAll = () => {
+    onRoleChange([...roles]);
   };
 
   const getDisplayText = () => {
@@ -64,7 +54,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
           aria-expanded={open}
           className="w-48 justify-between"
         >
-          {getDisplayText()}
+          <span className="truncate">{getDisplayText()}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -73,37 +63,44 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
           <CommandInput placeholder="Search roles..." />
           <CommandEmpty>No roles found.</CommandEmpty>
           <CommandGroup>
+            {/* Action buttons */}
+            <div className="p-2 border-b flex gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleSelectAll}
+                className="flex-1 text-xs"
+                disabled={selectedRoles.length === safeRoles.length}
+              >
+                Select All
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleClearAll}
+                className="flex-1 text-xs"
+                disabled={selectedRoles.length === 0}
+              >
+                Clear All
+              </Button>
+            </div>
+            
+            {/* Role options */}
             {safeRoles.map((role) => (
               <CommandItem
                 key={role}
                 onSelect={() => handleRoleToggle(role)}
+                className="cursor-pointer"
               >
                 <Check
                   className={`mr-2 h-4 w-4 ${
-                    tempSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
+                    selectedRoles.includes(role) ? "opacity-100" : "opacity-0"
                   }`}
                 />
-                {role}
+                <span className="truncate">{role}</span>
               </CommandItem>
             ))}
           </CommandGroup>
-          <div className="p-2 border-t flex gap-2">
-            <Button
-              size="sm"
-              onClick={handleApply}
-              className="flex-1"
-            >
-              Apply
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCancel}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          </div>
         </Command>
       </PopoverContent>
     </Popover>

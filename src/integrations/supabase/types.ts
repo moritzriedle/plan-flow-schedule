@@ -84,6 +84,7 @@ export type Database = {
           name: string
           role: string
           updated_at: string
+          vacation_dates: Json | null
         }
         Insert: {
           created_at?: string
@@ -93,6 +94,7 @@ export type Database = {
           name: string
           role: string
           updated_at?: string
+          vacation_dates?: Json | null
         }
         Update: {
           created_at?: string
@@ -102,6 +104,7 @@ export type Database = {
           name?: string
           role?: string
           updated_at?: string
+          vacation_dates?: Json | null
         }
         Relationships: []
       }
@@ -113,6 +116,7 @@ export type Database = {
           id: string
           lead_id: string | null
           name: string
+          ticket_reference: string | null
           updated_at: string
         }
         Insert: {
@@ -122,6 +126,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           name: string
+          ticket_reference?: string | null
           updated_at?: string
         }
         Update: {
@@ -131,6 +136,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           name?: string
+          ticket_reference?: string | null
           updated_at?: string
         }
         Relationships: [

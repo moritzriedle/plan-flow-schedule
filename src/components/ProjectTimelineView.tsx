@@ -5,6 +5,7 @@ import { Project } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import MultiRoleSelector from './MultiRoleSelector';
 import { getSprintDateRange } from '../utils/sprintUtils';
+import { ROLE_OPTIONS } from '@/constants/roles';
 
 interface ProjectTimelineViewProps {
   project: Project | null;
@@ -25,10 +26,8 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
 
   if (!project) return null;
 
-  // Get unique roles with safety checks
-  const uniqueRoles = Array.isArray(employees) && employees.length > 0 
-    ? Array.from(new Set(employees.filter(emp => emp && emp.role).map(emp => emp.role)))
-    : [];
+  // Use ROLE_OPTIONS from constants as the available roles for filtering
+  const availableRoles = ROLE_OPTIONS;
 
   // Filter employees by selected roles
   const filteredEmployees = Array.isArray(employees) && employees.length > 0
@@ -58,7 +57,7 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium">Filter by Role:</label>
             <MultiRoleSelector
-              roles={uniqueRoles}
+              roles={availableRoles}
               selectedRoles={selectedRoles}
               onRoleChange={onRoleChange}
               placeholder="All Roles"

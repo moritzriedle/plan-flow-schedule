@@ -17,6 +17,7 @@ import { getSprintDateRange, isSprintActive } from '../utils/sprintUtils';
 import { Project, Employee } from '../types';
 import { Button } from '@/components/ui/button';
 import { Plus, UserPlus } from 'lucide-react';
+import { ROLE_OPTIONS } from '@/constants/roles';
 
 const ResourcePlanner: React.FC = () => {
   const { employees = [], loading } = usePlanner();
@@ -53,10 +54,8 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
-  // Get unique roles from employees with safety checks
-  const uniqueRoles = Array.isArray(employees) && employees.length > 0 
-    ? Array.from(new Set(employees.filter(emp => emp && emp.role).map(emp => emp.role)))
-    : [];
+  // Use ROLE_OPTIONS from constants as the available roles for filtering
+  const availableRoles = ROLE_OPTIONS;
   
   // Filter employees by selected roles with safety checks
   const filteredEmployees = Array.isArray(employees) && employees.length > 0
@@ -112,7 +111,7 @@ const ResourcePlanner: React.FC = () => {
             <div className="flex items-center gap-4">
               <label className="text-sm font-medium">Filter by Role:</label>
               <MultiRoleSelector
-                roles={uniqueRoles}
+                roles={availableRoles}
                 selectedRoles={selectedRoles}
                 onRoleChange={setSelectedRoles}
                 placeholder="All Roles"

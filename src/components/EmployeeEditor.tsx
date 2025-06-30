@@ -9,7 +9,7 @@ import { usePlanner } from '@/contexts/PlannerContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { ROLE_OPTIONS } from '@/constants/roles';
-import VacationDateSelector from './VacationDateSelector';
+import VacationDateRangeSelector from './VacationDateRangeSelector';
 
 interface EmployeeEditorProps {
   employee: Employee;
@@ -37,17 +37,28 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
       .toUpperCase();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateEmployee({
+    
+    console.log('Submitting employee update:', {
+      id: employee.id,
+      name,
+      role,
+      imageUrl: imageUrl || undefined,
+      vacationDates
+    });
+    
+    const success = await updateEmployee({
       ...employee,
       name,
       role,
       imageUrl: imageUrl || undefined,
       vacationDates
     });
-    toast.success("Employee details updated");
-    onClose();
+    
+    if (success) {
+      onClose();
+    }
   };
 
   return (
@@ -112,7 +123,7 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Vacation Dates</label>
-            <VacationDateSelector
+            <VacationDateRangeSelector
               selectedDates={vacationDates}
               onDatesChange={setVacationDates}
             />
