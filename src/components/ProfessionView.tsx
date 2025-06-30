@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { usePlanner } from '../contexts/PlannerContext';
 import MultiRoleSelector from './MultiRoleSelector';
@@ -9,8 +8,8 @@ const ProfessionView: React.FC = () => {
   const { employees = [], allocations, projects, sprints } = usePlanner();
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
-  // Use ROLE_OPTIONS from constants as the available roles for filtering
-  const availableRoles = ROLE_OPTIONS;
+  // Convert ROLE_OPTIONS from readonly to mutable array
+  const availableRoles = [...ROLE_OPTIONS];
 
   // Filter employees by selected roles
   const filteredEmployees = Array.isArray(employees) && employees.length > 0

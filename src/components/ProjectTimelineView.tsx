@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Project } from '../types';
@@ -26,8 +25,8 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
 
   if (!project) return null;
 
-  // Use ROLE_OPTIONS from constants as the available roles for filtering
-  const availableRoles = ROLE_OPTIONS;
+  // Convert ROLE_OPTIONS from readonly to mutable array
+  const availableRoles = [...ROLE_OPTIONS];
 
   // Filter employees by selected roles
   const filteredEmployees = Array.isArray(employees) && employees.length > 0

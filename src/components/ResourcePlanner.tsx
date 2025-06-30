@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -54,8 +53,8 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
-  // Use ROLE_OPTIONS from constants as the available roles for filtering
-  const availableRoles = ROLE_OPTIONS;
+  // Convert ROLE_OPTIONS from readonly to mutable array
+  const availableRoles = [...ROLE_OPTIONS];
   
   // Filter employees by selected roles with safety checks
   const filteredEmployees = Array.isArray(employees) && employees.length > 0
