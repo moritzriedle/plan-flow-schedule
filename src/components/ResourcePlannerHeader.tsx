@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Plus, UserPlus } from 'lucide-react';
 import TimeframeSelector from './TimeframeSelector';
 import MultiRoleSelector from './MultiRoleSelector';
+import { TimeframeOption } from './TimeframeSelector';
 
 interface ResourcePlannerHeaderProps {
-  timeframe: string;
-  onTimeframeChange: (timeframe: string) => void;
+  timeframe: TimeframeOption;
+  onTimeframeChange: (timeframe: TimeframeOption) => void;
   selectedRoles: string[];
   onRoleChange: (roles: string[]) => void;
   availableRoles: string[];
