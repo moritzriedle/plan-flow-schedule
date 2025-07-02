@@ -164,7 +164,7 @@ export const usePlannerStore = () => {
     }
     
     loadInitialData();
-  }, [user, sprints]);
+  }, [user]);
   
   // Helper function to update project date ranges based on allocations
   const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
