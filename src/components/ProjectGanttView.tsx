@@ -84,8 +84,8 @@ const ProjectGanttView = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                {uniqueRoles.map(role => (
-                  <SelectItem key={role} value={role}>
+                {uniqueRoles.map((role, index) => (
+                  <SelectItem key={`${role}-${index}`} value={role}>
                     {role}
                   </SelectItem>
                 ))}

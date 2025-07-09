@@ -1,10 +1,10 @@
 
 import React, { createContext, useContext } from 'react';
-import { PlannerContextType } from './PlannerContextTypes';
+import { PlannerStoreReturn } from '../hooks/plannerStore/types';
 import { usePlannerStore } from '../hooks/usePlannerStore';
 
 // Create context
-const PlannerContext = createContext<PlannerContextType | undefined>(undefined);
+const PlannerContext = createContext<PlannerStoreReturn | undefined>(undefined);
 
 export const PlannerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log('PlannerProvider initializing');

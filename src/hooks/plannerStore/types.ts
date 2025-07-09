@@ -1,8 +1,6 @@
+import { Employee, Project, Allocation, Sprint, DragItem } from '../../types';
 
-import { Employee, Project, Allocation, Sprint, DragItem } from '../types';
-
-// Context type definition
-export type PlannerContextType = {
+export interface PlannerStoreReturn {
   employees: Employee[];
   projects: Project[];
   allocations: Allocation[];
@@ -24,4 +22,4 @@ export type PlannerContextType = {
   getProjectAllocations: (projectId: string) => Allocation[];
   allocateToProjectTimeline: (employeeId: string, projectId: string, daysPerWeek: 1 | 3 | 5) => Promise<boolean>;
   getAvailableDays: (employeeId: string, sprintId: string) => number;
-};
+}
