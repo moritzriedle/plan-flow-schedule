@@ -16,7 +16,7 @@ const isValidUUID = (str: string) => {
 
 export const usePlannerStore = () => {
   console.log('usePlannerStore initializing');
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
 
   // State for data from Supabase
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -71,13 +71,28 @@ export const usePlannerStore = () => {
   
   // Load data from Supabase on mount
   useEffect(() => {
+    // Don't start loading if auth is still loading
+    if (authLoading) {
+      console.log('usePlannerStore: Waiting for auth to complete');
+      return;
+    }
+    
     if (!user) {
+      console.log('usePlannerStore: No user, setting loading to false');
       setLoading(false);
       return;
     }
 
     async function loadInitialData() {
+      console.log('usePlannerStore: Starting data load for user:', user.id);
       setLoading(true);
+      
+      // Set a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.error('usePlannerStore: Data loading timeout after 10 seconds');
+        setLoading(false);
+        toast.error('Loading timeout - please refresh the page');
+      }, 10000);
       
       try {
         // Fetch employees from profiles table (this is the correct table to use)
@@ -135,19 +150,20 @@ export const usePlannerStore = () => {
           days: alloc.days
         }));
         
-        // Use real data from the database
-        setEmployees(mappedEmployees);
-        setProjects(mappedProjects.length ? mappedProjects : sampleProjects);
-        setAllocations(mappedAllocations);
-        
-        // Calculate project date ranges from allocations
-        if (mappedAllocations.length && mappedProjects.length) {
-          updateProjectDateRanges(mappedProjects, mappedAllocations);
+        // Calculate project date ranges from allocations BEFORE setting state
+        let finalProjects = mappedProjects.length ? mappedProjects : sampleProjects;
+        if (mappedAllocations.length && finalProjects.length) {
+          finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations);
         }
+        
+        // Set all state at once to avoid multiple re-renders
+        setEmployees(mappedEmployees);
+        setProjects(finalProjects);
+        setAllocations(mappedAllocations);
         
         console.log('Loaded from Supabase:', { 
           employees: mappedEmployees, 
-          projects: mappedProjects, 
+          projects: finalProjects, 
           allocations: mappedAllocations 
         });
       } catch (error) {
@@ -159,15 +175,17 @@ export const usePlannerStore = () => {
         setProjects(sampleProjects);
         setAllocations([]);
       } finally {
+        clearTimeout(timeoutId);
         setLoading(false);
+        console.log('usePlannerStore: Data loading completed');
       }
     }
     
     loadInitialData();
-  }, [user]);
+  }, [user, authLoading]);
   
-  // Helper function to update project date ranges based on allocations
-  const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
+  // Helper function to calculate project date ranges based on allocations (pure function)
+  const calculateProjectDateRanges = (projects: Project[], allocations: Allocation[]): Project[] => {
     // Group allocations by project
     const allocationsByProject = allocations.reduce((acc, alloc) => {
       if (!acc[alloc.projectId]) {
@@ -177,8 +195,8 @@ export const usePlannerStore = () => {
       return acc;
     }, {} as Record<string, Allocation[]>);
     
-    // Update projects with calculated date ranges
-    setProjects(projects.map(project => {
+    // Return updated projects with calculated date ranges
+    return projects.map(project => {
       const projectAllocations = allocationsByProject[project.id] || [];
       if (projectAllocations.length === 0) return project;
       
@@ -196,7 +214,13 @@ export const usePlannerStore = () => {
         startDate: startSprint?.startDate || project.startDate,
         endDate: endSprint?.endDate || project.endDate
       };
-    }));
+    });
+  };
+
+  // Helper function to update project date ranges (for use in mutations)
+  const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
+    const updatedProjects = calculateProjectDateRanges(projects, allocations);
+    setProjects(updatedProjects);
   };
 
   // Validate that user ID exists in profiles table
