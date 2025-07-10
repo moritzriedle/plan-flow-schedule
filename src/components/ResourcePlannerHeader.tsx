@@ -25,6 +25,43 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
   onAddProject,
   onAddEmployee
 }) => {
+  // Enhanced logging for debugging
+  console.log('ResourcePlannerHeader: Render', { 
+    selectedRoles, 
+    selectedRolesType: typeof selectedRoles,
+    selectedRolesIsArray: Array.isArray(selectedRoles),
+    availableRoles, 
+    availableRolesType: typeof availableRoles,
+    availableRolesIsArray: Array.isArray(availableRoles)
+  });
+
+  // Ensure arrays are safe with logging
+  const safeSelectedRoles = React.useMemo(() => {
+    if (!Array.isArray(selectedRoles)) {
+      console.warn('ResourcePlannerHeader: selectedRoles is not an array', { selectedRoles, type: typeof selectedRoles });
+      return [];
+    }
+    return selectedRoles;
+  }, [selectedRoles]);
+
+  const safeAvailableRoles = React.useMemo(() => {
+    if (!Array.isArray(availableRoles)) {
+      console.warn('ResourcePlannerHeader: availableRoles is not an array', { availableRoles, type: typeof availableRoles });
+      return [];
+    }
+    return availableRoles;
+  }, [availableRoles]);
+
+  const handleRoleChange = (roles: string[]) => {
+    console.log('ResourcePlannerHeader: handleRoleChange called', { roles });
+    try {
+      onRoleChange(Array.isArray(roles) ? roles : []);
+    } catch (error) {
+      console.error('ResourcePlannerHeader: Error in handleRoleChange', error);
+      onRoleChange([]);
+    }
+  };
+
   return (
     <div className="p-4 border-b bg-white space-y-4">
       <div className="flex justify-between items-center">
@@ -46,9 +83,9 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
       <div className="flex items-center gap-4">
         <label className="text-sm font-medium">Filter by Role:</label>
         <MultiRoleSelector
-          roles={availableRoles}
-          selectedRoles={selectedRoles}
-          onRoleChange={onRoleChange}
+          roles={safeAvailableRoles}
+          selectedRoles={safeSelectedRoles}
+          onRoleChange={handleRoleChange}
           placeholder="All Roles"
         />
       </div>

@@ -114,16 +114,90 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
-  // Convert ROLE_OPTIONS to mutable array and ensure it's always an array
-  const availableRoles = Array.isArray(ROLE_OPTIONS) ? [...ROLE_OPTIONS] : [];
-  
-  // Filter employees by selected roles with safety checks
-  const safeEmployees = Array.isArray(employees) ? employees : [];
-  const filteredEmployees = safeEmployees.length > 0
-    ? (selectedRoles.length === 0 
-        ? safeEmployees 
-        : safeEmployees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
-    : [];
+  // Enhanced logging and defensive programming for ROLE_OPTIONS
+  console.log('ResourcePlanner: ROLE_OPTIONS', { 
+    ROLE_OPTIONS, 
+    type: typeof ROLE_OPTIONS, 
+    isArray: Array.isArray(ROLE_OPTIONS),
+    length: ROLE_OPTIONS?.length 
+  });
+
+  // Ensure ROLE_OPTIONS is always an array
+  const safeRoleOptions = React.useMemo(() => {
+    if (!Array.isArray(ROLE_OPTIONS)) {
+      console.warn('ResourcePlanner: ROLE_OPTIONS is not an array', { ROLE_OPTIONS, type: typeof ROLE_OPTIONS });
+      return [];
+    }
+    return [...ROLE_OPTIONS];
+  }, []);
+
+  // Enhanced logging for employees
+  console.log('ResourcePlanner: employees processing', { 
+    employees, 
+    employeesType: typeof employees, 
+    employeesIsArray: Array.isArray(employees),
+    selectedRoles,
+    selectedRolesType: typeof selectedRoles,
+    selectedRolesIsArray: Array.isArray(selectedRoles)
+  });
+
+  // Ensure employees is always an array
+  const safeEmployees = React.useMemo(() => {
+    if (!Array.isArray(employees)) {
+      console.warn('ResourcePlanner: employees is not an array', { employees, type: typeof employees });
+      return [];
+    }
+    return employees;
+  }, [employees]);
+
+  // Ensure selectedRoles is always an array
+  const safeSelectedRoles = React.useMemo(() => {
+    if (!Array.isArray(selectedRoles)) {
+      console.warn('ResourcePlanner: selectedRoles is not an array', { selectedRoles, type: typeof selectedRoles });
+      return [];
+    }
+    return selectedRoles;
+  }, [selectedRoles]);
+
+  // Filter employees by selected roles with comprehensive safety checks
+  const filteredEmployees = React.useMemo(() => {
+    try {
+      if (safeSelectedRoles.length === 0) {
+        console.log('ResourcePlanner: No role filter, returning all employees', { count: safeEmployees.length });
+        return safeEmployees;
+      }
+      
+      const filtered = safeEmployees.filter(emp => {
+        if (!emp || !emp.role) {
+          console.warn('ResourcePlanner: Employee missing role', { emp });
+          return false;
+        }
+        return safeSelectedRoles.includes(emp.role);
+      });
+      
+      console.log('ResourcePlanner: Filtered employees', { 
+        originalCount: safeEmployees.length, 
+        filteredCount: filtered.length,
+        selectedRoles: safeSelectedRoles 
+      });
+      
+      return filtered;
+    } catch (error) {
+      console.error('ResourcePlanner: Error filtering employees', error);
+      return safeEmployees;
+    }
+  }, [safeEmployees, safeSelectedRoles]);
+
+  const handleRoleChange = (roles: string[]) => {
+    console.log('ResourcePlanner: handleRoleChange called', { roles, type: typeof roles });
+    try {
+      const safeRoles = Array.isArray(roles) ? roles : [];
+      setSelectedRoles(safeRoles);
+    } catch (error) {
+      console.error('ResourcePlanner: Error in handleRoleChange', error);
+      setSelectedRoles([]);
+    }
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -153,9 +227,9 @@ const ResourcePlanner: React.FC = () => {
           <ResourcePlannerHeader
             timeframe={timeframe}
             onTimeframeChange={setTimeframe}
-            selectedRoles={selectedRoles}
-            onRoleChange={setSelectedRoles}
-            availableRoles={availableRoles}
+            selectedRoles={safeSelectedRoles}
+            onRoleChange={handleRoleChange}
+            availableRoles={safeRoleOptions}
             onAddProject={() => setIsAddProjectDialogOpen(true)}
             onAddEmployee={() => setIsAddEmployeeDialogOpen(true)}
           />
@@ -175,8 +249,8 @@ const ResourcePlanner: React.FC = () => {
           setIsProjectTimelineOpen(false);
           setSelectedProject(null);
         }}
-        selectedRoles={selectedRoles}
-        onRoleChange={setSelectedRoles}
+        selectedRoles={safeSelectedRoles}
+        onRoleChange={handleRoleChange}
       />
 
       <AddProjectDialog 

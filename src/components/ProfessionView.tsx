@@ -9,16 +9,83 @@ const ProfessionView: React.FC = () => {
   const { employees = [], allocations = [], projects = [], sprints = [] } = usePlanner();
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
-  // Convert ROLE_OPTIONS to mutable array with safety check
-  const availableRoles = Array.isArray(ROLE_OPTIONS) ? [...ROLE_OPTIONS] : [];
+  // Enhanced logging for debugging
+  console.log('ProfessionView: Render', { 
+    employees, 
+    employeesType: typeof employees,
+    employeesIsArray: Array.isArray(employees),
+    selectedRoles,
+    selectedRolesType: typeof selectedRoles,
+    selectedRolesIsArray: Array.isArray(selectedRoles),
+    ROLE_OPTIONS,
+    ROLE_OPTIONS_type: typeof ROLE_OPTIONS,
+    ROLE_OPTIONS_isArray: Array.isArray(ROLE_OPTIONS)
+  });
+
+  // Ensure ROLE_OPTIONS is always an array with safety check
+  const availableRoles = React.useMemo(() => {
+    if (!Array.isArray(ROLE_OPTIONS)) {
+      console.warn('ProfessionView: ROLE_OPTIONS is not an array', { ROLE_OPTIONS, type: typeof ROLE_OPTIONS });
+      return [];
+    }
+    return [...ROLE_OPTIONS];
+  }, []);
+
+  // Ensure selectedRoles is always an array
+  const safeSelectedRoles = React.useMemo(() => {
+    if (!Array.isArray(selectedRoles)) {
+      console.warn('ProfessionView: selectedRoles is not an array', { selectedRoles, type: typeof selectedRoles });
+      return [];
+    }
+    return selectedRoles;
+  }, [selectedRoles]);
 
   // Filter employees by selected roles with comprehensive safety checks
-  const safeEmployees = Array.isArray(employees) ? employees : [];
-  const filteredEmployees = safeEmployees.length > 0
-    ? (selectedRoles.length === 0 
-        ? safeEmployees 
-        : safeEmployees.filter(emp => emp && emp.role && selectedRoles.includes(emp.role)))
-    : [];
+  const safeEmployees = React.useMemo(() => {
+    if (!Array.isArray(employees)) {
+      console.warn('ProfessionView: employees is not an array', { employees, type: typeof employees });
+      return [];
+    }
+    return employees;
+  }, [employees]);
+
+  const filteredEmployees = React.useMemo(() => {
+    try {
+      if (safeSelectedRoles.length === 0) {
+        console.log('ProfessionView: No role filter, returning all employees');
+        return safeEmployees;
+      }
+      
+      const filtered = safeEmployees.filter(emp => {
+        if (!emp || !emp.role) {
+          console.warn('ProfessionView: Employee missing role', { emp });
+          return false;
+        }
+        return safeSelectedRoles.includes(emp.role);
+      });
+      
+      console.log('ProfessionView: Filtered employees', { 
+        originalCount: safeEmployees.length, 
+        filteredCount: filtered.length 
+      });
+      
+      return filtered;
+    } catch (error) {
+      console.error('ProfessionView: Error filtering employees', error);
+      return safeEmployees;
+    }
+  }, [safeEmployees, safeSelectedRoles]);
+
+  const handleRoleChange = (roles: string[]) => {
+    console.log('ProfessionView: handleRoleChange called', { roles });
+    try {
+      const safeRoles = Array.isArray(roles) ? roles : [];
+      setSelectedRoles(safeRoles);
+    } catch (error) {
+      console.error('ProfessionView: Error in handleRoleChange', error);
+      setSelectedRoles([]);
+    }
+  };
 
   // Generate months starting from June 2025
   const startDate = new Date(2025, 5, 1); // June 2025 (month is 0-indexed)
@@ -84,8 +151,8 @@ const ProfessionView: React.FC = () => {
           <label className="text-sm font-medium">Filter by Role:</label>
           <MultiRoleSelector
             roles={availableRoles}
-            selectedRoles={selectedRoles}
-            onRoleChange={setSelectedRoles}
+            selectedRoles={safeSelectedRoles}
+            onRoleChange={handleRoleChange}
             placeholder="All Roles"
           />
         </div>

@@ -20,40 +20,81 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
 
-  const handleRoleToggle = (role: string) => {
-    if (!Array.isArray(selectedRoles)) {
-      onRoleChange([role]);
-      return;
+  // Enhanced logging and defensive programming
+  console.log('MultiRoleSelector: Render', { 
+    roles: roles, 
+    rolesType: typeof roles,
+    rolesIsArray: Array.isArray(roles),
+    rolesLength: roles?.length,
+    selectedRoles: selectedRoles,
+    selectedRolesType: typeof selectedRoles,
+    selectedRolesIsArray: Array.isArray(selectedRoles),
+    selectedRolesLength: selectedRoles?.length
+  });
+
+  // Ensure roles is always an array with logging
+  const safeRoles = React.useMemo(() => {
+    if (!Array.isArray(roles)) {
+      console.warn('MultiRoleSelector: roles is not an array, converting:', { roles, type: typeof roles });
+      return [];
     }
+    return roles;
+  }, [roles]);
+
+  // Ensure selectedRoles is always an array with logging
+  const safeSelectedRoles = React.useMemo(() => {
+    if (!Array.isArray(selectedRoles)) {
+      console.warn('MultiRoleSelector: selectedRoles is not an array, converting:', { selectedRoles, type: typeof selectedRoles });
+      return [];
+    }
+    return selectedRoles;
+  }, [selectedRoles]);
+
+  const handleRoleToggle = (role: string) => {
+    console.log('MultiRoleSelector: handleRoleToggle called', { role, safeSelectedRoles });
     
-    const newSelectedRoles = selectedRoles.includes(role)
-      ? selectedRoles.filter(r => r !== role)
-      : [...selectedRoles, role];
-    
-    onRoleChange(newSelectedRoles);
+    try {
+      const newSelectedRoles = safeSelectedRoles.includes(role)
+        ? safeSelectedRoles.filter(r => r !== role)
+        : [...safeSelectedRoles, role];
+      
+      console.log('MultiRoleSelector: New selected roles', { newSelectedRoles });
+      onRoleChange(newSelectedRoles);
+    } catch (error) {
+      console.error('MultiRoleSelector: Error in handleRoleToggle', error);
+      onRoleChange([]);
+    }
   };
 
   const handleClearAll = () => {
-    onRoleChange([]);
+    console.log('MultiRoleSelector: handleClearAll called');
+    try {
+      onRoleChange([]);
+    } catch (error) {
+      console.error('MultiRoleSelector: Error in handleClearAll', error);
+    }
   };
 
   const handleSelectAll = () => {
-    if (!Array.isArray(roles) || roles.length === 0) {
+    console.log('MultiRoleSelector: handleSelectAll called', { safeRoles });
+    try {
+      onRoleChange([...safeRoles]);
+    } catch (error) {
+      console.error('MultiRoleSelector: Error in handleSelectAll', error);
       onRoleChange([]);
-      return;
     }
-    onRoleChange([...roles]);
   };
 
   const getDisplayText = () => {
-    if (!Array.isArray(selectedRoles) || selectedRoles.length === 0) return placeholder;
-    if (selectedRoles.length === 1) return selectedRoles[0];
-    return `${selectedRoles.length} roles selected`;
+    try {
+      if (safeSelectedRoles.length === 0) return placeholder;
+      if (safeSelectedRoles.length === 1) return safeSelectedRoles[0];
+      return `${safeSelectedRoles.length} roles selected`;
+    } catch (error) {
+      console.error('MultiRoleSelector: Error in getDisplayText', error);
+      return placeholder;
+    }
   };
-
-  // Safety check to ensure roles is an array and has content
-  const safeRoles = Array.isArray(roles) ? roles : [];
-  const safeSelectedRoles = Array.isArray(selectedRoles) ? selectedRoles : [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

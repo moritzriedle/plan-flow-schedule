@@ -26,3 +26,11 @@ export const ROLE_OPTIONS = [
 ] as const;
 
 export type Role = typeof ROLE_OPTIONS[number];
+
+// Additional logging to verify the constant is properly exported
+console.log('roles.ts: ROLE_OPTIONS exported', { 
+  ROLE_OPTIONS, 
+  type: typeof ROLE_OPTIONS, 
+  isArray: Array.isArray(ROLE_OPTIONS),
+  length: ROLE_OPTIONS?.length 
+});
