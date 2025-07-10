@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePlanner } from '../contexts/PlannerContext';
@@ -18,8 +18,34 @@ import { Plus } from 'lucide-react';
 import { ROLE_OPTIONS } from '@/constants/roles';
 
 const ResourcePlanner: React.FC = () => {
-  const { employees = [], loading, allocateToProjectTimeline } = usePlanner();
+  const plannerData = usePlanner();
+  const { employees = [], loading, allocateToProjectTimeline } = plannerData;
+  
+  console.log('ResourcePlanner: Render', { 
+    loading, 
+    employeesCount: employees?.length,
+    plannerDataKeys: Object.keys(plannerData)
+  });
+  
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [forceShowContent, setForceShowContent] = useState(false);
+  
+  // Fallback mechanism: if loading is stuck for too long, show content anyway
+  useEffect(() => {
+    if (loading) {
+      console.log('ResourcePlanner: Starting fallback timer for stuck loading');
+      const fallbackTimer = setTimeout(() => {
+        console.warn('ResourcePlanner: Loading stuck for 15 seconds, forcing content display');
+        setForceShowContent(true);
+      }, 15000);
+      
+      return () => {
+        clearTimeout(fallbackTimer);
+      };
+    } else {
+      setForceShowContent(false);
+    }
+  }, [loading]);
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
@@ -77,10 +103,13 @@ const ResourcePlanner: React.FC = () => {
     );
   };
 
-  if (loading) {
+  if (loading && !forceShowContent) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading resource planner...</div>
+        <div className="text-sm text-gray-500 mt-2">
+          This is taking longer than expected. If stuck, please refresh the page.
+        </div>
       </div>
     );
   }

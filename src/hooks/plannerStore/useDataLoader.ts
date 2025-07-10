@@ -14,11 +14,21 @@ export const useDataLoader = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>(() => {
+    console.log('useDataLoader: Generating initial sprints');
     return generateSprints(new Date(), 12);
   });
   const [loading, setLoading] = useState(true);
+  
+  console.log('useDataLoader: Hook called', { 
+    user: user?.id, 
+    authLoading, 
+    loading,
+    profileId: profile?.id
+  });
 
   useEffect(() => {
+    console.log('useDataLoader: useEffect triggered', { authLoading, user: user?.id });
+    
     if (authLoading) {
       console.log('useDataLoader: Waiting for auth to complete');
       return;
@@ -30,14 +40,18 @@ export const useDataLoader = () => {
       return;
     }
 
+    let isCancelled = false;
+
     async function loadInitialData() {
       console.log('useDataLoader: Starting data load for user:', user.id);
       setLoading(true);
       
       const timeoutId = setTimeout(() => {
         console.error('useDataLoader: Data loading timeout after 10 seconds');
-        setLoading(false);
-        toast.error('Loading timeout - please refresh the page');
+        if (!isCancelled) {
+          setLoading(false);
+          toast.error('Loading timeout - please refresh the page');
+        }
       }, 10000);
       
       try {
@@ -116,13 +130,20 @@ export const useDataLoader = () => {
         setAllocations([]);
       } finally {
         clearTimeout(timeoutId);
-        setLoading(false);
-        console.log('useDataLoader: Data loading completed');
+        if (!isCancelled) {
+          setLoading(false);
+          console.log('useDataLoader: Data loading completed');
+        }
       }
     }
     
     loadInitialData();
-  }, [user, authLoading]);
+    
+    return () => {
+      console.log('useDataLoader: Cleanup function called');
+      isCancelled = true;
+    };
+  }, [user?.id, authLoading]);
 
   return {
     employees,
