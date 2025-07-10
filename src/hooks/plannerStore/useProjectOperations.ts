@@ -40,7 +40,8 @@ export const useProjectOperations = (
         ticketReference: data.ticket_reference
       };
       
-      setProjects(prev => [...prev, newProject]);
+      // Add new project and sort alphabetically
+      setProjects(prev => [...prev, newProject].sort((a, b) => a.name.localeCompare(b.name)));
       toast.success(`Added project: ${newProject.name}`);
       return newProject;
     } catch (error) {
@@ -69,8 +70,10 @@ export const useProjectOperations = (
         
       if (error) throw error;
       
+      // Update project and maintain alphabetical sorting
       setProjects(prev => 
         prev.map(proj => proj.id === updatedProject.id ? updatedProject : proj)
+           .sort((a, b) => a.name.localeCompare(b.name))
       );
       toast.success(`Updated project: ${updatedProject.name}`);
       return true;

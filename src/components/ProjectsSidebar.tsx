@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDrag } from 'react-dnd';
 import { usePlanner } from '../contexts/PlannerContext';
 import { Project, Employee } from '../types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Calendar } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Eye, Calendar, Search } from 'lucide-react';
 
 interface DraggableProjectItemProps {
   project: Project;
@@ -99,6 +100,22 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
 }) => {
   const { projects = [], employees = [] } = usePlanner();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Sort projects alphabetically and filter by search term
+  const filteredAndSortedProjects = useMemo(() => {
+    let filtered = projects;
+    
+    // Filter by search term if provided
+    if (searchTerm.trim()) {
+      filtered = projects.filter(project =>
+        project.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Sort alphabetically by name
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }, [projects, searchTerm]);
 
   const handleDetailedAllocation = (project: Project) => {
     if (selectedEmployeeId && onDetailedAllocation) {
@@ -111,6 +128,21 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
 
   return (
     <div className="space-y-2">
+      {/* Project Search */}
+      <div className="mb-4">
+        <label className="text-sm font-medium mb-2 block">Search Projects:</label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Type project name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       {/* Employee selector for detailed allocation */}
       <div className="mb-4">
         <label className="text-sm font-medium mb-2 block">Quick Allocate:</label>
@@ -128,27 +160,34 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
         </select>
       </div>
 
-      {projects.map((project) => (
-        <div key={project.id} className="space-y-1">
-          {/* Existing draggable project item */}
-          <DraggableProjectItem 
-            project={project} 
-            onTimelineOpen={onProjectTimelineOpen}
-          />
-          
-          {/* Quick allocation button */}
-          {selectedEmployeeId && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs"
-              onClick={() => handleDetailedAllocation(project)}
-            >
-              Allocate to {project.name}
-            </Button>
-          )}
+      {/* Projects List */}
+      {filteredAndSortedProjects.length === 0 && searchTerm ? (
+        <div className="text-sm text-gray-500 text-center py-4">
+          No projects found matching "{searchTerm}"
         </div>
-      ))}
+      ) : (
+        filteredAndSortedProjects.map((project) => (
+          <div key={project.id} className="space-y-1">
+            {/* Existing draggable project item */}
+            <DraggableProjectItem 
+              project={project} 
+              onTimelineOpen={onProjectTimelineOpen}
+            />
+            
+            {/* Quick allocation button */}
+            {selectedEmployeeId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => handleDetailedAllocation(project)}
+              >
+                Allocate to {project.name}
+              </Button>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 };

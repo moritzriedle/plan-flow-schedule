@@ -112,6 +112,9 @@ export const useDataLoader = () => {
           finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations, sprints);
         }
         
+        // Sort projects alphabetically by name
+        finalProjects.sort((a, b) => a.name.localeCompare(b.name));
+        
         setEmployees(mappedEmployees);
         setProjects(finalProjects);
         setAllocations(mappedAllocations);
@@ -125,8 +128,11 @@ export const useDataLoader = () => {
         console.error('Error loading data from Supabase:', error);
         toast.error('Failed to load data');
         
+        // Sort sample projects alphabetically as well
+        const sortedSampleProjects = [...sampleProjects].sort((a, b) => a.name.localeCompare(b.name));
+        
         setEmployees([]);
-        setProjects(sampleProjects);
+        setProjects(sortedSampleProjects);
         setAllocations([]);
       } finally {
         clearTimeout(timeoutId);
