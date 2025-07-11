@@ -6,8 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 
 interface MultiRoleSelectorProps {
-  roles: string[];
-  selectedRoles: string[];
+  roles?: string[];
+  selectedRoles?: string[];
   onRoleChange: (roles: string[]) => void;
   placeholder?: string;
 }
@@ -20,45 +20,34 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
 
-  // Enhanced logging and defensive programming
-  console.log('MultiRoleSelector: Render', { 
-    roles: roles, 
-    rolesType: typeof roles,
-    rolesIsArray: Array.isArray(roles),
-    rolesLength: roles?.length,
-    selectedRoles: selectedRoles,
-    selectedRolesType: typeof selectedRoles,
-    selectedRolesIsArray: Array.isArray(selectedRoles),
-    selectedRolesLength: selectedRoles?.length
-  });
-
-  // Ensure roles is always an array with logging
+  // Ensure arrays are always valid with comprehensive safety checks
   const safeRoles = React.useMemo(() => {
-    if (!Array.isArray(roles)) {
-      console.warn('MultiRoleSelector: roles is not an array, converting:', { roles, type: typeof roles });
+    if (!roles || !Array.isArray(roles)) {
+      console.warn('MultiRoleSelector: roles is not a valid array, using empty array', { roles });
       return [];
     }
-    return roles;
+    return roles.filter(role => role && typeof role === 'string');
   }, [roles]);
 
-  // Ensure selectedRoles is always an array with logging
   const safeSelectedRoles = React.useMemo(() => {
-    if (!Array.isArray(selectedRoles)) {
-      console.warn('MultiRoleSelector: selectedRoles is not an array, converting:', { selectedRoles, type: typeof selectedRoles });
+    if (!selectedRoles || !Array.isArray(selectedRoles)) {
+      console.warn('MultiRoleSelector: selectedRoles is not a valid array, using empty array', { selectedRoles });
       return [];
     }
-    return selectedRoles;
+    return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
 
   const handleRoleToggle = (role: string) => {
-    console.log('MultiRoleSelector: handleRoleToggle called', { role, safeSelectedRoles });
+    if (!role || typeof role !== 'string') {
+      console.warn('MultiRoleSelector: Invalid role provided to handleRoleToggle', { role });
+      return;
+    }
     
     try {
       const newSelectedRoles = safeSelectedRoles.includes(role)
         ? safeSelectedRoles.filter(r => r !== role)
         : [...safeSelectedRoles, role];
       
-      console.log('MultiRoleSelector: New selected roles', { newSelectedRoles });
       onRoleChange(newSelectedRoles);
     } catch (error) {
       console.error('MultiRoleSelector: Error in handleRoleToggle', error);
@@ -67,7 +56,6 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   };
 
   const handleClearAll = () => {
-    console.log('MultiRoleSelector: handleClearAll called');
     try {
       onRoleChange([]);
     } catch (error) {
@@ -76,7 +64,6 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   };
 
   const handleSelectAll = () => {
-    console.log('MultiRoleSelector: handleSelectAll called', { safeRoles });
     try {
       onRoleChange([...safeRoles]);
     } catch (error) {
@@ -109,7 +96,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-0">
+      <PopoverContent className="w-48 p-0 bg-white z-50">
         <Command>
           <CommandInput placeholder="Search roles..." />
           <CommandEmpty>No roles found.</CommandEmpty>

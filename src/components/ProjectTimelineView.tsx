@@ -12,7 +12,7 @@ interface ProjectTimelineViewProps {
   project: Project | null;
   isOpen: boolean;
   onClose: () => void;
-  selectedRoles: string[];
+  selectedRoles?: string[];
   onRoleChange: (roles: string[]) => void;
 }
 
@@ -20,55 +20,43 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   project,
   isOpen,
   onClose,
-  selectedRoles,
+  selectedRoles = [],
   onRoleChange
 }) => {
   const { employees = [], allocations = [], sprints = [] } = usePlanner();
 
   if (!project) return null;
 
-  // Enhanced logging for debugging
-  console.log('ProjectTimelineView: Render', { 
-    project: project?.name,
-    selectedRoles,
-    selectedRolesType: typeof selectedRoles,
-    selectedRolesIsArray: Array.isArray(selectedRoles),
-    ROLE_OPTIONS,
-    ROLE_OPTIONS_type: typeof ROLE_OPTIONS,
-    ROLE_OPTIONS_isArray: Array.isArray(ROLE_OPTIONS)
-  });
-
-  // Ensure ROLE_OPTIONS is always an array with safety check
+  // Ensure ROLE_OPTIONS is always a valid array
   const availableRoles = React.useMemo(() => {
-    if (!Array.isArray(ROLE_OPTIONS)) {
-      console.warn('ProjectTimelineView: ROLE_OPTIONS is not an array', { ROLE_OPTIONS, type: typeof ROLE_OPTIONS });
+    if (!ROLE_OPTIONS || !Array.isArray(ROLE_OPTIONS)) {
+      console.warn('ProjectTimelineView: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
       return [];
     }
-    return [...ROLE_OPTIONS];
+    return [...ROLE_OPTIONS].filter(role => role && typeof role === 'string');
   }, []);
 
-  // Ensure selectedRoles is always an array
+  // Ensure selectedRoles is always a valid array
   const safeSelectedRoles = React.useMemo(() => {
-    if (!Array.isArray(selectedRoles)) {
-      console.warn('ProjectTimelineView: selectedRoles is not an array', { selectedRoles, type: typeof selectedRoles });
+    if (!selectedRoles || !Array.isArray(selectedRoles)) {
+      console.warn('ProjectTimelineView: selectedRoles is not a valid array', { selectedRoles });
       return [];
     }
-    return selectedRoles;
+    return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
 
-  // Filter employees by selected roles with comprehensive safety checks
+  // Ensure employees is always a valid array
   const safeEmployees = React.useMemo(() => {
-    if (!Array.isArray(employees)) {
-      console.warn('ProjectTimelineView: employees is not an array', { employees, type: typeof employees });
+    if (!employees || !Array.isArray(employees)) {
+      console.warn('ProjectTimelineView: employees is not a valid array', { employees });
       return [];
     }
-    return employees;
+    return employees.filter(emp => emp && emp.id);
   }, [employees]);
 
   const filteredEmployees = React.useMemo(() => {
     try {
       if (safeSelectedRoles.length === 0) {
-        console.log('ProjectTimelineView: No role filter, returning all employees');
         return safeEmployees;
       }
       
@@ -80,11 +68,6 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
         return safeSelectedRoles.includes(emp.role);
       });
       
-      console.log('ProjectTimelineView: Filtered employees', { 
-        originalCount: safeEmployees.length, 
-        filteredCount: filtered.length 
-      });
-      
       return filtered;
     } catch (error) {
       console.error('ProjectTimelineView: Error filtering employees', error);
@@ -93,9 +76,8 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   }, [safeEmployees, safeSelectedRoles]);
 
   const handleRoleChange = (roles: string[]) => {
-    console.log('ProjectTimelineView: handleRoleChange called', { roles });
     try {
-      const safeRoles = Array.isArray(roles) ? roles : [];
+      const safeRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
       onRoleChange(safeRoles);
     } catch (error) {
       console.error('ProjectTimelineView: Error in handleRoleChange', error);

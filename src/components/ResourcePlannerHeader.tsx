@@ -9,9 +9,9 @@ import { TimeframeOption } from './TimeframeSelector';
 interface ResourcePlannerHeaderProps {
   timeframe: TimeframeOption;
   onTimeframeChange: (timeframe: TimeframeOption) => void;
-  selectedRoles: string[];
+  selectedRoles?: string[];
   onRoleChange: (roles: string[]) => void;
-  availableRoles: string[];
+  availableRoles?: string[];
   onAddProject: () => void;
   onAddEmployee: () => void;
 }
@@ -19,43 +19,33 @@ interface ResourcePlannerHeaderProps {
 const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
   timeframe,
   onTimeframeChange,
-  selectedRoles,
+  selectedRoles = [],
   onRoleChange,
-  availableRoles,
+  availableRoles = [],
   onAddProject,
   onAddEmployee
 }) => {
-  // Enhanced logging for debugging
-  console.log('ResourcePlannerHeader: Render', { 
-    selectedRoles, 
-    selectedRolesType: typeof selectedRoles,
-    selectedRolesIsArray: Array.isArray(selectedRoles),
-    availableRoles, 
-    availableRolesType: typeof availableRoles,
-    availableRolesIsArray: Array.isArray(availableRoles)
-  });
-
-  // Ensure arrays are safe with logging
+  // Ensure arrays are safe with comprehensive checks
   const safeSelectedRoles = React.useMemo(() => {
-    if (!Array.isArray(selectedRoles)) {
-      console.warn('ResourcePlannerHeader: selectedRoles is not an array', { selectedRoles, type: typeof selectedRoles });
+    if (!selectedRoles || !Array.isArray(selectedRoles)) {
+      console.warn('ResourcePlannerHeader: selectedRoles is not a valid array', { selectedRoles });
       return [];
     }
-    return selectedRoles;
+    return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
 
   const safeAvailableRoles = React.useMemo(() => {
-    if (!Array.isArray(availableRoles)) {
-      console.warn('ResourcePlannerHeader: availableRoles is not an array', { availableRoles, type: typeof availableRoles });
+    if (!availableRoles || !Array.isArray(availableRoles)) {
+      console.warn('ResourcePlannerHeader: availableRoles is not a valid array', { availableRoles });
       return [];
     }
-    return availableRoles;
+    return availableRoles.filter(role => role && typeof role === 'string');
   }, [availableRoles]);
 
   const handleRoleChange = (roles: string[]) => {
-    console.log('ResourcePlannerHeader: handleRoleChange called', { roles });
     try {
-      onRoleChange(Array.isArray(roles) ? roles : []);
+      const validRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
+      onRoleChange(validRoles);
     } catch (error) {
       console.error('ResourcePlannerHeader: Error in handleRoleChange', error);
       onRoleChange([]);

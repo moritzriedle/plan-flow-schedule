@@ -21,19 +21,12 @@ const ResourcePlanner: React.FC = () => {
   const plannerData = usePlanner();
   const { employees = [], loading, allocateToProjectTimeline } = plannerData;
   
-  console.log('ResourcePlanner: Render', { 
-    loading, 
-    employeesCount: employees?.length,
-    plannerDataKeys: Object.keys(plannerData)
-  });
-  
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [forceShowContent, setForceShowContent] = useState(false);
   
   // Fallback mechanism: if loading is stuck for too long, show content anyway
   useEffect(() => {
     if (loading) {
-      console.log('ResourcePlanner: Starting fallback timer for stuck loading');
       const fallbackTimer = setTimeout(() => {
         console.warn('ResourcePlanner: Loading stuck for 15 seconds, forcing content display');
         setForceShowContent(true);
@@ -46,6 +39,7 @@ const ResourcePlanner: React.FC = () => {
       setForceShowContent(false);
     }
   }, [loading]);
+  
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
@@ -114,56 +108,37 @@ const ResourcePlanner: React.FC = () => {
     );
   }
 
-  // Enhanced logging and defensive programming for ROLE_OPTIONS
-  console.log('ResourcePlanner: ROLE_OPTIONS', { 
-    ROLE_OPTIONS, 
-    type: typeof ROLE_OPTIONS, 
-    isArray: Array.isArray(ROLE_OPTIONS),
-    length: ROLE_OPTIONS?.length 
-  });
-
-  // Ensure ROLE_OPTIONS is always an array
+  // Ensure ROLE_OPTIONS is always a valid array
   const safeRoleOptions = React.useMemo(() => {
-    if (!Array.isArray(ROLE_OPTIONS)) {
-      console.warn('ResourcePlanner: ROLE_OPTIONS is not an array', { ROLE_OPTIONS, type: typeof ROLE_OPTIONS });
+    if (!ROLE_OPTIONS || !Array.isArray(ROLE_OPTIONS)) {
+      console.warn('ResourcePlanner: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
       return [];
     }
-    return [...ROLE_OPTIONS];
+    return [...ROLE_OPTIONS].filter(role => role && typeof role === 'string');
   }, []);
 
-  // Enhanced logging for employees
-  console.log('ResourcePlanner: employees processing', { 
-    employees, 
-    employeesType: typeof employees, 
-    employeesIsArray: Array.isArray(employees),
-    selectedRoles,
-    selectedRolesType: typeof selectedRoles,
-    selectedRolesIsArray: Array.isArray(selectedRoles)
-  });
-
-  // Ensure employees is always an array
+  // Ensure employees is always a valid array
   const safeEmployees = React.useMemo(() => {
-    if (!Array.isArray(employees)) {
-      console.warn('ResourcePlanner: employees is not an array', { employees, type: typeof employees });
+    if (!employees || !Array.isArray(employees)) {
+      console.warn('ResourcePlanner: employees is not a valid array', { employees });
       return [];
     }
-    return employees;
+    return employees.filter(emp => emp && emp.id);
   }, [employees]);
 
-  // Ensure selectedRoles is always an array
+  // Ensure selectedRoles is always a valid array
   const safeSelectedRoles = React.useMemo(() => {
-    if (!Array.isArray(selectedRoles)) {
-      console.warn('ResourcePlanner: selectedRoles is not an array', { selectedRoles, type: typeof selectedRoles });
+    if (!selectedRoles || !Array.isArray(selectedRoles)) {
+      console.warn('ResourcePlanner: selectedRoles is not a valid array', { selectedRoles });
       return [];
     }
-    return selectedRoles;
+    return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
 
   // Filter employees by selected roles with comprehensive safety checks
   const filteredEmployees = React.useMemo(() => {
     try {
       if (safeSelectedRoles.length === 0) {
-        console.log('ResourcePlanner: No role filter, returning all employees', { count: safeEmployees.length });
         return safeEmployees;
       }
       
@@ -175,12 +150,6 @@ const ResourcePlanner: React.FC = () => {
         return safeSelectedRoles.includes(emp.role);
       });
       
-      console.log('ResourcePlanner: Filtered employees', { 
-        originalCount: safeEmployees.length, 
-        filteredCount: filtered.length,
-        selectedRoles: safeSelectedRoles 
-      });
-      
       return filtered;
     } catch (error) {
       console.error('ResourcePlanner: Error filtering employees', error);
@@ -189,9 +158,8 @@ const ResourcePlanner: React.FC = () => {
   }, [safeEmployees, safeSelectedRoles]);
 
   const handleRoleChange = (roles: string[]) => {
-    console.log('ResourcePlanner: handleRoleChange called', { roles, type: typeof roles });
     try {
-      const safeRoles = Array.isArray(roles) ? roles : [];
+      const safeRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
       setSelectedRoles(safeRoles);
     } catch (error) {
       console.error('ResourcePlanner: Error in handleRoleChange', error);
