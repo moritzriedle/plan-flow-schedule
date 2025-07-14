@@ -114,7 +114,9 @@ const ResourcePlanner: React.FC = () => {
       console.warn('ResourcePlanner: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
       return [];
     }
-    return [...ROLE_OPTIONS].filter(role => role && typeof role === 'string');
+    return Array.isArray(ROLE_OPTIONS)
+      ? ROLE_OPTIONS.filter(role => role && typeof role === 'string')
+      : [];
   }, []);
 
   // Ensure employees is always a valid array
