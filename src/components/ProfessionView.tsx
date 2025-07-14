@@ -67,20 +67,38 @@ const ProfessionView: React.FC = () => {
     }
   };
 
-  // Generate months starting from June 2025
-  const startDate = new Date(2025, 5, 1); // June 2025 (month is 0-indexed)
-  const months = [];
-  for (let i = 0; i < 12; i++) {
-    const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
-    months.push(monthStart);
-  }
+  // Generate 12-month rolling view starting from current month
+  const months = React.useMemo(() => {
+    const currentDate = new Date();
+    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const monthsList = [];
+    for (let i = 0; i < 12; i++) {
+      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+      monthsList.push(monthStart);
+    }
+    return monthsList;
+  }, []);
 
-  // Calculate working days in a month (Monday to Friday)
-  const getWorkingDaysInMonth = (month: Date): number => {
+  // Calculate working days in a month (Monday to Friday) minus vacation days
+  const getWorkingDaysInMonth = (month: Date, employeeId?: string): number => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
     const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    return allDays.filter(day => !isWeekend(day)).length;
+    let workingDays = allDays.filter(day => !isWeekend(day)).length;
+    
+    // Deduct vacation days if employeeId is provided
+    if (employeeId) {
+      const employee = safeEmployees.find(emp => emp.id === employeeId);
+      if (employee && employee.vacationDates && Array.isArray(employee.vacationDates)) {
+        const vacationDaysInMonth = employee.vacationDates.filter(vacationDate => {
+          const vacation = new Date(vacationDate);
+          return vacation >= monthStart && vacation <= monthEnd && !isWeekend(vacation);
+        }).length;
+        workingDays = Math.max(0, workingDays - vacationDaysInMonth);
+      }
+    }
+    
+    return workingDays;
   };
 
   // Helper function to get allocations for a specific employee and month
@@ -91,9 +109,9 @@ const ProfessionView: React.FC = () => {
     // Filter allocations for the employee with safety checks
     const safeAllocations = Array.isArray(allocations) ? allocations : [];
     const employeeAllocations = safeAllocations.filter(alloc => alloc && alloc.employeeId === employeeId);
-  
+
     let totalDays = 0;
-  
+
     // Iterate through each allocation to check if it falls within the specified month
     employeeAllocations.forEach(allocation => {
       const safeSprints = Array.isArray(sprints) ? sprints : [];
@@ -101,7 +119,7 @@ const ProfessionView: React.FC = () => {
       if (sprint && sprint.startDate) {
         const sprintYear = sprint.startDate.getFullYear();
         const sprintMonth = sprint.startDate.getMonth();
-  
+
         // Check if the sprint falls within the specified month
         if (sprintYear === year && sprintMonth === monthIndex) {
           totalDays += allocation.days || 0;
@@ -112,14 +130,70 @@ const ProfessionView: React.FC = () => {
     return totalDays;
   };
 
+  // Get projects for an employee in a specific month
+  const getProjectsForMonth = (employeeId: string, month: Date): string[] => {
+    const year = month.getFullYear();
+    const monthIndex = month.getMonth();
+    
+    const safeAllocations = Array.isArray(allocations) ? allocations : [];
+    const safeProjects = Array.isArray(projects) ? projects : [];
+    const safeSprints = Array.isArray(sprints) ? sprints : [];
+    
+    const employeeAllocations = safeAllocations.filter(alloc => 
+      alloc && alloc.employeeId === employeeId
+    );
+    
+    const projectIds = new Set<string>();
+    
+    employeeAllocations.forEach(allocation => {
+      const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
+      if (sprint && sprint.startDate) {
+        const sprintYear = sprint.startDate.getFullYear();
+        const sprintMonth = sprint.startDate.getMonth();
+        if (sprintYear === year && sprintMonth === monthIndex) {
+          if (allocation.projectId) {
+            projectIds.add(allocation.projectId);
+          }
+        }
+      }
+    });
+    
+    return Array.from(projectIds).map(projectId => {
+      const project = safeProjects.find(p => p && p.id === projectId);
+      return project ? project.name : 'Unknown Project';
+    });
+  };
+
   // Calculate utilization percentage
   const getUtilizationPercentage = (employeeId: string, month: Date): number => {
     const allocatedDays = getAllocationDaysForMonth(employeeId, month);
-    const workingDays = getWorkingDaysInMonth(month);
+    const workingDays = getWorkingDaysInMonth(month, employeeId);
     
     if (workingDays === 0) return 0;
     return Math.round((allocatedDays / workingDays) * 100);
   };
+
+  // Calculate role summaries for each month
+  const getRoleSummaryForMonth = (role: string, month: Date) => {
+    const roleEmployees = filteredEmployees.filter(emp => emp.role === role);
+    let totalAvailable = 0;
+    let totalUtilized = 0;
+    
+    roleEmployees.forEach(employee => {
+      const availableDays = getWorkingDaysInMonth(month, employee.id);
+      const allocatedDays = getAllocationDaysForMonth(employee.id, month);
+      totalAvailable += availableDays;
+      totalUtilized += allocatedDays;
+    });
+    
+    return { totalAvailable, totalUtilized, utilization: totalAvailable > 0 ? Math.round((totalUtilized / totalAvailable) * 100) : 0 };
+  };
+
+  // Get unique roles from filtered employees
+  const uniqueRoles = React.useMemo(() => {
+    const roles = new Set(filteredEmployees.map(emp => emp.role));
+    return Array.from(roles).sort();
+  }, [filteredEmployees]);
 
   return (
     <div className="p-4 space-y-4">
@@ -144,14 +218,45 @@ const ProfessionView: React.FC = () => {
           <div className="flex border-b-2 border-gray-200 bg-gray-50">
             <div className="w-48 p-3 font-semibold border-r">Team Member</div>
             {months.map((month) => (
-              <div key={month.toISOString()} className="w-32 p-2 text-center text-sm font-medium border-r">
+              <div key={month.toISOString()} className="w-40 p-2 text-center text-sm font-medium border-r">
                 <div>{format(month, 'MMM yyyy')}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {getWorkingDaysInMonth(month)} working days
+                  Working days (avg: {getWorkingDaysInMonth(month)})
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Role Summary Rows */}
+          {uniqueRoles.map((role) => (
+            <div key={`role-${role}`} className="flex border-b bg-blue-50">
+              <div className="w-48 p-3 border-r">
+                <div className="font-bold text-blue-800">{role} (Total)</div>
+                <div className="text-sm text-blue-600">Role Summary</div>
+              </div>
+              {months.map((month) => {
+                const summary = getRoleSummaryForMonth(role, month);
+                
+                return (
+                  <div key={month.toISOString()} className="w-40 p-2 text-center border-r">
+                    <div className="text-sm font-bold text-blue-800">
+                      {summary.totalUtilized}d / {summary.totalAvailable}d
+                    </div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      {summary.utilization}% utilized
+                    </div>
+                    <div className={`text-xs mt-1 ${
+                      summary.utilization > 100 ? 'text-red-600' : 
+                      summary.utilization > 80 ? 'text-orange-600' : 
+                      'text-green-600'
+                    }`}>
+                      {summary.totalAvailable - summary.totalUtilized}d available
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
 
           {/* Employee Rows */}
           {filteredEmployees.map((employee) => (
@@ -163,10 +268,11 @@ const ProfessionView: React.FC = () => {
               {months.map((month) => {
                 const monthlyAllocation = getAllocationDaysForMonth(employee.id, month);
                 const utilizationPercentage = getUtilizationPercentage(employee.id, month);
-                const workingDays = getWorkingDaysInMonth(month);
+                const workingDays = getWorkingDaysInMonth(month, employee.id);
+                const projectsInMonth = getProjectsForMonth(employee.id, month);
                 
                 return (
-                  <div key={month.toISOString()} className="w-32 p-2 text-center border-r">
+                  <div key={month.toISOString()} className="w-40 p-2 text-center border-r">
                     {monthlyAllocation > 0 ? (
                       <div>
                         <span className="text-sm font-medium text-blue-600">
@@ -175,6 +281,11 @@ const ProfessionView: React.FC = () => {
                         <div className="text-xs text-gray-500 mt-1">
                           {utilizationPercentage}% of {workingDays}d
                         </div>
+                        {projectsInMonth.length > 0 && (
+                          <div className="text-xs text-gray-700 mt-1 truncate" title={projectsInMonth.join(', ')}>
+                            {projectsInMonth.length === 1 ? projectsInMonth[0] : `${projectsInMonth.length} projects`}
+                          </div>
+                        )}
                         <div className={`text-xs mt-1 ${
                           utilizationPercentage > 100 ? 'text-red-500' : 
                           utilizationPercentage > 80 ? 'text-orange-500' : 
@@ -188,7 +299,9 @@ const ProfessionView: React.FC = () => {
                     ) : (
                       <div>
                         <span className="text-xs text-gray-400">-</span>
-                        <div className="text-xs text-green-500 mt-1">Available</div>
+                        <div className="text-xs text-green-500 mt-1">
+                          {workingDays}d available
+                        </div>
                       </div>
                     )}
                   </div>
