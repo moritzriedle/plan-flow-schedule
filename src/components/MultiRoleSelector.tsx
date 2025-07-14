@@ -46,7 +46,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
     try {
       const newSelectedRoles = safeSelectedRoles.includes(role)
         ? safeSelectedRoles.filter(r => r !== role)
-        : [...safeSelectedRoles, role];
+        : Array.isArray(safeSelectedRoles) ? [...safeSelectedRoles, role] : [role];
       
       onRoleChange(newSelectedRoles);
     } catch (error) {
@@ -65,7 +65,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
 
   const handleSelectAll = () => {
     try {
-      onRoleChange([...safeRoles]);
+      onRoleChange(Array.isArray(safeRoles) ? [...safeRoles] : []);
     } catch (error) {
       console.error('MultiRoleSelector: Error in handleSelectAll', error);
       onRoleChange([]);

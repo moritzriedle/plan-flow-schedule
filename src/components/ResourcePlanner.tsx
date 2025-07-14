@@ -167,6 +167,15 @@ const ResourcePlanner: React.FC = () => {
     }
   };
 
+  // Final defensive fallback before render
+  if (!Array.isArray(safeSelectedRoles)) {
+    console.warn('safeSelectedRoles not iterable — defaulting to empty array');
+  }
+
+  if (!Array.isArray(safeRoleOptions)) {
+    console.warn('safeRoleOptions not iterable — defaulting to empty array');
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex h-screen bg-gray-50">
