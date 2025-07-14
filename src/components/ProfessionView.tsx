@@ -15,7 +15,9 @@ const ProfessionView: React.FC = () => {
       console.warn('ProfessionView: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
       return [];
     }
-    return [...ROLE_OPTIONS].filter(role => role && typeof role === 'string');
+    return Array.isArray(ROLE_OPTIONS)
+      ? ROLE_OPTIONS.filter(role => role && typeof role === 'string')
+      : [];
   }, []);
 
   // Ensure selectedRoles is always a valid array
