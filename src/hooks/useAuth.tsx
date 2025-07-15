@@ -53,39 +53,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let isMounted = true;
     
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
         if (!isMounted) return;
         
+        // Only synchronous state updates here
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          // Defer profile fetching to avoid blocking the auth state change
+          setTimeout(() => {
+            if (isMounted) {
+              fetchProfile(session.user.id);
+            }
+          }, 0);
         } else {
           setProfile(null);
         }
         
+        // Always set loading to false to prevent infinite loading
         if (isMounted) {
           setLoading(false);
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!isMounted) return;
+      
+      if (error) {
+        console.error('Error getting session:', error);
+        // Sign out if session is corrupted
+        supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
       
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
+        setTimeout(() => {
+          if (isMounted) {
+            fetchProfile(session.user.id);
+          }
+        }, 0);
+      } else {
+        setProfile(null);
       }
       
+      if (isMounted) {
+        setLoading(false);
+      }
+    }).catch((error) => {
+      console.error('Unexpected error getting session:', error);
       if (isMounted) {
         setLoading(false);
       }
