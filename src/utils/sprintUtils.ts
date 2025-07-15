@@ -11,8 +11,8 @@ export const getSprintLabel = (sprintNumber: number, startDate: Date): string =>
 const calculateSprintNumber = (startDate: Date): number => {
   const year = getYear(startDate);
   
-  // Reference: Sprint 13 starts on June 23rd, 2024 (Monday)
-  const referenceDate = new Date(2024, 5, 23); // June 23rd, 2024 (month is 0-indexed)
+  // Reference: Sprint 13 starts on June 24th, 2024 (Monday)
+  const referenceDate = new Date(2024, 5, 24); // June 24 (Monday)
   const referenceSprintNumber = 13;
   
   if (year === 2024) {
@@ -45,8 +45,8 @@ const calculateSprintNumber = (startDate: Date): number => {
 export const generateSprints = (startDate: Date, numSprints: number): Sprint[] => {
   const sprints: Sprint[] = [];
   
-  // Start with Sprint 13 on June 23rd, 2024 as reference
-  const referenceDate = new Date(2024, 5, 23); // June 23rd, 2024 (Monday)
+  // Start with Sprint 13 on June 24th, 2024 as reference
+  const referenceDate = new Date(2024, 5, 24); // June 24th, 2024 (Monday)
   
   // Find the current sprint based on today's date
   const today = new Date();
