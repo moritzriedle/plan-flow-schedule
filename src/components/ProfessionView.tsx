@@ -160,7 +160,9 @@ const ProfessionView: React.FC = () => {
       }
     });
     
-    return Array.from(projectIds || []).map(projectId => {
+    console.log('ProfessionView: About to call Array.from with projectIds:', projectIds);
+    const projectIdsArray = Array.isArray(projectIds) ? Array.from(projectIds) : (projectIds ? Array.from(projectIds) : []);
+    return (projectIdsArray || []).map(projectId => {
       const project = (safeProjects || []).find(p => p && p.id === projectId);
       return project ? project.name : 'Unknown Project';
     });
@@ -198,7 +200,9 @@ const ProfessionView: React.FC = () => {
       return [];
     }
     const roles = new Set((filteredEmployees || []).map(emp => emp?.role).filter(role => role));
-    return Array.from(roles).sort();
+    console.log('ProfessionView: About to call Array.from with roles Set:', roles);
+    const rolesArray = Array.isArray(roles) ? Array.from(roles) : (roles ? Array.from(roles) : []);
+    return (rolesArray || []).sort();
   }, [filteredEmployees]);
 
   return (

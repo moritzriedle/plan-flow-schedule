@@ -90,7 +90,9 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   const projectAllocations = safeAllocations.filter(alloc => alloc && alloc.projectId === project.id);
   
   // Get unique sprints for this project
-  const projectSprintIds = Array.from(new Set((projectAllocations || []).map(alloc => alloc?.sprintId).filter(id => id)));
+  const sprintIdSet = new Set((projectAllocations || []).map(alloc => alloc?.sprintId).filter(id => id));
+  console.log('ProjectTimelineView: About to call Array.from with sprintIdSet:', sprintIdSet);
+  const projectSprintIds = Array.isArray(sprintIdSet) ? Array.from(sprintIdSet) : (sprintIdSet ? Array.from(sprintIdSet) : []);
   const safeSprints = Array.isArray(sprints) ? sprints : [];
   
   if (!Array.isArray(safeSprints)) {

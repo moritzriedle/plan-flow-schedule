@@ -54,7 +54,9 @@ const ProjectGanttView = () => {
       console.warn('ProjectGanttView: safeEmployees is not an array', safeEmployees);
       return [];
     }
-    return Array.from(new Set((safeEmployees || []).map(emp => emp?.role).filter(role => role)));
+    const roleSet = new Set((safeEmployees || []).map(emp => emp?.role).filter(role => role));
+    console.log('ProjectGanttView: About to call Array.from with roleSet:', roleSet);
+    return Array.isArray(roleSet) ? Array.from(roleSet) : [];
   }, [safeEmployees]);
   
   // Filter projects based on selected roles
