@@ -160,8 +160,8 @@ const ProfessionView: React.FC = () => {
       }
     });
     
-    return Array.from(projectIds).map(projectId => {
-      const project = safeProjects.find(p => p && p.id === projectId);
+    return Array.from(projectIds || []).map(projectId => {
+      const project = (safeProjects || []).find(p => p && p.id === projectId);
       return project ? project.name : 'Unknown Project';
     });
   };
@@ -177,7 +177,7 @@ const ProfessionView: React.FC = () => {
 
   // Calculate role summaries for each month
   const getRoleSummaryForMonth = (role: string, month: Date) => {
-    const roleEmployees = filteredEmployees.filter(emp => emp.role === role);
+    const roleEmployees = (filteredEmployees || []).filter(emp => emp?.role === role);
     let totalAvailable = 0;
     let totalUtilized = 0;
     
@@ -193,7 +193,11 @@ const ProfessionView: React.FC = () => {
 
   // Get unique roles from filtered employees
   const uniqueRoles = React.useMemo(() => {
-    const roles = new Set(filteredEmployees.map(emp => emp.role));
+    if (!Array.isArray(filteredEmployees)) {
+      console.warn('ProfessionView: filteredEmployees is not an array', filteredEmployees);
+      return [];
+    }
+    const roles = new Set((filteredEmployees || []).map(emp => emp?.role).filter(role => role));
     return Array.from(roles).sort();
   }, [filteredEmployees]);
 
@@ -230,13 +234,13 @@ const ProfessionView: React.FC = () => {
           </div>
 
           {/* Role Summary Rows */}
-          {uniqueRoles.map((role) => (
+          {(uniqueRoles || []).map((role) => (
             <div key={`role-${role}`} className="flex border-b bg-blue-50">
               <div className="w-48 p-3 border-r">
                 <div className="font-bold text-blue-800">{role} (Total)</div>
                 <div className="text-sm text-blue-600">Role Summary</div>
               </div>
-              {months.map((month) => {
+              {(months || []).map((month) => {
                 const summary = getRoleSummaryForMonth(role, month);
                 
                 return (
@@ -261,13 +265,13 @@ const ProfessionView: React.FC = () => {
           ))}
 
           {/* Employee Rows */}
-          {filteredEmployees.map((employee) => (
+          {(filteredEmployees || []).map((employee) => (
             <div key={employee.id} className="flex border-b hover:bg-gray-50">
               <div className="w-48 p-3 border-r">
                 <div className="font-medium">{employee.name}</div>
                 <div className="text-sm text-gray-500">{employee.role}</div>
               </div>
-              {months.map((month) => {
+              {(months || []).map((month) => {
                 const monthlyAllocation = getAllocationDaysForMonth(employee.id, month);
                 const utilizationPercentage = getUtilizationPercentage(employee.id, month);
                 const workingDays = getWorkingDaysInMonth(month, employee.id);

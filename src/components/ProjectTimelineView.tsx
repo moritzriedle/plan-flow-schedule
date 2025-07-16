@@ -90,10 +90,15 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   const projectAllocations = safeAllocations.filter(alloc => alloc && alloc.projectId === project.id);
   
   // Get unique sprints for this project
-  const projectSprintIds = Array.from(new Set(projectAllocations.map(alloc => alloc.sprintId)));
+  const projectSprintIds = Array.from(new Set((projectAllocations || []).map(alloc => alloc?.sprintId).filter(id => id)));
   const safeSprints = Array.isArray(sprints) ? sprints : [];
-  const projectSprints = safeSprints.filter(sprint => sprint && projectSprintIds.includes(sprint.id)).sort((a, b) => 
-    a.startDate.getTime() - b.startDate.getTime()
+  
+  if (!Array.isArray(safeSprints)) {
+    console.warn('ProjectTimelineView: safeSprints is not an array', safeSprints);
+  }
+  
+  const projectSprints = (safeSprints || []).filter(sprint => sprint && projectSprintIds.includes(sprint.id)).sort((a, b) => 
+    a?.startDate?.getTime() - b?.startDate?.getTime()
   );
 
   return (
@@ -141,8 +146,11 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
               </div>
 
               {/* Employee Rows */}
-              {filteredEmployees.map((employee) => {
-                const employeeAllocations = projectAllocations.filter(alloc => alloc.employeeId === employee.id);
+              {!Array.isArray(filteredEmployees) ? (
+                console.warn('ProjectTimelineView: filteredEmployees is not an array', filteredEmployees),
+                <div>No employees data available</div>
+              ) : (filteredEmployees || []).map((employee) => {
+                const employeeAllocations = (projectAllocations || []).filter(alloc => alloc?.employeeId === employee?.id);
                 
                 if (employeeAllocations.length === 0) return null;
 
@@ -152,8 +160,8 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
                       <div className="font-medium">{employee.name}</div>
                       <div className="text-sm text-gray-500">{employee.role}</div>
                     </div>
-                    {projectSprints.map((sprint) => {
-                      const allocation = employeeAllocations.find(alloc => alloc.sprintId === sprint.id);
+                    {(projectSprints || []).map((sprint) => {
+                      const allocation = (employeeAllocations || []).find(alloc => alloc?.sprintId === sprint?.id);
                       return (
                         <div key={sprint.id} className="w-32 p-2 text-center border-r">
                           {allocation ? (

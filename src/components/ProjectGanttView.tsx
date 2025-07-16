@@ -50,19 +50,28 @@ const ProjectGanttView = () => {
 
   // Get unique roles from employees
   const uniqueRoles = React.useMemo(() => {
-    return Array.from(new Set(safeEmployees.map(emp => emp.role)));
+    if (!Array.isArray(safeEmployees)) {
+      console.warn('ProjectGanttView: safeEmployees is not an array', safeEmployees);
+      return [];
+    }
+    return Array.from(new Set((safeEmployees || []).map(emp => emp?.role).filter(role => role)));
   }, [safeEmployees]);
   
   // Filter projects based on selected roles
   const filteredProjects = React.useMemo(() => {
+    if (!Array.isArray(projects)) {
+      console.warn('ProjectGanttView: projects is not an array', projects);
+      return [];
+    }
+    
     if (safeSelectedRoles.length === 0) {
       return projects; // Show all projects when no roles selected
     }
     
-    return projects.filter(project => {
-      const allocations = getProjectAllocations(project.id);
-      return allocations.some(alloc => {
-        const employee = safeEmployees.find(emp => emp.id === alloc.employeeId);
+    return (projects || []).filter(project => {
+      const allocations = getProjectAllocations(project?.id) || [];
+      return (allocations || []).some(alloc => {
+        const employee = (safeEmployees || []).find(emp => emp?.id === alloc?.employeeId);
         return employee && safeSelectedRoles.includes(employee.role);
       });
     });
