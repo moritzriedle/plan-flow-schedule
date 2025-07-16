@@ -7,13 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Project } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Edit } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProjectEditDialog from './ProjectEditDialog';
 import ProjectMonthDetails from './ProjectMonthDetails';
+import MultiRoleSelector from './MultiRoleSelector';
 
 const ProjectGanttView = () => {
   const { projects, employees, getProjectAllocations } = usePlanner();
-  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   
   // Handle case where projects array is empty
@@ -31,19 +31,42 @@ const ProjectGanttView = () => {
     );
   }
   
+  // Ensure arrays are safe with comprehensive checks
+  const safeEmployees = React.useMemo(() => {
+    if (!employees || !Array.isArray(employees)) {
+      console.warn('ProjectGanttView: employees is not a valid array', { employees });
+      return [];
+    }
+    return employees.filter(emp => emp && emp.role && typeof emp.role === 'string');
+  }, [employees]);
+
+  const safeSelectedRoles = React.useMemo(() => {
+    if (!selectedRoles || !Array.isArray(selectedRoles)) {
+      console.warn('ProjectGanttView: selectedRoles is not a valid array', { selectedRoles });
+      return [];
+    }
+    return selectedRoles.filter(role => role && typeof role === 'string');
+  }, [selectedRoles]);
+
   // Get unique roles from employees
-  const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
+  const uniqueRoles = React.useMemo(() => {
+    return Array.from(new Set(safeEmployees.map(emp => emp.role)));
+  }, [safeEmployees]);
   
-  // Filter projects based on selected role
-  const filteredProjects = selectedRole === 'all' 
-    ? projects 
-    : projects.filter(project => {
-        const allocations = getProjectAllocations(project.id);
-        return allocations.some(alloc => {
-          const employee = employees.find(emp => emp.id === alloc.employeeId);
-          return employee && employee.role === selectedRole;
-        });
+  // Filter projects based on selected roles
+  const filteredProjects = React.useMemo(() => {
+    if (safeSelectedRoles.length === 0) {
+      return projects; // Show all projects when no roles selected
+    }
+    
+    return projects.filter(project => {
+      const allocations = getProjectAllocations(project.id);
+      return allocations.some(alloc => {
+        const employee = safeEmployees.find(emp => emp.id === alloc.employeeId);
+        return employee && safeSelectedRoles.includes(employee.role);
       });
+    });
+  }, [projects, safeSelectedRoles, getProjectAllocations, safeEmployees]);
   
   // Rolling 12-month view: current month to 11 months forward
   const currentDate = new Date();
@@ -78,19 +101,12 @@ const ProjectGanttView = () => {
           {/* Role Filter */}
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium">Filter by Role:</label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {uniqueRoles.map((role, index) => (
-                  <SelectItem key={`${role}-${index}`} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiRoleSelector
+              roles={uniqueRoles}
+              selectedRoles={safeSelectedRoles}
+              onRoleChange={setSelectedRoles}
+              placeholder="All Roles"
+            />
           </div>
         </div>
       </div>
