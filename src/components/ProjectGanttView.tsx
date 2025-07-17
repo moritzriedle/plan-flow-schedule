@@ -54,9 +54,11 @@ const ProjectGanttView = () => {
       console.warn('ProjectGanttView: safeEmployees is not an array', safeEmployees);
       return [];
     }
+    console.log('ProjectGanttView: About to extract roles from employees:', safeEmployees);
     const roleSet = new Set((safeEmployees || []).map(emp => emp?.role).filter(role => role));
     console.log('ProjectGanttView: About to call Array.from with roleSet:', roleSet);
-    return Array.isArray(roleSet) ? Array.from(roleSet) : [];
+    const rolesArray = Array.isArray(roleSet) ? Array.from(roleSet) : (roleSet ? Array.from(roleSet) : []);
+    return (rolesArray || []).sort();
   }, [safeEmployees]);
   
   // Filter projects based on selected roles
@@ -66,15 +68,16 @@ const ProjectGanttView = () => {
       return [];
     }
     
-    if (safeSelectedRoles.length === 0) {
-      return projects; // Show all projects when no roles selected
+    console.log('ProjectGanttView: About to filter projects with safeSelectedRoles:', safeSelectedRoles);
+    if (!Array.isArray(safeSelectedRoles) || safeSelectedRoles.length === 0) {
+      return Array.isArray(projects) ? projects : []; // Show all projects when no roles selected
     }
     
-    return (projects || []).filter(project => {
+    return (Array.isArray(projects) ? projects : []).filter(project => {
       const allocations = getProjectAllocations(project?.id) || [];
-      return (allocations || []).some(alloc => {
-        const employee = (safeEmployees || []).find(emp => emp?.id === alloc?.employeeId);
-        return employee && safeSelectedRoles.includes(employee.role);
+      return (Array.isArray(allocations) ? allocations : []).some(alloc => {
+        const employee = (Array.isArray(safeEmployees) ? safeEmployees : []).find(emp => emp?.id === alloc?.employeeId);
+        return employee && Array.isArray(safeSelectedRoles) && safeSelectedRoles.includes(employee.role);
       });
     });
   }, [projects, safeSelectedRoles, getProjectAllocations, safeEmployees]);
@@ -140,7 +143,10 @@ const ProjectGanttView = () => {
           </div>
           
           {/* Project Rows */}
-          {filteredProjects.map(project => (
+          {!Array.isArray(filteredProjects) ? (
+            console.warn('ProjectGanttView: filteredProjects is not an array', filteredProjects),
+            <div>No projects data available</div>
+          ) : (filteredProjects || []).map(project => (
             <React.Fragment key={project.id}>
               <ProjectGanttRow 
                 project={project} 

@@ -71,6 +71,7 @@ const ProfessionView: React.FC = () => {
 
   // Generate 12-month rolling view starting from current month
   const months = React.useMemo(() => {
+    console.log('ProfessionView: Generating months array');
     const currentDate = new Date();
     const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const monthsList = [];
@@ -78,7 +79,8 @@ const ProfessionView: React.FC = () => {
       const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
       monthsList.push(monthStart);
     }
-    return monthsList;
+    console.log('ProfessionView: Generated months array:', monthsList);
+    return Array.isArray(monthsList) ? monthsList : [];
   }, []);
 
   // Calculate working days in a month (Monday to Friday) minus vacation days
@@ -224,10 +226,13 @@ const ProfessionView: React.FC = () => {
 
       <div className="overflow-auto">
         <div className="min-w-max">
-          {/* Month Headers */}
-          <div className="flex border-b-2 border-gray-200 bg-gray-50">
-            <div className="w-48 p-3 font-semibold border-r">Team Member</div>
-            {months.map((month) => (
+            {/* Month Headers */}
+            <div className="flex border-b-2 border-gray-200 bg-gray-50">
+              <div className="w-48 p-3 font-semibold border-r">Team Member</div>
+              {!Array.isArray(months) ? (
+                console.warn('ProfessionView: months is not an array', months),
+                <div>No months data available</div>
+              ) : (months || []).map((month) => (
               <div key={month.toISOString()} className="w-40 p-2 text-center text-sm font-medium border-r">
                 <div>{format(month, 'MMM yyyy')}</div>
                 <div className="text-xs text-gray-500 mt-1">

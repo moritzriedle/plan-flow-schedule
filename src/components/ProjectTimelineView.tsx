@@ -99,7 +99,10 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
     console.warn('ProjectTimelineView: safeSprints is not an array', safeSprints);
   }
   
-  const projectSprints = (safeSprints || []).filter(sprint => sprint && projectSprintIds.includes(sprint.id)).sort((a, b) => 
+  console.log('ProjectTimelineView: About to filter and sort project sprints');
+  const projectSprints = (Array.isArray(safeSprints) ? safeSprints : []).filter(sprint => 
+    sprint && Array.isArray(projectSprintIds) && projectSprintIds.includes(sprint.id)
+  ).sort((a, b) => 
     a?.startDate?.getTime() - b?.startDate?.getTime()
   );
 
@@ -137,7 +140,10 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
               {/* Sprint Headers */}
               <div className="flex border-b-2 border-gray-200 bg-gray-50">
                 <div className="w-48 p-3 font-semibold border-r">Team Member</div>
-                {projectSprints.map((sprint) => (
+                {!Array.isArray(projectSprints) ? (
+                  console.warn('ProjectTimelineView: projectSprints is not an array', projectSprints),
+                  <div>No sprints data available</div>
+                ) : (projectSprints || []).map((sprint) => (
                   <div key={sprint.id} className="w-32 p-2 text-center text-sm font-medium border-r">
                     <div className="font-semibold">{sprint.name}</div>
                     <div className="text-xs text-gray-600 mt-1">
@@ -158,11 +164,14 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
 
                 return (
                   <div key={employee.id} className="flex border-b hover:bg-gray-50">
-                    <div className="w-48 p-3 border-r">
-                      <div className="font-medium">{employee.name}</div>
-                      <div className="text-sm text-gray-500">{employee.role}</div>
-                    </div>
-                    {(projectSprints || []).map((sprint) => {
+                      <div className="w-48 p-3 border-r">
+                        <div className="font-medium">{employee.name}</div>
+                        <div className="text-sm text-gray-500">{employee.role}</div>
+                      </div>
+                      {!Array.isArray(projectSprints) ? (
+                        console.warn('ProjectTimelineView: projectSprints is not an array in employee row', projectSprints),
+                        <div>No sprints available</div>
+                      ) : (projectSprints || []).map((sprint) => {
                       const allocation = (employeeAllocations || []).find(alloc => alloc?.sprintId === sprint?.id);
                       return (
                         <div key={sprint.id} className="w-32 p-2 text-center border-r">
