@@ -52,6 +52,36 @@ const ResourcePlanner: React.FC = () => {
   
   const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
 
+   // Ensure ROLE_OPTIONS is always a valid array
+  const safeRoleOptions = React.useMemo(() => {
+    if (!ROLE_OPTIONS || !Array.isArray(ROLE_OPTIONS)) {
+      console.warn('ResourcePlanner: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
+      return [];
+    }
+    return Array.isArray(ROLE_OPTIONS)
+      ? ROLE_OPTIONS.filter(role => role && typeof role === 'string')
+      : [];
+  }, []);
+
+  // Ensure employees is always a valid array
+  const safeEmployees = React.useMemo(() => {
+    if (!employees || !Array.isArray(employees)) {
+      console.warn('ResourcePlanner: employees is not a valid array', { employees });
+      return [];
+    }
+    return employees.filter(emp => emp && emp.id);
+  }, [employees]);
+
+  
+  // Ensure selectedRoles is always a valid array
+  const safeSelectedRoles = React.useMemo(() => {
+    if (!selectedRoles || !Array.isArray(selectedRoles)) {
+      console.warn('ResourcePlanner: selectedRoles is not a valid array', { selectedRoles });
+      return [];
+    }
+    return selectedRoles.filter(role => role && typeof role === 'string');
+  }, [selectedRoles]);
+  
   const handleProjectTimelineOpen = (project: Project) => {
     setSelectedProject(project);
     setIsProjectTimelineOpen(true);
@@ -107,35 +137,6 @@ const ResourcePlanner: React.FC = () => {
       </div>
     );
   }
-
-  // Ensure ROLE_OPTIONS is always a valid array
-  const safeRoleOptions = React.useMemo(() => {
-    if (!ROLE_OPTIONS || !Array.isArray(ROLE_OPTIONS)) {
-      console.warn('ResourcePlanner: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
-      return [];
-    }
-    return Array.isArray(ROLE_OPTIONS)
-      ? ROLE_OPTIONS.filter(role => role && typeof role === 'string')
-      : [];
-  }, []);
-
-  // Ensure employees is always a valid array
-  const safeEmployees = React.useMemo(() => {
-    if (!employees || !Array.isArray(employees)) {
-      console.warn('ResourcePlanner: employees is not a valid array', { employees });
-      return [];
-    }
-    return employees.filter(emp => emp && emp.id);
-  }, [employees]);
-
-  // Ensure selectedRoles is always a valid array
-  const safeSelectedRoles = React.useMemo(() => {
-    if (!selectedRoles || !Array.isArray(selectedRoles)) {
-      console.warn('ResourcePlanner: selectedRoles is not a valid array', { selectedRoles });
-      return [];
-    }
-    return selectedRoles.filter(role => role && typeof role === 'string');
-  }, [selectedRoles]);
 
   // Filter employees by selected roles with comprehensive safety checks
   const filteredEmployees = React.useMemo(() => {
