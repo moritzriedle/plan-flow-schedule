@@ -104,17 +104,31 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
 
   // Sort projects alphabetically and filter by search term
   const filteredAndSortedProjects = useMemo(() => {
-    let filtered = projects;
-    
-    // Filter by search term if provided
-    if (searchTerm.trim()) {
-      filtered = projects.filter(project =>
-        project.name.toLowerCase().includes(searchTerm.toLowerCase())
+    try {
+      if (!Array.isArray(projects)) {
+        console.warn('ProjectsSidebar: projects is not an array', projects);
+        return [];
+      }
+      
+      let filtered = projects.filter(project => 
+        project && 
+        project.name && 
+        typeof project.name === 'string'
       );
+      
+      // Filter by search term if provided
+      if (searchTerm.trim()) {
+        filtered = filtered.filter(project =>
+          project.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+      
+      // Clone array before sorting to avoid mutating original
+      return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      console.error('ProjectsSidebar: Error filtering/sorting projects', error);
+      return [];
     }
-    
-    // Sort alphabetically by name
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [projects, searchTerm]);
 
   const handleDetailedAllocation = (project: Project) => {

@@ -50,15 +50,31 @@ const ProjectGanttView = () => {
 
   // Get unique roles from employees
   const uniqueRoles = React.useMemo(() => {
-    if (!Array.isArray(safeEmployees)) {
-      console.warn('ProjectGanttView: safeEmployees is not an array', safeEmployees);
+    try {
+      if (!Array.isArray(safeEmployees)) {
+        console.warn('ProjectGanttView: safeEmployees is not an array', safeEmployees);
+        return [];
+      }
+      
+      console.log('ProjectGanttView: About to extract roles from employees:', safeEmployees);
+      const validRoles = (safeEmployees || [])
+        .map(emp => emp?.role)
+        .filter(role => role && typeof role === 'string');
+      
+      const roleSet = new Set(validRoles);
+      console.log('ProjectGanttView: About to call Array.from with roleSet:', roleSet);
+      
+      if (!roleSet || typeof roleSet[Symbol.iterator] !== 'function') {
+        console.warn('ProjectGanttView: roleSet is not iterable', roleSet);
+        return [];
+      }
+      
+      const rolesArray = Array.from(roleSet);
+      return rolesArray.sort();
+    } catch (error) {
+      console.error('ProjectGanttView: Error creating uniqueRoles', error);
       return [];
     }
-    console.log('ProjectGanttView: About to extract roles from employees:', safeEmployees);
-    const roleSet = new Set((safeEmployees || []).map(emp => emp?.role).filter(role => role));
-    console.log('ProjectGanttView: About to call Array.from with roleSet:', roleSet);
-    const rolesArray = Array.isArray(roleSet) ? Array.from(roleSet) : (roleSet ? Array.from(roleSet) : []);
-    return (rolesArray || []).sort();
   }, [safeEmployees]);
   
   // Filter projects based on selected roles

@@ -145,8 +145,8 @@ const ResourcePlanner: React.FC = () => {
       }
       
       const filtered = safeEmployees.filter(emp => {
-        if (!emp || !emp.role) {
-          console.warn('ResourcePlanner: Employee missing role', { emp });
+        if (!emp || !emp.role || typeof emp.role !== 'string') {
+          console.warn('ResourcePlanner: Employee missing valid role', { emp });
           return false;
         }
         return safeSelectedRoles.includes(emp.role);

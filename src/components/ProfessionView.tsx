@@ -45,8 +45,8 @@ const ProfessionView: React.FC = () => {
       }
       
       const filtered = safeEmployees.filter(emp => {
-        if (!emp || !emp.role) {
-          console.warn('ProfessionView: Employee missing role', { emp });
+        if (!emp || !emp.role || typeof emp.role !== 'string') {
+          console.warn('ProfessionView: Employee missing valid role', { emp });
           return false;
         }
         return safeSelectedRoles.includes(emp.role);
@@ -197,14 +197,30 @@ const ProfessionView: React.FC = () => {
 
   // Get unique roles from filtered employees
   const uniqueRoles = React.useMemo(() => {
-    if (!Array.isArray(filteredEmployees)) {
-      console.warn('ProfessionView: filteredEmployees is not an array', filteredEmployees);
+    try {
+      if (!Array.isArray(filteredEmployees)) {
+        console.warn('ProfessionView: filteredEmployees is not an array', filteredEmployees);
+        return [];
+      }
+      
+      const validRoles = (filteredEmployees || [])
+        .map(emp => emp?.role)
+        .filter(role => role && typeof role === 'string');
+      
+      const roles = new Set(validRoles);
+      console.log('ProfessionView: About to call Array.from with roles Set:', roles);
+      
+      if (!roles || typeof roles[Symbol.iterator] !== 'function') {
+        console.warn('ProfessionView: roles Set is not iterable', roles);
+        return [];
+      }
+      
+      const rolesArray = Array.from(roles);
+      return rolesArray.sort();
+    } catch (error) {
+      console.error('ProfessionView: Error creating uniqueRoles', error);
       return [];
     }
-    const roles = new Set((filteredEmployees || []).map(emp => emp?.role).filter(role => role));
-    console.log('ProfessionView: About to call Array.from with roles Set:', roles);
-    const rolesArray = Array.isArray(roles) ? Array.from(roles) : (roles ? Array.from(roles) : []);
-    return (rolesArray || []).sort();
   }, [filteredEmployees]);
 
   return (
