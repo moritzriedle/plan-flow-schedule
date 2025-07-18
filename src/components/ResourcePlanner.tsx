@@ -20,6 +20,14 @@ import { ROLE_OPTIONS } from '@/constants/roles';
 const ResourcePlanner: React.FC = () => {
   const plannerData = usePlanner();
   const { employees = [], loading, allocateToProjectTimeline } = plannerData;
+   // Ensure employees is always a valid array
+  const safeEmployees = React.useMemo(() => {
+    if (!employees || !Array.isArray(employees)) {
+      console.warn('ResourcePlanner: employees is not a valid array', { employees });
+      return [];
+    }
+    return employees.filter(emp => emp && emp.id);
+  }, [employees]);
   
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [forceShowContent, setForceShowContent] = useState(false);
@@ -51,17 +59,7 @@ const ResourcePlanner: React.FC = () => {
   const [allocationProject, setAllocationProject] = useState<Project | null>(null);
   
   const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
-
-  // Ensure employees is always a valid array
-  const safeEmployees = React.useMemo(() => {
-    if (!employees || !Array.isArray(employees)) {
-      console.warn('ResourcePlanner: employees is not a valid array', { employees });
-      return [];
-    }
-    return employees.filter(emp => emp && emp.id);
-  }, [employees]);
-
-  
+ 
    const safeRoleOptions = React.useMemo(() => {
   const fromEmployees = Array.isArray(safeEmployees)
     ? safeEmployees
