@@ -18,12 +18,12 @@ interface ResourcePlannerHeaderProps {
 
 const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
   timeframe,
-  onTimeframeChange,
+  onTimeframeChange = () => {},    // default no-op if not provided
   selectedRoles = [],
-  onRoleChange,
+  onRoleChange = () => {},          // default no-op
   availableRoles = [],
-  onAddProject,
-  onAddEmployee
+  onAddProject = () => {},
+  onAddEmployee = () => {}
 }) => {
   // Sanitize selectedRoles
   const safeSelectedRoles = React.useMemo(() => {
