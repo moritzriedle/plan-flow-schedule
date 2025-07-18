@@ -163,8 +163,8 @@ const ProjectGanttView = () => {
             console.warn('ProjectGanttView: filteredProjects is not an array', filteredProjects),
             <div>No projects data available</div>
           ) : (filteredProjects || []).map(project => (
-            <React.Fragment key={project.id}>
               <ProjectGanttRow 
+                key={project.id}
                 project={project} 
                 months={months}
                 isExpanded={expandedProjects.has(project.id)}
