@@ -125,8 +125,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
             </div>
             
             {/* Role options */}
-            {Array.isArray(safeRoles)
-              ? safeRoles
+            {safeRoles
                 .filter(role => typeof role === 'string') // extra safety
                 .map(role => (              
                   <CommandItem
@@ -143,8 +142,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
               </CommandItem>
             ))}
           </CommandGroup>
-            ):null}
-        
+          ):null}
         </Command>
       </PopoverContent>
     </Popover>
