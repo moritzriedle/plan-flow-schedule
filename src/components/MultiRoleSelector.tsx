@@ -125,12 +125,15 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
             </div>
             
             {/* Role options */}
-            {safeRoles.map((role) => (
-              <CommandItem
-                key={role}
-                onSelect={() => handleRoleToggle(role)}
-                className="cursor-pointer"
-              >
+            {Array.isArray(safeRoles)
+              ? safeRoles
+                .filter(role => typeof role === 'string') // extra safety
+                .map(role => (              
+                  <CommandItem
+                    key={role}
+                    onSelect={() => handleRoleToggle(role)}
+                    className="cursor-pointer"
+                    >
                 <Check
                   className={`mr-2 h-4 w-4 ${
                     safeSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
