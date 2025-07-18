@@ -52,17 +52,22 @@ const ResourcePlanner: React.FC = () => {
   
   const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
 
-   // Ensure ROLE_OPTIONS is always a valid array
-  const safeRoleOptions = React.useMemo(() => {
-  if (!Array.isArray(ROLE_OPTIONS)) {
-    console.warn('ResourcePlanner: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
-    return [];
-  }
+   const safeRoleOptions = React.useMemo(() => {
+  const fromEmployees = Array.isArray(safeEmployees)
+    ? safeEmployees
+        .map(emp => emp?.role)
+        .filter((role): role is string => typeof role === 'string' && role.trim() !== '')
+    : [];
 
-  return ROLE_OPTIONS.filter(
-    (role): role is string => typeof role === 'string' && role.trim() !== ''
-  );
-}, []);
+  const fromConstants = Array.isArray(ROLE_OPTIONS)
+    ? ROLE_OPTIONS.filter((role): role is string => typeof role === 'string' && role.trim() !== '')
+    : [];
+
+  const allRoles = [...fromEmployees, ...fromConstants];
+
+  return Array.from(new Set(allRoles)); // remove duplicates
+}, [safeEmployees]);
+
 
 
   // Ensure employees is always a valid array
