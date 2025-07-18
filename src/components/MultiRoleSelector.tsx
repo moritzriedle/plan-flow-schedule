@@ -97,53 +97,62 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-0 bg-white z-50">
-        <Command>
-          <CommandInput placeholder="Search roles..." />
-          <CommandEmpty>No roles found.</CommandEmpty>
-          {Array.isArray(safeRoles) && safeRoles.length > 0 ? (
-          <CommandGroup>
-            {/* Action buttons */}
-            <div className="p-2 border-b flex gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleSelectAll}
-                className="flex-1 text-xs"
-                disabled={safeSelectedRoles.length === safeRoles.length}
-              >
-                Select All
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleClearAll}
-                className="flex-1 text-xs"
-                disabled={safeSelectedRoles.length === 0}
-              >
-                Clear All
-              </Button>
-            </div>
-            
-            {/* Role options */}
-            {safeRoles
-                .filter(role => typeof role === 'string') // extra safety
-                .map(role => (              
-                  <CommandItem
-                    key={role}
-                    onSelect={() => handleRoleToggle(role)}
-                    className="cursor-pointer"
-                    >
-                <Check
-                  className={`mr-2 h-4 w-4 ${
-                    safeSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-                <span className="truncate">{role}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          ):null}
-        </Command>
+<Command>
+  <CommandInput placeholder="Search roles..." />
+  <CommandEmpty>No roles found.</CommandEmpty>
+
+  {/* 🔁 NEW: Pre-build items list */}
+  {(() => {
+    const roleItems = safeRoles
+      .filter(role => typeof role === 'string')
+      .map(role => (
+        <CommandItem
+          key={role}
+          onSelect={() => handleRoleToggle(role)}
+          className="cursor-pointer"
+        >
+          <Check
+            className={`mr-2 h-4 w-4 ${
+              safeSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
+            }`}
+          />
+          <span className="truncate">{role}</span>
+        </CommandItem>
+      ));
+
+    // ✅ Only render group if items exist
+    if (roleItems.length === 0) return null;
+
+    return (
+      <CommandGroup>
+        <div className="p-2 border-b flex gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleSelectAll}
+            className="flex-1 text-xs"
+            disabled={safeSelectedRoles.length === safeRoles.length}
+          >
+            Select All
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleClearAll}
+            className="flex-1 text-xs"
+            disabled={safeSelectedRoles.length === 0}
+          >
+            Clear All
+          </Button>
+        </div>
+        {roleItems}
+      </CommandGroup>
+    );
+  })()}
+</Command>
+
+
+       
       </PopoverContent>
     </Popover>
   );
