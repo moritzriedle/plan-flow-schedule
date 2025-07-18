@@ -100,6 +100,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
         <Command>
           <CommandInput placeholder="Search roles..." />
           <CommandEmpty>No roles found.</CommandEmpty>
+          {safeRoles.length > 0 && (
           <CommandGroup>
             {/* Action buttons */}
             <div className="p-2 border-b flex gap-2">
@@ -139,6 +140,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
               </CommandItem>
             ))}
           </CommandGroup>
+          )}
         </Command>
       </PopoverContent>
     </Popover>
