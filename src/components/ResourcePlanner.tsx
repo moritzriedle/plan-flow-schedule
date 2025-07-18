@@ -81,6 +81,47 @@ const ResourcePlanner: React.FC = () => {
     }
     return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
+
+ // Filter employees by selected roles with comprehensive safety checks
+  const filteredEmployees = React.useMemo(() => {
+    try {
+      if (safeSelectedRoles.length === 0) {
+        return safeEmployees;
+      }
+      
+      const filtered = safeEmployees.filter(emp => {
+        if (!emp || !emp.role || typeof emp.role !== 'string') {
+          console.warn('ResourcePlanner: Employee missing valid role', { emp });
+          return false;
+        }
+        return safeSelectedRoles.includes(emp.role);
+      });
+      
+      return filtered;
+    } catch (error) {
+      console.error('ResourcePlanner: Error filtering employees', error);
+      return safeEmployees;
+    }
+  }, [safeEmployees, safeSelectedRoles]);
+
+  const handleRoleChange = (roles: string[]) => {
+    try {
+      const safeRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
+      setSelectedRoles(safeRoles);
+    } catch (error) {
+      console.error('ResourcePlanner: Error in handleRoleChange', error);
+      setSelectedRoles([]);
+    }
+  };
+
+  // Final defensive fallback before render
+  if (!Array.isArray(safeSelectedRoles)) {
+    console.warn('safeSelectedRoles not iterable — defaulting to empty array');
+  }
+
+  if (!Array.isArray(safeRoleOptions)) {
+    console.warn('safeRoleOptions not iterable — defaulting to empty array');
+  }
   
   const handleProjectTimelineOpen = (project: Project) => {
     setSelectedProject(project);
@@ -136,47 +177,6 @@ const ResourcePlanner: React.FC = () => {
         </div>
       </div>
     );
-  }
-
-  // Filter employees by selected roles with comprehensive safety checks
-  const filteredEmployees = React.useMemo(() => {
-    try {
-      if (safeSelectedRoles.length === 0) {
-        return safeEmployees;
-      }
-      
-      const filtered = safeEmployees.filter(emp => {
-        if (!emp || !emp.role || typeof emp.role !== 'string') {
-          console.warn('ResourcePlanner: Employee missing valid role', { emp });
-          return false;
-        }
-        return safeSelectedRoles.includes(emp.role);
-      });
-      
-      return filtered;
-    } catch (error) {
-      console.error('ResourcePlanner: Error filtering employees', error);
-      return safeEmployees;
-    }
-  }, [safeEmployees, safeSelectedRoles]);
-
-  const handleRoleChange = (roles: string[]) => {
-    try {
-      const safeRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
-      setSelectedRoles(safeRoles);
-    } catch (error) {
-      console.error('ResourcePlanner: Error in handleRoleChange', error);
-      setSelectedRoles([]);
-    }
-  };
-
-  // Final defensive fallback before render
-  if (!Array.isArray(safeSelectedRoles)) {
-    console.warn('safeSelectedRoles not iterable — defaulting to empty array');
-  }
-
-  if (!Array.isArray(safeRoleOptions)) {
-    console.warn('safeRoleOptions not iterable — defaulting to empty array');
   }
 
   return (
