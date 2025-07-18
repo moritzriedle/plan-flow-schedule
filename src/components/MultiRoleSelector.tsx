@@ -143,6 +143,7 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
               </CommandItem>
             ))}
           </CommandGroup>
+            ):null}
           ):null}
         </Command>
       </PopoverContent>
