@@ -15,7 +15,7 @@ interface MultiRoleSelectorProps {
 const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   roles = [],
   selectedRoles = [],
-  onRoleChange,
+  onRoleChange  = () => {},  // <-- default empty function to avoid crashes
   placeholder = "Select roles..."
 }) => {
   const [open, setOpen] = React.useState(false);
