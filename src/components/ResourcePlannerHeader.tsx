@@ -25,23 +25,26 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
   onAddProject,
   onAddEmployee
 }) => {
-  // Ensure arrays are safe with comprehensive checks
+  // Sanitize selectedRoles
   const safeSelectedRoles = React.useMemo(() => {
-    if (!selectedRoles || !Array.isArray(selectedRoles)) {
-      console.warn('ResourcePlannerHeader: selectedRoles is not a valid array', { selectedRoles });
+    if (!Array.isArray(selectedRoles)) {
+      console.warn('selectedRoles is not an array', { selectedRoles });
       return [];
     }
-    return selectedRoles.filter(role => role && typeof role === 'string');
+    return selectedRoles.filter(role => typeof role === 'string' && role.trim() !== '');
   }, [selectedRoles]);
 
+  // ✅ Sanitize availableRoles (Step 1 fix)
   const safeAvailableRoles = React.useMemo(() => {
-    if (!availableRoles || !Array.isArray(availableRoles)) {
-      console.warn('ResourcePlannerHeader: availableRoles is not a valid array', { availableRoles });
+    if (!Array.isArray(availableRoles)) {
+      console.warn('availableRoles is not an array', { availableRoles });
       return [];
     }
-    return availableRoles.filter(role => role && typeof role === 'string');
+    const cleaned = availableRoles.filter(role => typeof role === 'string' && role.trim() !== '');
+    console.log('✅ Sanitized availableRoles:', cleaned);
+    return cleaned;
   }, [availableRoles]);
-
+  
   const handleRoleChange = (roles: string[]) => {
     try {
       const validRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
