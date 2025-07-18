@@ -36,7 +36,18 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
     }
     return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
-
+  
+React.useEffect(() => {
+    if (!Array.isArray(safeRoles)) {
+      console.error('MultiRoleSelector: safeRoles is NOT an array', safeRoles);
+    }
+    if (!Array.isArray(safeSelectedRoles)) {
+      console.error('MultiRoleSelector: safeSelectedRoles is NOT an array', safeSelectedRoles);
+    }
+    console.log('MultiRoleSelector current safeRoles:', safeRoles);
+    console.log('MultiRoleSelector current safeSelectedRoles:', safeSelectedRoles);
+  }, [safeRoles, safeSelectedRoles]);
+  
   const handleRoleToggle = (role: string) => {
     if (!role || typeof role !== 'string') {
       console.warn('MultiRoleSelector: Invalid role provided to handleRoleToggle', { role });
@@ -103,6 +114,15 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
 
   {/* 🔁 NEW: Pre-build items list */}
   {(() => {
+ // Defensive check here before mapping
+            if (!Array.isArray(safeRoles)) {
+              console.error('MultiRoleSelector: safeRoles is not an array during render', safeRoles);
+              return null; // fail gracefully
+            }
+            if (!Array.isArray(safeSelectedRoles)) {
+              console.error('MultiRoleSelector: safeSelectedRoles is not an array during render', safeSelectedRoles);
+              return null; // fail gracefully
+            }
     const roleItems = safeRoles
       .filter(role => typeof role === 'string')
       .map(role => (
