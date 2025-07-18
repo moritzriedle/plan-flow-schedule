@@ -52,6 +52,16 @@ const ResourcePlanner: React.FC = () => {
   
   const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
 
+  // Ensure employees is always a valid array
+  const safeEmployees = React.useMemo(() => {
+    if (!employees || !Array.isArray(employees)) {
+      console.warn('ResourcePlanner: employees is not a valid array', { employees });
+      return [];
+    }
+    return employees.filter(emp => emp && emp.id);
+  }, [employees]);
+
+  
    const safeRoleOptions = React.useMemo(() => {
   const fromEmployees = Array.isArray(safeEmployees)
     ? safeEmployees
@@ -67,17 +77,6 @@ const ResourcePlanner: React.FC = () => {
 
   return Array.from(new Set(allRoles)); // remove duplicates
 }, [safeEmployees]);
-
-
-
-  // Ensure employees is always a valid array
-  const safeEmployees = React.useMemo(() => {
-    if (!employees || !Array.isArray(employees)) {
-      console.warn('ResourcePlanner: employees is not a valid array', { employees });
-      return [];
-    }
-    return employees.filter(emp => emp && emp.id);
-  }, [employees]);
 
   
   // Ensure selectedRoles is always a valid array
