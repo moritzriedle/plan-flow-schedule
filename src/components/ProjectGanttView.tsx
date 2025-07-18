@@ -50,32 +50,26 @@ const ProjectGanttView = () => {
 
   // Get unique roles from employees
   const uniqueRoles = React.useMemo(() => {
-    try {
-      if (!Array.isArray(safeEmployees)) {
-        console.warn('ProjectGanttView: safeEmployees is not an array', safeEmployees);
-        return [];
-      }
-      
-      console.log('ProjectGanttView: About to extract roles from employees:', safeEmployees);
-      const validRoles = (safeEmployees || [])
-        .map(emp => emp?.role)
-        .filter(role => role && typeof role === 'string');
-      
-      const roleSet = new Set(validRoles);
-      console.log('ProjectGanttView: About to call Array.from with roleSet:', roleSet);
-      
-      if (!roleSet || typeof roleSet[Symbol.iterator] !== 'function') {
-        console.warn('ProjectGanttView: roleSet is not iterable', roleSet);
-        return [];
-      }
-      
-      const rolesArray = Array.from(roleSet);
-      return rolesArray.sort();
-    } catch (error) {
-      console.error('ProjectGanttView: Error creating uniqueRoles', error);
+  try {
+    const validRoles = Array.isArray(safeEmployees)
+      ? safeEmployees.map(emp => emp?.role).filter(role => typeof role === 'string')
+      : [];
+
+    const roleSet = new Set(validRoles);
+
+    // Final check to ensure Set is iterable (paranoia)
+    if (roleSet && typeof roleSet[Symbol.iterator] === 'function') {
+      return Array.from(roleSet).sort();
+    } else {
+      console.warn('ProjectGanttView: roleSet is not iterable', roleSet);
       return [];
     }
-  }, [safeEmployees]);
+  } catch (error) {
+    console.error('ProjectGanttView: Error computing uniqueRoles', error);
+    return [];
+  }
+}, [safeEmployees]);
+
   
   // Filter projects based on selected roles
   const filteredProjects = React.useMemo(() => {
