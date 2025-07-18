@@ -54,14 +54,16 @@ const ResourcePlanner: React.FC = () => {
 
    // Ensure ROLE_OPTIONS is always a valid array
   const safeRoleOptions = React.useMemo(() => {
-    if (!ROLE_OPTIONS || !Array.isArray(ROLE_OPTIONS)) {
-      console.warn('ResourcePlanner: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
-      return [];
-    }
-    return Array.isArray(ROLE_OPTIONS)
-      ? ROLE_OPTIONS.filter(role => role && typeof role === 'string')
-      : [];
-  }, []);
+  if (!Array.isArray(ROLE_OPTIONS)) {
+    console.warn('ResourcePlanner: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
+    return [];
+  }
+
+  return ROLE_OPTIONS.filter(
+    (role): role is string => typeof role === 'string' && role.trim() !== ''
+  );
+}, []);
+
 
   // Ensure employees is always a valid array
   const safeEmployees = React.useMemo(() => {
