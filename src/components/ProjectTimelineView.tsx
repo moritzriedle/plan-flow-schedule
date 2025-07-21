@@ -2,6 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Project } from '../types';
+import MultiRoleSelector from './MultiRoleSelector';
 import { usePlanner } from '../contexts/PlannerContext';
 import TicketReferenceInput from './TicketReferenceInput';
 import { getSprintDateRange } from '../utils/sprintUtils';
