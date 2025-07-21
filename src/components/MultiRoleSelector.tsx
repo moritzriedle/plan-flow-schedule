@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { ROLE_OPTIONS } from '@/constants/roles'; // adjust path if needed
 import { Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,7 +14,7 @@ interface MultiRoleSelectorProps {
 }
 
 const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
-  roles = [],
+  roles = ROLE_OPTIONS,
   selectedRoles = [],
   onRoleChange  = () => {},  // <-- default empty function to avoid crashes
   placeholder = "Select roles..."
