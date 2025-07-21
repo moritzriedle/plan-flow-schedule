@@ -30,13 +30,13 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
     return roles.filter(role => role && typeof role === 'string');
   }, [roles]);
 
-  const safeSelectedRoles = React.useMemo(() => {
-    if (!selectedRoles || !Array.isArray(selectedRoles)) {
-      console.warn('MultiRoleSelector: selectedRoles is not a valid array, using empty array', { selectedRoles });
-      return [];
-    }
-    return selectedRoles.filter(role => role && typeof role === 'string');
-  }, [selectedRoles]);
+  const safeSelectedRoles: string[] = React.useMemo(() => {
+  if (!Array.isArray(selectedRoles)) {
+    console.warn('MultiRoleSelector: selectedRoles is not an array — fallback to []', { selectedRoles });
+    return [];
+  }
+  return selectedRoles.filter(role => typeof role === 'string' && role.trim() !== '');
+}, [selectedRoles]);
   
 React.useEffect(() => {
     if (!Array.isArray(safeRoles)) {
@@ -124,7 +124,12 @@ React.useEffect(() => {
               console.error('MultiRoleSelector: safeSelectedRoles is not an array during render', safeSelectedRoles);
               return null; // fail gracefully
             }
-    const roleItems = safeRoles
+   
+  // Final fallback in case safeSelectedRoles is invalid
+const rolesToUse = Array.isArray(safeSelectedRoles) ? safeSelectedRoles : [];
+
+const roleItems = Array.isArray(safeRoles)
+  ? safeRoles
       .filter(role => typeof role === 'string')
       .map(role => (
         <CommandItem
@@ -134,12 +139,13 @@ React.useEffect(() => {
         >
           <Check
             className={`mr-2 h-4 w-4 ${
-              safeSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
+              rolesToUse.includes(role) ? "opacity-100" : "opacity-0"
             }`}
           />
           <span className="truncate">{role}</span>
         </CommandItem>
-      ));
+      ))
+  : [];
 
     // ✅ Only render group if items exist
     if (roleItems.length === 0) return null;
