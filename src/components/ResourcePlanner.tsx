@@ -4,7 +4,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePlanner } from '../contexts/PlannerContext';
 import ProjectsSidebar from './ProjectsSidebar';
-import ProjectTimelineView from './ProjectTimelineView';
+// import ProjectTimelineView from './ProjectTimelineView';
 import EmployeeEditor from './EmployeeEditor';
 import { AddProjectDialog } from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
@@ -226,16 +226,19 @@ const ResourcePlanner: React.FC = () => {
         </div>
       </div>
 
-      <ProjectTimelineView
-        project={selectedProject}
-        isOpen={isProjectTimelineOpen}
-        onClose={() => {
-          setIsProjectTimelineOpen(false);
-          setSelectedProject(null);
-        }}
-        selectedRoles={safeSelectedRoles}
-        onRoleChange={handleRoleChange}
-      />
+     {/*
+<ProjectTimelineView
+  project={selectedProject}
+  isOpen={isProjectTimelineOpen}
+  onClose={() => {
+    setIsProjectTimelineOpen(false);
+    setSelectedProject(null);
+  }}
+  selectedRoles={safeSelectedRoles}
+  onRoleChange={handleRoleChange}
+/>
+*/}
+
 
       <AddProjectDialog 
         open={isAddProjectDialogOpen} 
