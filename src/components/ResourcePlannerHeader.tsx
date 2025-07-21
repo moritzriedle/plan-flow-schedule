@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { ROLE_OPTIONS } from '@/constants/roles';
 import { Button } from '@/components/ui/button';
 import { Plus, UserPlus } from 'lucide-react';
 import TimeframeSelector from './TimeframeSelector';
@@ -21,7 +22,7 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
   onTimeframeChange = () => {},    // default no-op if not provided
   selectedRoles = [],
   onRoleChange = () => {},          // default no-op
-  availableRoles = [],
+  availableRoles = ROLE_OPTIONS,
   onAddProject = () => {},
   onAddEmployee = () => {}
 }) => {
