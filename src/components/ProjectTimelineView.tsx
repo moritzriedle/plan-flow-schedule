@@ -3,7 +3,6 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Project } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
-import MultiRoleSelector from './MultiRoleSelector';
 import TicketReferenceInput from './TicketReferenceInput';
 import { getSprintDateRange } from '../utils/sprintUtils';
 import { ROLE_OPTIONS } from '@/constants/roles';
