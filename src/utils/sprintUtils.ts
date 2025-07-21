@@ -13,7 +13,7 @@ const calculateSprintNumber = (startDate: Date): number => {
   
   // Reference: Sprint 13 starts on June 24th, 2024 (Monday)
   const referenceDate = new Date(2024, 5, 24); // June 24 (Monday)
-  const referenceSprintNumber = 13;
+  const referenceSprintNumber = 14;
   
   if (year === 2024) {
     // Calculate weeks difference from reference date
