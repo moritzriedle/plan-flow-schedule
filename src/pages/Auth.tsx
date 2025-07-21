@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 import { isPasswordValid } from '@/utils/passwordValidation';
+import { ROLE_OPTIONS } from '@/constants/roles';
+
 
 const Auth = () => {
   const { user, signIn, signUp, resetPassword, loading } = useAuth();
@@ -169,16 +171,22 @@ const Auth = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="signup-role">Role</Label>
-                    <Input
-                      id="signup-role"
-                      type="text"
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      placeholder="Developer"
-                      required
-                    />
-                  </div>
+  <Label htmlFor="signup-role">Role</Label>
+  <select
+    id="signup-role"
+    value={role}
+    onChange={(e) => setRole(e.target.value)}
+    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    required
+  >
+    {ROLE_OPTIONS.map((r) => (
+      <option key={r} value={r}>
+        {r}
+      </option>
+    ))}
+  </select>
+</div>
+
                   
                   <div>
                     <Label htmlFor="signup-email">Email</Label>
