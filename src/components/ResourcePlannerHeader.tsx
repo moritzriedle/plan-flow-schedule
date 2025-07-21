@@ -37,12 +37,26 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
 
   // ✅ Sanitize availableRoles (Step 1 fix)
   const safeAvailableRoles = React.useMemo(() => {
+    console.log('ResourcePlannerHeader: Processing availableRoles:', { 
+      availableRoles, 
+      type: typeof availableRoles, 
+      isArray: Array.isArray(availableRoles) 
+    });
+    
     if (!Array.isArray(availableRoles)) {
-      console.warn('availableRoles is not an array', { availableRoles });
+      console.warn('ResourcePlannerHeader: availableRoles is not an array', { availableRoles });
       return [];
     }
-    const cleaned = availableRoles.filter(role => typeof role === 'string' && role.trim() !== '');
-    console.log('✅ Sanitized availableRoles:', cleaned);
+    
+    const cleaned = availableRoles.filter(role => {
+      const isValid = typeof role === 'string' && role.trim() !== '';
+      if (!isValid) {
+        console.warn('ResourcePlannerHeader: Filtering out invalid availableRole:', role);
+      }
+      return isValid;
+    });
+    
+    console.log('ResourcePlannerHeader: Sanitized availableRoles result:', cleaned);
     return cleaned;
   }, [availableRoles]);
   

@@ -68,7 +68,7 @@ const ResourcePlanner: React.FC = () => {
     : [];
 
   const fromConstants = Array.isArray(ROLE_OPTIONS)
-    ? ROLE_OPTIONS.filter((role): role is string => typeof role === 'string' && role.trim() !== '')
+    ? ROLE_OPTIONS.filter(role => typeof role === 'string' && role.trim() !== '')
     : [];
 
   const allRoles = [...fromEmployees, ...fromConstants];
