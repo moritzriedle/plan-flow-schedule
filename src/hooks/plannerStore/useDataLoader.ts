@@ -9,13 +9,14 @@ import { dateToSprintId, calculateProjectDateRanges } from './utils';
 
 export const useDataLoader = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  
+  const referenceSprintStart = new Date(2024, 5, 24); // June 24, 2024
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>(() => {
     console.log('useDataLoader: Generating initial sprints');
-    return generateSprints(new Date(), 100);
+    return generateSprints(referenceSprintStart, 100);
   });
   const [loading, setLoading] = useState(true);
   
