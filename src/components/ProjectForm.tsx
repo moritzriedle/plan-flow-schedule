@@ -1,5 +1,5 @@
 // components/ProjectForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Project } from '@/types';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { DialogFooter } from '@/components/ui/dialog';
+import TicketReferenceInput from './TicketReferenceInput';
 
 interface ProjectFormProps {
   initialProject: Partial<Project>;
@@ -26,6 +27,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
   const [leadId, setLeadId] = useState(initialProject.leadId || '');
   const [startDate, setStartDate] = useState<Date>(initialProject.startDate || new Date());
   const [endDate, setEndDate] = useState<Date>(initialProject.endDate || new Date());
+  const [jiraTicket, setJiraTicket] = useState(initialProject.jiraTicket || '');
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
@@ -39,6 +41,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
       leadId: leadId === 'none' ? undefined : leadId,
       startDate,
       endDate,
+      jiraTicket: jiraTicket || undefined,
     });
   };
 
@@ -91,6 +94,15 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ticketReference">Ticket Reference</Label>
+        <TicketReferenceInput
+          value={jiraTicket}
+          onChange={setJiraTicket}
+          placeholder="e.g., PPT-82"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
