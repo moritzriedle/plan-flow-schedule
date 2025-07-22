@@ -6,7 +6,7 @@ import { usePlanner } from '../contexts/PlannerContext';
 import ProjectsSidebar from './ProjectsSidebar';
 // import ProjectTimelineView from './ProjectTimelineView';
 import EmployeeEditor from './EmployeeEditor';
-import { AddProjectDialog } from './AddProjectDialog';
+import AddProjectDialog from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
 import { DetailedAllocationDialog } from './DetailedAllocationDialog';
 import ResourcePlannerHeader from './ResourcePlannerHeader';
