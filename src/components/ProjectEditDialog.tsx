@@ -49,7 +49,8 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
       color,
       leadId: leadId || undefined,
       startDate,
-      endDate
+      endDate,
+      jiraTicket
     };
     
     updateProject(updatedProject);
