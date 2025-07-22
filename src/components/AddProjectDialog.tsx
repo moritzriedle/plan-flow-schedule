@@ -29,7 +29,8 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
       color: projectData.color ?? 'blue',
       startDate: projectData.startDate ?? new Date(),
       endDate: projectData.endDate ?? new Date(),
-      leadId: projectData.leadId
+      leadId: projectData.leadId,
+      jiraTicket: data.jiraTicket,
     };
 
     addProject(newProject);
