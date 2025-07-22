@@ -1,102 +1,55 @@
-
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// components/AddProjectDialog.tsx
+import React from 'react';
 import { usePlanner } from '@/contexts/PlannerContext';
-import { toast } from 'sonner';
-import { ROLE_OPTIONS } from '@/constants/roles';
+import { Project } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
+import ProjectForm from './ProjectForm';
 
-interface AddEmployeeDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface AddProjectDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
-  open,
-  onOpenChange
+const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
+  isOpen,
+  onClose
 }) => {
-  const { addEmployee } = usePlanner();
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const { addProject } = usePlanner();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!name.trim() || !role) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
+  const handleAdd = (projectData: Partial<Project>) => {
+    const newProject: Project = {
+      id: uuidv4(),
+      name: projectData.name ?? '',
+      color: projectData.color ?? 'blue',
+      startDate: projectData.startDate ?? new Date(),
+      endDate: projectData.endDate ?? new Date(),
+      leadId: projectData.leadId
+    };
 
-    const result = await addEmployee({
-      name: name.trim(),
-      role,
-      imageUrl: imageUrl.trim() || undefined
-    });
-
-    if (result) {
-      setName('');
-      setRole('');
-      setImageUrl('');
-      onOpenChange(false);
-    }
+    addProject(newProject);
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Team Member</DialogTitle>
+          <DialogTitle>Add Project</DialogTitle>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">Name *</label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter full name"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="role" className="text-sm font-medium">Role *</label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map((roleOption) => (
-                  <SelectItem key={roleOption} value={roleOption}>
-                    {roleOption}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="imageUrl" className="text-sm font-medium">Profile Image URL</label>
-            <Input
-              id="imageUrl"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg (optional)"
-            />
-          </div>
-          
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Add Team Member</Button>
-          </div>
-        </form>
+        <ProjectForm
+          initialProject={{}}
+          onSubmit={handleAdd}
+          submitLabel="Create Project"
+        />
       </DialogContent>
     </Dialog>
   );
 };
+
+export default AddProjectDialog;
