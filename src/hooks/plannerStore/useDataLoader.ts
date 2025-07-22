@@ -8,7 +8,7 @@ import { dateToSprintId, calculateProjectDateRanges } from './utils';
 
 export const useDataLoader = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  const referenceSprintStart = new Date(2024, 5, 24); // June 24, 2024
+  const referenceSprintStart = new Date(2024, 11, 30); // December 30, 2024 (month 11 = December)
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
