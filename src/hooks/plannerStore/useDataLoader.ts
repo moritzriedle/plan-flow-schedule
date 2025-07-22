@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Employee, Project, Allocation, Sprint } from '../../types';
-import { sampleProjects, sampleAllocations } from '../../data/sampleData';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -137,11 +136,8 @@ export const useDataLoader = () => {
         console.error('Error loading data from Supabase:', error);
         toast.error('Failed to load data');
         
-        // Sort sample projects alphabetically as well
-        const sortedSampleProjects = [...sampleProjects].sort((a, b) => a.name.localeCompare(b.name));
-        
         setEmployees([]);
-        setProjects(sortedSampleProjects);
+        setProjects([]);
         setAllocations([]);
       } finally {
         clearTimeout(timeoutId);
