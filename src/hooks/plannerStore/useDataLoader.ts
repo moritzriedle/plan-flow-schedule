@@ -15,7 +15,7 @@ export const useDataLoader = () => {
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>(() => {
     console.log('useDataLoader: Generating initial sprints');
-    return generateSprints(new Date(), 12);
+    return generateSprints(new Date(), 100);
   });
   const [loading, setLoading] = useState(true);
   
