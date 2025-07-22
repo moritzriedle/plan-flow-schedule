@@ -12,13 +12,13 @@ import {
 import ProjectForm from './ProjectForm';
 
 interface AddProjectDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
-  isOpen,
-  onClose
+  open,
+  onOpenChange
 }) => {
   const { addProject } = usePlanner();
 
@@ -33,11 +33,11 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
     };
 
     addProject(newProject);
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Project</DialogTitle>
