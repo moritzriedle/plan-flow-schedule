@@ -19,9 +19,14 @@ const TicketReferenceInput: React.FC<TicketReferenceInputProps> = ({
   };
 
   const generateLink = (ticketRef: string) => {
-    if (!ticketRef.trim()) return null;
-    return `https://proglove.atlassian.net/browse/${ticketRef.trim()}`;
-  };
+  if (!ticketRef.trim()) return null;
+
+  // Extract project key (e.g., "PPT") from ticketRef (e.g., "PPT-82")
+  const projectKey = ticketRef.split('-')[0];
+  
+  // The URL base and the project key are used in the new URL structure
+  return `https://proglove.atlassian.net/jira/polaris/projects/${projectKey}/ideas/view/3252935?selectedIssue=${ticketRef.trim()}`;
+};
 
   const link = generateLink(value);
 
