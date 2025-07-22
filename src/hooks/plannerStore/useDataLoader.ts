@@ -14,10 +14,13 @@ export const useDataLoader = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
-  const [sprints, setSprints] = useState<Sprint[]>(() => {
-    console.log('useDataLoader: Generating initial sprints');
-    return generateSprints(referenceSprintStart, 100);
-  });
+  const [sprints, setSprints] = useState<Sprint[]>([]); 
+   useEffect(() => {
+  console.log('useDataLoader: Generating sprints inside useEffect');
+  const generated = generateSprints(referenceSprintStart, 100);
+  setSprints(generated);
+}, []);
+  
   const [loading, setLoading] = useState(true);
   
   console.log('useDataLoader: Hook called', { 
@@ -40,7 +43,12 @@ export const useDataLoader = () => {
       setLoading(false);
       return;
     }
-
+    
+    if (sprints.length === 0) {
+      console.log('useDataLoader: Waiting for sprints to be generated');
+      return; // Don't load data until sprints are ready
+    }
+    
     let isCancelled = false;
 
     async function loadInitialData() {
