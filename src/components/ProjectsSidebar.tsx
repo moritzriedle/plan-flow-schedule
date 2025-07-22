@@ -13,6 +13,13 @@ interface DraggableProjectItemProps {
   onTimelineOpen?: (project: Project) => void;
 }
 
+// ✅ Helper to generate Jira ticket URL
+const generateLink = (ticketRef: string) => {
+  if (!ticketRef.trim()) return null;
+  const projectKey = ticketRef.split('-')[0];
+  return `https://proglove.atlassian.net/jira/polaris/projects/${projectKey}/ideas/view/3252935?selectedIssue=${ticketRef.trim()}`;
+};
+
 const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({ 
   project, 
   onTimelineOpen 
@@ -79,10 +86,18 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
           </div>
         )}
       </div>
-      
+
+      {/* ✅ Jira ticket link */}
       {project.ticketReference && (
-        <div className="mt-2 text-xs text-blue-600">
-          {project.ticketReference}
+        <div className="mt-2 text-xs">
+          <a
+            href={generateLink(project.ticketReference)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+          >
+            {project.ticketReference}
+          </a>
         </div>
       )}
     </Card>
@@ -102,7 +117,6 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Sort projects alphabetically and filter by search term
   const filteredAndSortedProjects = useMemo(() => {
     try {
       if (!Array.isArray(projects)) {
@@ -116,14 +130,12 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
         typeof project.name === 'string'
       );
       
-      // Filter by search term if provided
       if (searchTerm.trim()) {
         filtered = filtered.filter(project =>
           project.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
       
-      // Clone array before sorting to avoid mutating original
       return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
       console.error('ProjectsSidebar: Error filtering/sorting projects', error);
@@ -182,13 +194,10 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
       ) : (
         filteredAndSortedProjects.map((project) => (
           <div key={project.id} className="space-y-1">
-            {/* Existing draggable project item */}
             <DraggableProjectItem 
               project={project} 
               onTimelineOpen={onProjectTimelineOpen}
             />
-            
-            {/* Quick allocation button */}
             {selectedEmployeeId && (
               <Button
                 variant="outline"
