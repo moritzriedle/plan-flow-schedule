@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import ProjectForm from './ProjectForm'; //new addition
+import ProjectForm from './ProjectForm'; // you can replace the whole form with ProjectForm component instead if preferred
 import { usePlanner } from '@/contexts/PlannerContext';
 import { Project } from '@/types';
 import { 
@@ -18,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
+import TicketReferenceInput from './TicketReferenceInput'; // import your Jira input
 
 interface ProjectEditDialogProps {
   project: Project;
@@ -31,18 +31,19 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
   onClose
 }) => {
   const { updateProject, employees } = usePlanner();
-  
+
   const [name, setName] = useState(project.name);
   const [color, setColor] = useState<Project['color']>(project.color);
   const [leadId, setLeadId] = useState(project.leadId || '');
   const [startDate, setStartDate] = useState<Date>(project.startDate);
   const [endDate, setEndDate] = useState<Date>(project.endDate);
-  
+  const [jiraTicket, setJiraTicket] = useState(project.jiraTicket || '');
+
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const updatedProject: Project = {
       ...project,
       name,
@@ -50,9 +51,9 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
       leadId: leadId || undefined,
       startDate,
       endDate,
-      jiraTicket
+      jiraTicket: jiraTicket || undefined,
     };
-    
+
     updateProject(updatedProject);
     onClose();
   };
@@ -63,7 +64,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Edit Project</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="project-name">Project Name</Label>
@@ -74,7 +75,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="project-color">Project Color</Label>
             <Select value={color} onValueChange={(value: Project['color']) => setColor(value)}>
@@ -96,7 +97,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="project-lead">Project Lead</Label>
             <Select value={leadId} onValueChange={setLeadId}>
@@ -104,7 +105,6 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
                 <SelectValue placeholder="Select project lead" />
               </SelectTrigger>
               <SelectContent>
-                {/* Use a placeholder value instead of empty string */}
                 <SelectItem value="none">No project lead</SelectItem>
                 {employees.map((employee) => (
                   <SelectItem key={employee.id} value={employee.id}>
@@ -114,7 +114,16 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
-          
+
+          <div className="space-y-2">
+            <Label htmlFor="ticketReference">Ticket Reference</Label>
+            <TicketReferenceInput
+              value={jiraTicket}
+              onChange={setJiraTicket}
+              placeholder="e.g., PPT-82"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Start Date</Label>
@@ -138,7 +147,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div className="space-y-2">
               <Label>End Date</Label>
               <Popover>
@@ -162,7 +171,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
               </Popover>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button type="submit">Save Changes</Button>
           </DialogFooter>
