@@ -78,13 +78,6 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
           onTimeframeChange={onTimeframeChange}
         />
         
-        <Button 
-          onClick={onAddEmployee}
-          variant="outline"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Add Team Member
-        </Button>
       </div>
       
       {/* Role Filter */}

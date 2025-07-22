@@ -37,7 +37,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
   const [leadId, setLeadId] = useState(project.leadId || '');
   const [startDate, setStartDate] = useState<Date>(project.startDate);
   const [endDate, setEndDate] = useState<Date>(project.endDate);
-  const [jiraTicket, setJiraTicket] = useState(project.jiraTicket || '');
+  const [ticketReference, setTicketReference] = useState(project.ticketReference || '');
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
@@ -51,7 +51,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
       leadId: leadId || undefined,
       startDate,
       endDate,
-      jiraTicket: jiraTicket || undefined,
+      ticketReference: ticketReference || undefined,
     };
 
     updateProject(updatedProject);
@@ -118,8 +118,8 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
           <div className="space-y-2">
             <Label htmlFor="ticketReference">Ticket Reference</Label>
             <TicketReferenceInput
-              value={jiraTicket}
-              onChange={setJiraTicket}
+              value={ticketReference}
+              onChange={setTicketReference}
               placeholder="e.g., PPT-82"
             />
           </div>

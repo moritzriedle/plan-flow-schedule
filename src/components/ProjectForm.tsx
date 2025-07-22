@@ -27,7 +27,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
   const [leadId, setLeadId] = useState(initialProject.leadId || '');
   const [startDate, setStartDate] = useState<Date>(initialProject.startDate || new Date());
   const [endDate, setEndDate] = useState<Date>(initialProject.endDate || new Date());
-  const [jiraTicket, setJiraTicket] = useState(initialProject.jiraTicket || '');
+  const [ticketReference, setTicketReference] = useState(initialProject.ticketReference || '');
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
@@ -41,7 +41,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
       leadId: leadId === 'none' ? undefined : leadId,
       startDate,
       endDate,
-      jiraTicket: jiraTicket || undefined,
+      ticketReference: ticketReference || undefined,
     });
   };
 
@@ -99,8 +99,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
       <div className="space-y-2">
         <Label htmlFor="ticketReference">Ticket Reference</Label>
         <TicketReferenceInput
-          value={jiraTicket}
-          onChange={setJiraTicket}
+          value={ticketReference}
+          onChange={setTicketReference}
           placeholder="e.g., PPT-82"
         />
       </div>

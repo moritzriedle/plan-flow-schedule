@@ -30,7 +30,7 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
       startDate: projectData.startDate ?? new Date(),
       endDate: projectData.endDate ?? new Date(),
       leadId: projectData.leadId,
-      jiraTicket: data.jiraTicket,
+      ticketReference: projectData.ticketReference,
     };
 
     addProject(newProject);

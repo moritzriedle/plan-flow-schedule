@@ -11,6 +11,13 @@ import ProjectEditDialog from './ProjectEditDialog';
 import ProjectMonthDetails from './ProjectMonthDetails';
 import MultiRoleSelector from './MultiRoleSelector';
 
+// ✅ Helper to generate Jira ticket URL
+const generateLink = (ticketRef: string) => {
+  if (!ticketRef.trim()) return null;
+  const projectKey = ticketRef.split('-')[0];
+  return `https://proglove.atlassian.net/jira/polaris/projects/${projectKey}/ideas/view/3252935?selectedIssue=${ticketRef.trim()}`;
+};
+
 const ProjectGanttView = () => {
   const { projects, employees, getProjectAllocations } = usePlanner();
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -243,6 +250,18 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                 <span className="font-medium">{totalAllocation} days</span> allocated
                 {projectLead && (
                   <div className="mt-1">Lead: {projectLead.name}</div>
+                )}
+                {project.ticketReference && (
+                  <div className="mt-1">
+                    <a
+                      href={generateLink(project.ticketReference)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {project.ticketReference}
+                    </a>
+                  </div>
                 )}
               </div>
             </div>
