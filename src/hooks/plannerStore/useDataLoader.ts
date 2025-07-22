@@ -117,6 +117,7 @@ export const useDataLoader = () => {
   };
 });
 
+        let finalProjects = mappedProjects;
         
         if (mappedAllocations.length && finalProjects.length) {
           finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations, sprints);
