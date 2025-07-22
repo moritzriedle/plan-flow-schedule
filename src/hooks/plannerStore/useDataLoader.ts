@@ -3,13 +3,11 @@ import { Employee, Project, Allocation, Sprint } from '../../types';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { generateSprints } from '@/utils/sprintUtils';
+import { generateSprints, referenceSprintStart } from '@/utils/sprintUtils';
 import { dateToSprintId, calculateProjectDateRanges } from './utils';
 
 export const useDataLoader = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  const referenceSprintStart = new Date(2024, 11, 30); // December 30, 2024 (month 11 = December)
-
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
