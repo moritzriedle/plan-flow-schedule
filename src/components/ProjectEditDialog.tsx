@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import ProjectForm from './ProjectForm'; //new addition
 import { usePlanner } from '@/contexts/PlannerContext';
 import { Project } from '@/types';
 import { 
