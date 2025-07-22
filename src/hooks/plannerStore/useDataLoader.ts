@@ -158,7 +158,7 @@ export const useDataLoader = () => {
       console.log('useDataLoader: Cleanup function called');
       isCancelled = true;
     };
-  }, [user?.id, authLoading]);
+  }, [user?.id, authLoading, sprints]);
 
   return {
     employees,
