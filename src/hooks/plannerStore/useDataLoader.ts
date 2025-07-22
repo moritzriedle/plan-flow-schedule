@@ -3,8 +3,8 @@ import { Employee, Project, Allocation, Sprint } from '../../types';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { generateSprints, referenceSprintStart } from '@/utils/sprintUtils';
-import { dateToSprintId, calculateProjectDateRanges } from './utils';
+import { generateSprints, referenceSprintStart, calculateSprintNumber } from '@/utils/sprintUtils';
+import {calculateProjectDateRanges } from './utils';
 
 export const useDataLoader = () => {
   const { user, profile, loading: authLoading } = useAuth();
@@ -104,16 +104,20 @@ export const useDataLoader = () => {
         if (allocationsError) {
           throw allocationsError;
         }
+        const mappedAllocations: Allocation[] = allocationsData.map(alloc => {
+  const sprintNumber = calculateSprintNumber(new Date(alloc.week));
+  const sprintId = `sprint-${sprintNumber}`;
+
+  return {
+    id: alloc.id,
+    employeeId: alloc.user_id,
+    projectId: alloc.project_id,
+    sprintId,
+    days: alloc.days
+  };
+});
+
         
-        const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
-          id: alloc.id,
-          employeeId: alloc.user_id,
-          projectId: alloc.project_id,
-          sprintId: dateToSprintId(alloc.week, sprints),
-          days: alloc.days
-        }));
-        
-        let finalProjects = mappedProjects.length ? mappedProjects : sampleProjects;
         if (mappedAllocations.length && finalProjects.length) {
           finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations, sprints);
         }
