@@ -22,7 +22,7 @@ export const sprintIdToDate = (sprintId: string, sprints: Sprint[]): string => {
     const baseDate = startOfWeek(new Date(), { weekStartsOn: 1 });
     // Each sprint is 2 weeks apart
     const sprintStartDate = new Date(baseDate);
-    sprintStartDate.setDate(baseDate.getDate() + (sprintNumber - 1) * 14);
+    sprintStartDate.setDate(baseDate.getDate() + (sprintNumber) * 14);
     return format(sprintStartDate, 'yyyy-MM-dd');
   }
   
