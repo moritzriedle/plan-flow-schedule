@@ -4,6 +4,7 @@ import { DragItem } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import AllocationItem from './AllocationItem';
 import { Loader2 } from 'lucide-react';
+import { useEmployeeOperations, useTimeFrameSprints } from '../hooks'; // or however you fetch employee/sprint
 
 interface DroppableCellProps {
   employeeId: string;
@@ -11,20 +12,29 @@ interface DroppableCellProps {
 }
 
 const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) => {
-  const { allocations, moveAllocation, getTotalAllocationDays, getAvailableDays } = usePlanner();
+  const {
+    allocations,
+    moveAllocation,
+    getTotalAllocationDays,
+    getAvailableDays,
+    getEmployeeById,
+    getSprintById
+  } = usePlanner();
+
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Filter allocations for this employee and sprint
+  const employee: Employee | undefined = getEmployeeById(employeeId);
+  const sprint: Sprint | undefined = getSprintById(sprintId);
+
   const cellAllocations = allocations.filter(
-    alloc => alloc.employeeId === employeeId && alloc.sprintId === sprintId
+    (alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId
   );
-  
+
   const totalDays = getTotalAllocationDays(employeeId, sprintId);
   const availableDays = getAvailableDays(employeeId, sprintId);
   const isOverallocated = totalDays > availableDays;
 
-  // Set up drop functionality
   const [{ isOverCurrent }, drop] = useDrop({
     accept: 'ALLOCATION',
     drop: (item: DragItem) => {
@@ -41,25 +51,16 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
 
   const handleDrop = async (item: DragItem) => {
     setIsProcessing(true);
-    
     try {
-      console.log('Dropping item:', item, 'to sprint:', sprintId, 'for employee:', employeeId);
-      
-      // Calculate days for new allocations (default to 10 for sprints)
-      let allocationDays = item.days;
-      if (!item.sourceSprintId) { // New allocation from project drag
-        allocationDays = 10;
-      }
-      
-      // Ensure we have the correct employee ID for new allocations
+      let allocationDays = item.days ?? 10;
+
       const dragItemWithEmployee = {
         ...item,
-        employeeId: employeeId,
-        days: allocationDays
+        employeeId,
+        days: allocationDays,
       };
-      
+
       await moveAllocation(dragItemWithEmployee, sprintId);
-      console.log('Drop successful, allocation updated');
     } catch (error) {
       console.error('Drop failed:', error);
     } finally {
@@ -67,11 +68,24 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOverCurrent) {
       setIsOver(false);
     }
   }, [isOverCurrent]);
+
+  // 🔢 Count vacation days within this sprint
+  const vacationDays = React.useMemo(() => {
+    if (!employee || !sprint || !employee.vacationDates || !sprint.workingDays) return 0;
+
+    const sprintWorkingDates = new Set(
+      sprint.workingDays.map((date) => new Date(date).toDateString())
+    );
+
+    return employee.vacationDates.filter((vacDate) =>
+      sprintWorkingDates.has(new Date(vacDate).toDateString())
+    ).length;
+  }, [employee, sprint]);
 
   return (
     <div
@@ -84,20 +98,17 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
         <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>
           {totalDays}/{availableDays} days
         </span>
-        {isOverallocated && (
-          <span className="text-xs text-red-500 font-bold">!</span>
-        )}
-        {isProcessing && (
-          <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
-        )}
+        {isOverallocated && <span className="text-xs text-red-500 font-bold">!</span>}
+        {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
       </div>
-      
-      {availableDays < 10 && (
+
+      {/* ✅ Vacation days inside sprint cell */}
+      {vacationDays > 0 && (
         <div className="text-xs text-orange-500 mb-1">
-          {10 - availableDays} vacation days
+          {vacationDays} vacation day{vacationDays > 1 ? 's' : ''}
         </div>
       )}
-      
+
       {cellAllocations.map((allocation) => (
         <AllocationItem
           key={allocation.id}
