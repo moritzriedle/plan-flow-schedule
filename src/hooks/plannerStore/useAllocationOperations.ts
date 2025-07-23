@@ -363,13 +363,20 @@ export const useAllocationOperations = (
     const sprint = sprints.find(s => s.id === sprintId);
     if (!sprint) return 10;
     
-    const vacationDaysInSprint = employee.vacationDates.filter(vacationDate => {
-      const date = new Date(vacationDate);
-      return date >= sprint.startDate && date <= sprint.endDate;
-    }).length;
-    
-    return Math.max(0, 10 - vacationDaysInSprint);
-  }, [employees, sprints]);
+   const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
+  const employee = employees.find(emp => emp.id === employeeId);
+  const sprint = sprints.find(s => s.id === sprintId);
+  if (!employee || !sprint || !sprint.workingDays) return 0;
+
+  const workingDaysInSprint = sprint.workingDays.map(date => new Date(date).toDateString());
+
+  const vacationDaysInSprint = (employee.vacationDates || []).filter(vac => {
+    const vacationDate = new Date(vac).toDateString();
+    return workingDaysInSprint.includes(vacationDate);
+  }).length;
+
+  return sprint.workingDays.length - vacationDaysInSprint;
+}, [employees, sprints]);
 
   return {
     addAllocation,
