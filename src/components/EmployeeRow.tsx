@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Employee, Sprint } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
@@ -15,7 +14,15 @@ interface EmployeeRowProps {
 const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployeeEdit }) => {
   const { getTotalAllocationDays } = usePlanner();
 
-  // Calculate total allocation across all sprints
+  // Utility to count how many vacation dates fall within this sprint
+  function countVacationDaysInSprint(vacationDates: string[], sprint: Sprint): number {
+    if (!Array.isArray(vacationDates) || !sprint.workingDays) return 0;
+
+    const sprintDays = new Set(sprint.workingDays.map(d => new Date(d).toDateString()));
+    return vacationDates.filter(dateStr => sprintDays.has(new Date(dateStr).toDateString())).length;
+  }
+
+  // Total allocation across all sprints
   const totalAllocation = sprints.reduce((total, sprint) => {
     return total + getTotalAllocationDays(employee.id, sprint.id);
   }, 0);
@@ -39,7 +46,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
   };
 
   return (
-    <div className="p-3 h-full min-h-[120px] flex flex-col">
+    <div className="p-3 h-full min-h-[120px] flex flex-col justify-between">
+      {/* Top: Avatar, name, role, edit button */}
       <div className="flex items-center gap-2 mb-2">
         <Avatar className="h-8 w-8 flex-shrink-0">
           {employee.imageUrl ? (
@@ -69,12 +77,28 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
           </Button>
         )}
       </div>
-      
+
+      {/* Total allocation */}
       {totalAllocation > 0 && (
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-gray-500 mb-1">
           Total: {totalAllocation} days allocated
         </div>
       )}
+
+      {/* Vacation per sprint */}
+      <div className="text-[11px] text-yellow-800 space-y-0.5">
+        {sprints.map((sprint) => {
+          const days = countVacationDaysInSprint(employee.vacationDates || [], sprint);
+          if (days > 0) {
+            return (
+              <div key={sprint.id} className="text-amber-700">
+                <span className="font-medium">{sprint.name}:</span> {days}d vacation
+              </div>
+            );
+          }
+          return null;
+        })}
+      </div>
     </div>
   );
 };
