@@ -74,18 +74,13 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
     }
   }, [isOverCurrent]);
 
-  // 🔢 Count vacation days within this sprint
-  const vacationDays = React.useMemo(() => {
-    if (!employee || !sprint || !employee.vacationDates || !sprint.workingDays) return 0;
+ // Utility to count how many vacation dates fall within this sprint
+  function countVacationDaysInSprint(vacationDates: string[], sprint: Sprint): number {
+    if (!Array.isArray(vacationDates) || !sprint.workingDays) return 0;
 
-    const sprintWorkingDates = new Set(
-      sprint.workingDays.map((date) => new Date(date).toDateString())
-    );
-
-    return employee.vacationDates.filter((vacDate) =>
-      sprintWorkingDates.has(new Date(vacDate).toDateString())
-    ).length;
-  }, [employee, sprint]);
+    const sprintDays = new Set(sprint.workingDays.map(d => new Date(d).toDateString()));
+    return vacationDates.filter(dateStr => sprintDays.has(new Date(dateStr).toDateString())).length;
+  }
 
   return (
     <div
@@ -102,11 +97,16 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
         {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
       </div>
 
-      {/* ✅ Vacation days inside sprint cell */}
-      {vacationDays > 0 && (
-        <div className="text-xs text-orange-500 mb-1">
-          {vacationDays} vacation day{vacationDays > 1 ? 's' : ''}
-        </div>
+        {/* Vacation display just for this sprint */}
+      {employee && sprint && employee.vacationDates && (
+        (() => {
+          const vacationCount = countVacationDaysInSprint(employee.vacationDates, sprint);
+          return vacationCount > 0 ? (
+            <div className="text-[11px] text-amber-700 mb-1">
+              {vacationCount} vacation day{vacationCount > 1 ? 's' : ''}
+            </div>
+          ) : null;
+        })()
       )}
 
       {cellAllocations.map((allocation) => (
