@@ -50,6 +50,8 @@ export const usePlannerStore = (): PlannerStoreReturn => {
     employees
   );
 
+  const getSprintById = (id: string) => sprints.find(s => s.id === id);
+
   return {
     employees,
     projects,
@@ -71,6 +73,7 @@ export const usePlannerStore = (): PlannerStoreReturn => {
     getTotalAllocationDays,
     getProjectAllocations,
     allocateToProjectTimeline,
-    getAvailableDays
+    getAvailableDays,
+    getSprintById
   };
 };
