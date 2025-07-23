@@ -4,7 +4,6 @@ import { DragItem } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import AllocationItem from './AllocationItem';
 import { Loader2 } from 'lucide-react';
-import { useEmployeeOperations, useTimeFrameSprints } from '../hooks'; // or however you fetch employee/sprint
 
 interface DroppableCellProps {
   employeeId: string;
@@ -18,14 +17,15 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
     getTotalAllocationDays,
     getAvailableDays,
     getEmployeeById,
-    getSprintById
+    getSprintById,
+    sprints,
   } = usePlanner();
 
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const employee: Employee | undefined = getEmployeeById(employeeId);
-  const sprint: Sprint | undefined = getSprintById(sprintId);
+  const employee = getEmployeeById(employeeId);
+  const sprint = getSprintById(sprintId);
 
   const cellAllocations = allocations.filter(
     (alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId
@@ -60,6 +60,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
         days: allocationDays,
       };
 
+      // IMPORTANT: Assumes moveAllocation internally handles splitting across sprints
       await moveAllocation(dragItemWithEmployee, sprintId);
     } catch (error) {
       console.error('Drop failed:', error);
@@ -74,7 +75,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
     }
   }, [isOverCurrent]);
 
- // Utility to count how many vacation dates fall within this sprint
+  // Utility to count how many vacation dates fall within this sprint
   function countVacationDaysInSprint(vacationDates: string[], sprint: Sprint): number {
     if (!Array.isArray(vacationDates) || !sprint.workingDays) return 0;
 
@@ -97,17 +98,15 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
         {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
       </div>
 
-        {/* Vacation display just for this sprint */}
-      {employee && sprint && employee.vacationDates && (
-        (() => {
-          const vacationCount = countVacationDaysInSprint(employee.vacationDates, sprint);
-          return vacationCount > 0 ? (
-            <div className="text-[11px] text-amber-700 mb-1">
-              {vacationCount} vacation day{vacationCount > 1 ? 's' : ''}
-            </div>
-          ) : null;
-        })()
-      )}
+      {/* Vacation display just for this sprint */}
+      {employee && sprint && employee.vacationDates && (() => {
+        const vacationCount = countVacationDaysInSprint(employee.vacationDates, sprint);
+        return vacationCount > 0 ? (
+          <div className="text-[11px] text-amber-700 mb-1">
+            {vacationCount} vacation day{vacationCount > 1 ? 's' : ''}
+          </div>
+        ) : null;
+      })()}
 
       {cellAllocations.map((allocation) => (
         <AllocationItem
