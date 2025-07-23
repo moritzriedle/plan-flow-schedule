@@ -19,27 +19,35 @@ const VacationDateRangeSelector: React.FC<VacationDateRangeSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  const handleAddRange = () => {
-    if (dateRange?.from && dateRange?.to) {
-      const newDates = eachDayOfInterval({
-        start: dateRange.from,
-        end: dateRange.to
-      }).map(date => format(date, 'yyyy-MM-dd'));
-      
-      const updatedDates = [...new Set([...selectedDates, ...newDates])];
-      onDatesChange(updatedDates);
-      setDateRange(undefined);
-      setIsOpen(false);
-    } else if (dateRange?.from) {
-      // Single date selection
+const handleAddRange = () => {
+  if (dateRange?.from && dateRange?.to) {
+    const newDates = eachDayOfInterval({
+      start: dateRange.from,
+      end: dateRange.to
+    })
+      .filter(date => {
+        const day = date.getDay();
+        return day !== 0 && day !== 6; // Exclude Sunday (0) and Saturday (6)
+      })
+      .map(date => format(date, 'yyyy-MM-dd'));
+
+    const updatedDates = [...new Set([...selectedDates, ...newDates])];
+    onDatesChange(updatedDates);
+    setDateRange(undefined);
+    setIsOpen(false);
+  } else if (dateRange?.from) {
+    const day = dateRange.from.getDay();
+    if (day !== 0 && day !== 6) {
       const newDate = format(dateRange.from, 'yyyy-MM-dd');
       if (!selectedDates.includes(newDate)) {
         onDatesChange([...selectedDates, newDate]);
       }
-      setDateRange(undefined);
-      setIsOpen(false);
     }
-  };
+    setDateRange(undefined);
+    setIsOpen(false);
+  }
+};
+
 
   const handleRemoveDate = (dateToRemove: string) => {
     onDatesChange(selectedDates.filter(date => date !== dateToRemove));
