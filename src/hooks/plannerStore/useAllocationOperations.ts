@@ -355,13 +355,6 @@ export const useAllocationOperations = (
       return false;
     }
   }, [sprints, projects, addAllocation, user, profile]);
-
-  const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
-    if (!employee || !employee.vacationDates) return 10;
-    
-    const sprint = sprints.find(s => s.id === sprintId);
-    if (!sprint) return 10;
     
    const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
   const employee = employees.find(emp => emp.id === employeeId);
