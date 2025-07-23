@@ -16,7 +16,6 @@ export const useAllocationOperations = (
 ) => {
   const { user, profile } = useAuth();
 
-  // Validate that user ID exists in profiles table
   const validateUserId = useCallback(async (userId: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase
@@ -24,20 +23,12 @@ export const useAllocationOperations = (
         .select('id')
         .eq('id', userId)
         .single();
-      
-      if (error || !data) {
-        console.error('User ID validation failed:', error);
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error validating user ID:', error);
+      return !!data && !error;
+    } catch {
       return false;
     }
   }, []);
 
-  // Helper function to update project date ranges
   const updateProjectDateRanges = (projects: Project[], allocations: Allocation[]) => {
     const updatedProjects = calculateProjectDateRanges(projects, allocations, sprints);
     setProjects(updatedProjects);
@@ -51,20 +42,14 @@ export const useAllocationOperations = (
 
     try {
       const isValidUser = await validateUserId(allocation.employeeId);
-      if (!isValidUser) {
-        throw new Error(`Invalid employee ID: ${allocation.employeeId}. Employee not found in profiles.`);
-      }
+      if (!isValidUser) throw new Error('Invalid employee ID');
 
       const sprintDate = sprintIdToDate(allocation.sprintId, sprints);
-      
       const tempId = uuidv4();
-      const newAllocation: Allocation = {
-        ...allocation,
-        id: tempId
-      };
-      
+
+      const newAllocation: Allocation = { ...allocation, id: tempId };
       setAllocations(prev => [...prev, newAllocation]);
-      
+
       const { data, error } = await supabase
         .from('allocations')
         .insert({
@@ -75,28 +60,21 @@ export const useAllocationOperations = (
         })
         .select()
         .single();
-        
+
       if (error) {
         setAllocations(prev => prev.filter(a => a.id !== tempId));
         throw error;
       }
-      
-      setAllocations(prev => prev.map(a => 
-        a.id === tempId ? { ...a, id: data.id } : a
-      ));
-      
-      toast.success('Resource allocated successfully');
-      console.log('Allocation added to Supabase:', data);
-      
+
+      setAllocations(prev => prev.map(a => a.id === tempId ? { ...a, id: data.id } : a));
       updateProjectDateRanges(projects, [...allocations, { ...allocation, id: data.id }]);
-      
+
       return { ...allocation, id: data.id };
     } catch (error) {
-      console.error('Error adding allocation:', error);
-      toast.error('Failed to add allocation: ' + (error as Error).message);
+      toast.error('Failed to add allocation');
       return null;
     }
-  }, [sprints, projects, allocations, user, profile, validateUserId, setAllocations, setProjects]);
+  }, [user, profile, validateUserId, sprints, projects, allocations]);
 
   const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
     if (!user || !profile?.is_admin) {
@@ -105,156 +83,27 @@ export const useAllocationOperations = (
     }
 
     try {
-      setAllocations(prev => 
-        prev.map(alloc => alloc.id === updatedAllocation.id ? updatedAllocation : alloc)
+      setAllocations(prev =>
+        prev.map(a => a.id === updatedAllocation.id ? updatedAllocation : a)
       );
-      
+
       const { error } = await supabase
         .from('allocations')
-        .update({
-          days: updatedAllocation.days
-        })
+        .update({ days: updatedAllocation.days })
         .eq('id', updatedAllocation.id);
-        
-      if (error) {
-        setAllocations(prev => {
-          const original = prev.find(a => a.id === updatedAllocation.id);
-          return prev.map(a => a.id === updatedAllocation.id && original ? original : a);
-        });
-        throw error;
-      }
-      
-      toast.success('Allocation updated');
-      console.log('Allocation updated in Supabase:', updatedAllocation);
-      
-      updateProjectDateRanges(projects, allocations.map(a => 
+
+      if (error) throw error;
+
+      updateProjectDateRanges(projects, allocations.map(a =>
         a.id === updatedAllocation.id ? updatedAllocation : a
       ));
-      
+
       return true;
     } catch (error) {
-      console.error('Error updating allocation:', error);
       toast.error('Failed to update allocation');
       return false;
     }
-  }, [projects, allocations, user, profile, setAllocations, setProjects]);
-
-  const moveAllocation = useCallback(async (dragItem: DragItem, sprintId: string) => {
-    if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can move allocations');
-      return false;
-    }
-
-    try {
-      console.log('moveAllocation called with:', { dragItem, sprintId });
-      
-      if (!isValidUUID(dragItem.employeeId)) {
-        throw new Error(`Invalid employee ID: ${dragItem.employeeId}. Cannot create allocation.`);
-      }
-      
-      if (!isValidUUID(dragItem.projectId)) {
-        throw new Error(`Invalid project ID: ${dragItem.projectId}. Cannot create allocation.`);
-      }
-      
-      const isValidUser = await validateUserId(dragItem.employeeId);
-      if (!isValidUser) {
-        throw new Error(`Employee ID ${dragItem.employeeId} not found in profiles. Please ensure the employee is registered.`);
-      }
-      
-      if (dragItem.sourceSprintId) {
-        const existingAllocation = allocations.find(a => a.id === dragItem.id);
-        
-        if (!existingAllocation) {
-          throw new Error('Allocation not found');
-        }
-        
-        if (!isValidUUID(dragItem.id)) {
-          throw new Error(`Cannot move allocation with ID: ${dragItem.id}`);
-        }
-        
-        const sprintDate = sprintIdToDate(sprintId, sprints);
-        
-        const updatedAllocation: Allocation = {
-          ...existingAllocation,
-          sprintId
-        };
-        
-        setAllocations(prev => 
-          prev.map(alloc => alloc.id === dragItem.id ? updatedAllocation : alloc)
-        );
-        
-        const { error } = await supabase
-          .from('allocations')
-          .update({
-            week: sprintDate
-          })
-          .eq('id', dragItem.id);
-          
-        if (error) {
-          setAllocations(prev => 
-            prev.map(alloc => alloc.id === dragItem.id ? existingAllocation : alloc)
-          );
-          throw error;
-        }
-        
-        toast.success('Resource moved successfully');
-        console.log('Allocation moved in Supabase:', updatedAllocation, 'to sprint:', sprintId);
-        
-        updateProjectDateRanges(projects, allocations.map(a => 
-          a.id === dragItem.id ? updatedAllocation : a
-        ));
-      } else {
-        const sprintDate = sprintIdToDate(sprintId, sprints);
-        
-        if (!dragItem.employeeId || !dragItem.projectId) {
-          throw new Error('Missing required fields for new allocation');
-        }
-        
-        const tempId = uuidv4();
-        const newAllocation: Allocation = {
-          id: tempId,
-          employeeId: dragItem.employeeId,
-          projectId: dragItem.projectId,
-          sprintId,
-          days: dragItem.days || 10,
-        };
-        
-        setAllocations(prev => [...prev, newAllocation]);
-        
-        const { data, error } = await supabase
-          .from('allocations')
-          .insert({
-            user_id: dragItem.employeeId,
-            project_id: dragItem.projectId,
-            week: sprintDate,
-            days: dragItem.days || 10
-          })
-          .select()
-          .single();
-          
-        if (error) {
-          console.error('Supabase insert error:', error);
-          setAllocations(prev => prev.filter(a => a.id !== tempId));
-          throw error;
-        }
-        
-        setAllocations(prev => prev.map(a => 
-          a.id === tempId ? { ...a, id: data.id } : a
-        ));
-        
-        toast.success('Resource allocated successfully');
-        console.log('New allocation added to Supabase:', data);
-        
-        updateProjectDateRanges(projects, [...allocations, { ...newAllocation, id: data.id }]);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error moving/creating allocation:', error);
-      toast.error('Failed to update allocation: ' + (error as Error).message);
-      return false;
-    }
-  }, [allocations, projects, sprints, user, profile, validateUserId, setAllocations, setProjects]);
+  }, [user, profile, setAllocations, projects, allocations]);
 
   const deleteAllocation = useCallback(async (id: string) => {
     if (!user || !profile?.is_admin) {
@@ -263,35 +112,97 @@ export const useAllocationOperations = (
     }
 
     try {
-      const allocationToDelete = allocations.find(a => a.id === id);
-      if (!allocationToDelete) throw new Error('Allocation not found');
-      
-      setAllocations(prev => prev.filter(alloc => alloc.id !== id));
-      
+      const toDelete = allocations.find(a => a.id === id);
+      if (!toDelete) throw new Error('Allocation not found');
+
+      setAllocations(prev => prev.filter(a => a.id !== id));
+
       const { error } = await supabase
         .from('allocations')
         .delete()
         .eq('id', id);
-        
+
       if (error) {
-        setAllocations(prev => [...prev, allocationToDelete]);
+        setAllocations(prev => [...prev, toDelete]);
         throw error;
       }
-      
-      toast.success('Allocation removed');
-      console.log('Allocation deleted from Supabase:', id);
-      
+
       updateProjectDateRanges(projects, allocations.filter(a => a.id !== id));
-      
       return true;
     } catch (error) {
-      console.error('Error deleting allocation:', error);
       toast.error('Failed to delete allocation');
       return false;
     }
-  }, [allocations, projects, user, profile, setAllocations, setProjects]);
+  }, [user, profile, allocations, projects]);
 
-  // Helper functions for allocations
+  const moveAllocation = useCallback(async (dragItem: DragItem, targetSprintId: string) => {
+    if (!user || !profile?.is_admin) {
+      toast.error('Only administrators can move allocations');
+      return false;
+    }
+
+    try {
+      if (!isValidUUID(dragItem.employeeId) || !isValidUUID(dragItem.projectId)) {
+        throw new Error('Invalid employee or project ID');
+      }
+
+      const isValidUser = await validateUserId(dragItem.employeeId);
+      if (!isValidUser) throw new Error('Employee not found');
+
+      // Remove old allocation if needed
+      if (dragItem.sourceSprintId && dragItem.id) {
+        await deleteAllocation(dragItem.id);
+      }
+
+      let daysRemaining = dragItem.days || 10;
+      const employee = employees.find(e => e.id === dragItem.employeeId);
+      if (!employee) throw new Error('Employee not found');
+
+      const startingIndex = sprints.findIndex(s => s.id === targetSprintId);
+      if (startingIndex === -1) throw new Error('Target sprint not found');
+
+      const futureSprints = sprints.slice(startingIndex);
+      const createdAllocations: Allocation[] = [];
+
+      for (const sprint of futureSprints) {
+        if (daysRemaining <= 0) break;
+
+        const workingDays = sprint.workingDays || [];
+        const vacationDates = (employee.vacationDates || []).map(d => new Date(d).toDateString());
+        const availableDays = workingDays.filter(
+          date => !vacationDates.includes(new Date(date).toDateString())
+        );
+
+        const maxAvailable = availableDays.length;
+        if (maxAvailable <= 0) continue;
+
+        const toAllocate = Math.min(daysRemaining, maxAvailable);
+        const result = await addAllocation({
+          employeeId: dragItem.employeeId,
+          projectId: dragItem.projectId,
+          sprintId: sprint.id,
+          days: toAllocate,
+        });
+
+        if (result) {
+          createdAllocations.push(result);
+          daysRemaining -= toAllocate;
+        }
+      }
+
+      if (createdAllocations.length > 0) {
+        toast.success(`Allocation split across ${createdAllocations.length} sprint(s)`);
+        return true;
+      } else {
+        toast.warning('No working days available');
+        return false;
+      }
+    } catch (error) {
+      toast.error('Failed to move allocation');
+      return false;
+    }
+  }, [user, profile, validateUserId, sprints, employees, deleteAllocation, addAllocation]);
+
   const getEmployeeAllocations = useCallback((employeeId: string) => {
     return allocations.filter(alloc => alloc.employeeId === employeeId);
   }, [allocations]);
@@ -299,7 +210,7 @@ export const useAllocationOperations = (
   const getTotalAllocationDays = useCallback((employeeId: string, sprintId: string) => {
     return allocations
       .filter(alloc => alloc.employeeId === employeeId && alloc.sprintId === sprintId)
-      .reduce((total, alloc) => total + alloc.days, 0);
+      .reduce((sum, a) => sum + a.days, 0);
   }, [allocations]);
 
   const getProjectAllocations = useCallback((projectId: string) => {
@@ -307,8 +218,8 @@ export const useAllocationOperations = (
   }, [allocations]);
 
   const allocateToProjectTimeline = useCallback(async (
-    employeeId: string, 
-    projectId: string, 
+    employeeId: string,
+    projectId: string,
     daysPerWeek: 1 | 3 | 5
   ) => {
     if (!user || !profile?.is_admin) {
@@ -318,68 +229,52 @@ export const useAllocationOperations = (
 
     try {
       const project = projects.find(p => p.id === projectId);
-      if (!project) {
-        throw new Error('Project not found');
-      }
+      if (!project) throw new Error('Project not found');
 
-      const projectSprints = sprints.filter(sprint => {
-        return sprint.startDate <= project.endDate && sprint.endDate >= project.startDate;
-      });
-
-      if (projectSprints.length === 0) {
-        throw new Error('No sprints found for project timeline');
-      }
+      const projectSprints = sprints.filter(s =>
+        s.startDate <= project.endDate && s.endDate >= project.startDate
+      );
 
       const daysPerSprint = Math.min(daysPerWeek * 2, 10);
 
-      const allocationsToCreate = projectSprints.map(sprint => ({
-        employeeId,
-        projectId,
-        sprintId: sprint.id,
-        days: daysPerSprint
-      }));
-
-      const createdAllocations = [];
-      for (const allocation of allocationsToCreate) {
-        const result = await addAllocation(allocation);
-        if (result) {
-          createdAllocations.push(result);
-        }
+      for (const sprint of projectSprints) {
+        await addAllocation({
+          employeeId,
+          projectId,
+          sprintId: sprint.id,
+          days: daysPerSprint,
+        });
       }
 
-      toast.success(`Allocated ${createdAllocations.length} sprints to project timeline`);
+      toast.success('Allocations added for project timeline');
       return true;
     } catch (error) {
-      console.error('Error allocating to project timeline:', error);
-      toast.error('Failed to allocate to project timeline');
+      toast.error('Failed to allocate to project');
       return false;
     }
-  }, [sprints, projects, addAllocation, user, profile]);
-    
-   const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
-  const employee = employees.find(emp => emp.id === employeeId);
-  const sprint = sprints.find(s => s.id === sprintId);
-  if (!employee || !sprint || !sprint.workingDays) return 0;
+  }, [user, profile, sprints, projects, addAllocation]);
 
-  const workingDaysInSprint = sprint.workingDays.map(date => new Date(date).toDateString());
+  const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    const sprint = sprints.find(s => s.id === sprintId);
+    if (!employee || !sprint || !sprint.workingDays) return 0;
 
-  const vacationDaysInSprint = (employee.vacationDates || []).filter(vac => {
-    const vacationDate = new Date(vac).toDateString();
-    return workingDaysInSprint.includes(vacationDate);
-  }).length;
+    const workingDays = sprint.workingDays.map(d => new Date(d).toDateString());
+    const vacationDays = (employee.vacationDates || []).map(d => new Date(d).toDateString());
 
-  return sprint.workingDays.length - vacationDaysInSprint;
-}, [employees, sprints]);
+    const available = workingDays.filter(date => !vacationDays.includes(date));
+    return available.length;
+  }, [employees, sprints]);
 
   return {
     addAllocation,
     updateAllocation,
-    moveAllocation,
     deleteAllocation,
+    moveAllocation,
     getEmployeeAllocations,
     getTotalAllocationDays,
     getProjectAllocations,
     allocateToProjectTimeline,
-    getAvailableDays
+    getAvailableDays,
   };
 };
