@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { v4 as uuidv4 } from 'uuid';
 import { isValidUUID, sprintIdToDate, calculateProjectDateRanges } from './utils';
+import { format } from 'date-fns';
 
 export const useAllocationOperations = (
   allocations: Allocation[],
@@ -254,17 +255,19 @@ export const useAllocationOperations = (
     }
   }, [user, profile, sprints, projects, addAllocation]);
 
-  const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
-    const sprint = sprints.find(s => s.id === sprintId);
-    if (!employee || !sprint || !sprint.workingDays) return 0;
+const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
+  const employee = employees.find(e => e.id === employeeId);
+  const sprint = sprints.find(s => s.id === sprintId);
+  if (!employee || !sprint || !sprint.workingDays) return 0;
 
-    const workingDays = sprint.workingDays.map(d => new Date(d).toDateString());
-    const vacationDays = (employee.vacationDates || []).map(d => new Date(d).toDateString());
+  // Normalize all dates to 'yyyy-MM-dd' for exact matching
+  const workingDays = sprint.workingDays.map(d => format(new Date(d), 'yyyy-MM-dd'));
+  const vacationDays = (employee.vacationDates || []).map(d => format(new Date(d), 'yyyy-MM-dd'));
 
-    const available = workingDays.filter(date => !vacationDays.includes(date));
-    return available.length;
-  }, [employees, sprints]);
+  const available = workingDays.filter(date => !vacationDays.includes(date));
+  return available.length;
+}, [employees, sprints]);
+
 
   return {
     addAllocation,
