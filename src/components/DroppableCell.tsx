@@ -8,9 +8,10 @@ import { Loader2 } from 'lucide-react';
 interface DroppableCellProps {
   employeeId: string;
   sprintId: string;
+  sprint: Sprint;
 }
 
-const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) => {
+const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, sprint }) => {
   const {
     allocations,
     moveAllocation,
@@ -25,7 +26,6 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
 const [isProcessing, setIsProcessing] = useState(false);
 
 const employee = getEmployeeById(employeeId);
-const sprint = getSprintById(sprintId);
 
 useEffect(() => {
   function normalizeDate(date: string | Date): string {
@@ -42,10 +42,10 @@ useEffect(() => {
 }, [
   employeeId,
   sprintId,
+  sprint,
   getAvailableDays,
   getTotalAllocationDays,
   getEmployeeById,
-  getSprintById,
 ]);
 
 
