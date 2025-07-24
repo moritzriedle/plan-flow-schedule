@@ -24,13 +24,16 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
+ const [isOver, setIsOver] = useState(false);
+const [isProcessing, setIsProcessing] = useState(false);
+
+const employee = getEmployeeById(employeeId);
+const sprint = getSprintById(sprintId);
+
+useEffect(() => {
   function normalizeDate(date: string | Date): string {
     return new Date(date).toISOString().split('T')[0];
   }
-
-  const employee = getEmployeeById(employeeId);
-  const sprint = getSprintById(sprintId);
 
   if (employee && sprint) {
     console.log('🟦 Sprint:', sprint.name);
@@ -47,6 +50,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
   getEmployeeById,
   getSprintById,
 ]);
+
 
   const cellAllocations = allocations.filter(
     (alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId
