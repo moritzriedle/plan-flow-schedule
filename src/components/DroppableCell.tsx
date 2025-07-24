@@ -21,9 +21,6 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
     sprints,
   } = usePlanner();
 
-  const [isOver, setIsOver] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-
  const [isOver, setIsOver] = useState(false);
 const [isProcessing, setIsProcessing] = useState(false);
 
