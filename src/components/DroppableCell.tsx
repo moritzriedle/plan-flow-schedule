@@ -27,6 +27,19 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId }) =
   const employee = getEmployeeById(employeeId);
   const sprint = getSprintById(sprintId);
 
+useEffect(() => {
+    function normalizeDate(date: string | Date): string {
+      return new Date(date).toISOString().split('T')[0];
+    }
+
+    if (employee && sprint) {
+      console.log('🟦 Sprint:', sprint.name);
+      console.log('📅 Working days:', sprint.workingDays.map(normalizeDate));
+      console.log('🏖 Vacation days:', (employee.vacationDates || []).map(normalizeDate));
+      console.log('✅ Available days:', getAvailableDays(employee.id, sprint.id));
+    }
+  }, [employee, sprint]);
+  
   const cellAllocations = allocations.filter(
     (alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId
   );
