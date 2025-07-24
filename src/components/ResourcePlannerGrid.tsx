@@ -95,6 +95,7 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
                     <DroppableCell
                       employeeId={employee.id}
                       sprintId={sprint.id}
+                      sprint={sprint} 
                     />
                   </div>
                 ))}
