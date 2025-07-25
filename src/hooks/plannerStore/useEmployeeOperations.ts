@@ -20,9 +20,13 @@ export const useEmployeeOperations = (
     return null;
   }, [user, profile]);
 
-  const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
-    if (!user || (!profile?.is_admin && updatedEmployee.id !== user.id)) {
-      toast.error('You can only update your own profile');
+const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
+    const isOwnProfile = updatedEmployee.id === user?.id;
+    const isAdmin = profile?.is_admin;
+    const isManager = profile?.role === 'Manager'; // Adjust as needed
+
+    if (!user || (!isOwnProfile && !isAdmin && !isManager)) {
+      toast.error('You do not have permission to update this profile');
       return false;
     }
 
