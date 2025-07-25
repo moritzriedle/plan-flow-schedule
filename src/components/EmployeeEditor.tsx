@@ -56,12 +56,6 @@ const success = await updateEmployee({
       vacationDates
     });
     
-    console.log(
-      '📝 Saving employee:',
-      updatedEmployee,
-      'vacationDates →',
-      updatedEmployee.vacationDates
-    );
   
     if (success) {
       onClose();
