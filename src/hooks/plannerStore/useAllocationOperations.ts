@@ -208,11 +208,11 @@ export const useAllocationOperations = (
     return allocations.filter(alloc => alloc.employeeId === employeeId);
   }, [allocations]);
 
-  const getTotalAllocationDays = useCallback((employeeId: string, sprintId: string) => {
-    return allocations
-      .filter(alloc => alloc.employeeId === employeeId && alloc.sprintId === sprintId)
-      .reduce((sum, a) => sum + a.days, 0);
-  }, [allocations]);
+ const getTotalAllocationDays = useCallback((employeeId: string, sprint: Sprint) => {
+  return allocations
+    .filter(alloc => alloc.employeeId === employeeId && alloc.sprintId === sprint.id)
+    .reduce((sum, a) => sum + a.days, 0);
+}, [allocations]);
 
   const getProjectAllocations = useCallback((projectId: string) => {
     return allocations.filter(alloc => alloc.projectId === projectId);
@@ -255,18 +255,17 @@ export const useAllocationOperations = (
     }
   }, [user, profile, sprints, projects, addAllocation]);
 
-const getAvailableDays = useCallback((employeeId: string, sprintId: string) => {
+const getAvailableDays = useCallback((employeeId: string, sprint: Sprint) => {
   const employee = employees.find(e => e.id === employeeId);
-  const sprint = sprints.find(s => s.id === sprintId);
-  if (!employee || !sprint || !sprint.workingDays) return 0;
+  if (!employee || !sprint?.workingDays) return 0;
 
-  // Normalize all dates to 'yyyy-MM-dd' for exact matching
   const workingDays = sprint.workingDays.map(d => format(new Date(d), 'yyyy-MM-dd'));
   const vacationDays = (employee.vacationDates || []).map(d => format(new Date(d), 'yyyy-MM-dd'));
 
   const available = workingDays.filter(date => !vacationDays.includes(date));
   return available.length;
-}, [employees, sprints]);
+}, [employees]);
+
 
 
   return {
