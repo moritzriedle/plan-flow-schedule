@@ -65,7 +65,7 @@ export const useDataLoader = () => {
           .from('profiles')
           .select('id, name, role, image_url, is_admin, vacation_dates');
 
-        console.log('👥 Loaded profiles:', profilesData, error);
+        console.log('👥 Loaded profiles:', profilesData, profilesError);
           
         if (profilesError) {
           throw profilesError;
