@@ -24,7 +24,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
 
   // Total allocation across all sprints
   const totalAllocation = sprints.reduce((total, sprint) => {
-    return total + getTotalAllocationDays(employee.id, sprint.id);
+    return total + getTotalAllocationDays(employee.id, sprint);
   }, 0);
 
   // Get initials from name
