@@ -58,7 +58,7 @@ const success = await updateEmployee({
     
     console.log(
       '📝 Saving employee:',
-      updatedEmployee.id,
+      updatedEmployee,
       'vacationDates →',
       updatedEmployee.vacationDates
     );
