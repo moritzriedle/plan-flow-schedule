@@ -38,10 +38,14 @@ export const useEmployeeOperations = (
       
       console.log('Update data being sent:', updateData);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update(updateData)
-        .eq('id', updatedEmployee.id);
+        .eq('id', updatedEmployee.id)
+        .select();
+
+      console.log('🔄 Supabase update result:', { data, error });
+
         
       if (error) {
         console.error('Supabase update error:', error);
