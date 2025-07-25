@@ -48,14 +48,7 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
       vacationDates
     });
 
-    console.log(
-      '📝 Saving employee:',
-      updatedEmployee.id,
-      'vacationDates →',
-      updatedEmployee.vacationDates
-    );
-    
-    const success = await updateEmployee({
+const success = await updateEmployee({
       ...employee,
       name,
       role,
@@ -63,6 +56,13 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
       vacationDates
     });
     
+    console.log(
+      '📝 Saving employee:',
+      updatedEmployee.id,
+      'vacationDates →',
+      updatedEmployee.vacationDates
+    );
+  
     if (success) {
       onClose();
     }
