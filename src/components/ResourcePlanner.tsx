@@ -15,6 +15,7 @@ import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
 import { Project, Employee } from '../types';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import ProjectTimelineView from './ProjectTimelineView';
 import { ROLE_OPTIONS } from '@/constants/roles';
 
 const ResourcePlanner: React.FC = () => {
