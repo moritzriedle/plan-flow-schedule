@@ -64,6 +64,8 @@ export const useDataLoader = () => {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, name, role, image_url, is_admin, vacation_dates');
+
+        console.log('👥 Loaded profiles:', profilesData, error);
           
         if (profilesError) {
           throw profilesError;
