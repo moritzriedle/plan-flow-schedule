@@ -226,7 +226,7 @@ const ResourcePlanner: React.FC = () => {
         </div>
       </div>
 
-     {/*
+     
 <ProjectTimelineView
   project={selectedProject}
   isOpen={isProjectTimelineOpen}
@@ -237,7 +237,7 @@ const ResourcePlanner: React.FC = () => {
   selectedRoles={safeSelectedRoles}
   onRoleChange={handleRoleChange}
 />
-*/}
+
 
 
       <AddProjectDialog 
