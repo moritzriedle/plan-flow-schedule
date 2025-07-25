@@ -45,8 +45,13 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
 
   if (!project) return null;
 
-  const availableDays = getAvailableDays(employeeId, sprintId);
-  const totalAllocated = getTotalAllocationDays(employeeId, sprintId);
+  const { getSprintById } = usePlanner();
+  
+  const sprint = getSprintById(sprintId);
+  if (!sprint) return null;
+
+  const availableDays = getAvailableDays(employeeId, sprint);
+  const totalAllocated = getTotalAllocationDays(employeeId, sprint);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
