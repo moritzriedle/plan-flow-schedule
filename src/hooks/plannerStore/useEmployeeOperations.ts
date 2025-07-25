@@ -33,7 +33,8 @@ export const useEmployeeOperations = (
         name: updatedEmployee.name,
         role: updatedEmployee.role,
         image_url: updatedEmployee.imageUrl || null,
-        vacation_dates: updatedEmployee.vacationDates || []
+        vacation_dates: JSON.stringify(updatedEmployee.vacationDates || [])
+
       };
       
       console.log('Update data being sent:', updateData);
