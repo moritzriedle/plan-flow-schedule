@@ -47,6 +47,13 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
       imageUrl: imageUrl || undefined,
       vacationDates
     });
+
+    console.log(
+      '📝 Saving employee:',
+      updatedEmployee.id,
+      'vacationDates →',
+      updatedEmployee.vacationDates
+    );
     
     const success = await updateEmployee({
       ...employee,
