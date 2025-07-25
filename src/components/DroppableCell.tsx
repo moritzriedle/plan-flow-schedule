@@ -36,8 +36,8 @@ useEffect(() => {
     console.log('🟦 Sprint:', sprint.name);
     console.log('📅 Working days:', sprint.workingDays.map(normalizeDate));
     console.log('🏖 Vacation days:', (employee.vacationDates || []).map(normalizeDate));
-    console.log('✅ Available days:', getAvailableDays(employee.id, sprint.id));
-    console.log('🧮 Total allocated days:', getTotalAllocationDays(employee.id, sprint.id));
+    console.log('✅ Available days:', getAvailableDays(employee.id, sprint));
+    console.log('🧮 Total allocated days:', getTotalAllocationDays(employee.id, sprint));
   }
 }, [
   employeeId,
@@ -53,8 +53,8 @@ useEffect(() => {
     (alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId
   );
 
-  const totalDays = getTotalAllocationDays(employeeId, sprintId);
-  const availableDays = getAvailableDays(employeeId, sprintId);
+  const totalDays = getTotalAllocationDays(employeeId, sprint);
+  const availableDays = getAvailableDays(employeeId, sprint);
   const isOverallocated = totalDays > availableDays;
 
   const [{ isOverCurrent }, drop] = useDrop({
