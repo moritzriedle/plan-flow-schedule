@@ -84,18 +84,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
           Total: {totalAllocation} days allocated
         </div>
       )}
-
-      {/* Vacation per sprint */}
-      <div className="text-[11px] text-yellow-800 space-y-0.5">
-        {sprints.map((sprint) => {
-          const days = countVacationDaysInSprint(employee.vacationDates || [], sprint);
-          if (days > 0) {
-            return (
-              <div key={sprint.id} className="text-amber-700">
-                <span className="font-medium">{sprint.name}:</span> {days}d vacation
-              </div>
-            );
-          }
           return null;
         })}
       </div>
