@@ -63,7 +63,7 @@ export const useDataLoader = () => {
       try {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('*');
+          .select('id, name, role, image_url, is_admin, vacation_dates');
           
         if (profilesError) {
           throw profilesError;
