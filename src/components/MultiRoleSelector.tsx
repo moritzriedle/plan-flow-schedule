@@ -200,66 +200,74 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
             <CommandInput placeholder="Search roles..." />
             <CommandEmpty>No roles found.</CommandEmpty>
             
-            {(() => {
-              // Use renderSafe arrays instead of the original safe arrays
-              console.log('MultiRoleSelector: Building command items with:', { renderSafeRoles, renderSafeSelectedRoles });
-              
-              if (!Array.isArray(renderSafeRoles) || !Array.isArray(renderSafeSelectedRoles)) {
-                console.error('MultiRoleSelector: renderSafe arrays invalid during Command render');
-                return null;
-              }
-              
-              const roleItems = renderSafeRoles
-                .filter(role => typeof role === 'string' && role.trim() !== '')
-                .map(role => (
-                  <CommandItem
-                    key={role}
-                    onSelect={() => handleRoleToggle(role)}
-                    className="cursor-pointer"
-                  >
-                    <Check
-                      className={`mr-2 h-4 w-4 ${
-                        renderSafeSelectedRoles.includes(role) ? "opacity-100" : "opacity-0"
-                      }`}
-                    />
-                    <span className="truncate">{role}</span>
-                  </CommandItem>
-                ));
-              
-              if (roleItems.length === 0) {
-                return (
-                  <div className="p-4 text-center text-sm text-gray-500">
-                    No valid roles found
-                  </div>
-                );
-              }
+           {(() => {
+  console.log('MultiRoleSelector: Building command items with:', { renderSafeRoles, renderSafeSelectedRoles });
 
-              return (
-                <CommandGroup>
-                  <div className="p-2 border-b flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleSelectAll}
-                      className="flex-1 text-xs"
-                      disabled={renderSafeSelectedRoles.length === renderSafeRoles.length}
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleClearAll}
-                      className="flex-1 text-xs"
-                      disabled={renderSafeSelectedRoles.length === 0}
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-                  {roleItems}
-                </CommandGroup>
-              );
-            })()}
+  if (!Array.isArray(renderSafeRoles) || !Array.isArray(renderSafeSelectedRoles)) {
+    console.error('MultiRoleSelector: renderSafe arrays invalid during Command render');
+    return null;
+  }
+
+  const roleItems = renderSafeRoles
+    .filter(role => typeof role === 'string' && role.trim() !== '')
+    .map((role, index) => {
+      try {
+        const isSelected = renderSafeSelectedRoles.includes(role);
+
+        return (
+          <CommandItem
+            key={String(role) + '-' + index}
+            onSelect={() => handleRoleToggle(role)}
+            className="cursor-pointer"
+          >
+            <Check
+              className={`mr-2 h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`}
+            />
+            <span className="truncate">{role}</span>
+          </CommandItem>
+        );
+      } catch (err) {
+        console.error('MultiRoleSelector: Error rendering CommandItem for role:', role, err);
+        return null;
+      }
+    })
+    .filter(Boolean); // filter out any failed/null renders
+
+  if (roleItems.length === 0) {
+    return (
+      <div className="p-4 text-center text-sm text-gray-500">
+        No valid roles found
+      </div>
+    );
+  }
+
+  return (
+    <CommandGroup>
+      <div className="p-2 border-b flex gap-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleSelectAll}
+          className="flex-1 text-xs"
+          disabled={renderSafeSelectedRoles.length === renderSafeRoles.length}
+        >
+          Select All
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleClearAll}
+          className="flex-1 text-xs"
+          disabled={renderSafeSelectedRoles.length === 0}
+        >
+          Clear All
+        </Button>
+      </div>
+      {roleItems}
+    </CommandGroup>
+  );
+})()}
+
           </Command>
         )}
       </PopoverContent>
