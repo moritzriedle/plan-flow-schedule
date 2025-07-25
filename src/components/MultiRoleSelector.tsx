@@ -19,6 +19,9 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   onRoleChange  = () => {},  // <-- default empty function to avoid crashes
   placeholder = "Select roles..."
 }) => {
+  
+  console.log("MultiRoleSelector: roles defaulted to", roles);
+
   const [open, setOpen] = React.useState(false);
 
   // Add comprehensive logging at the start
