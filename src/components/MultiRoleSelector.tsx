@@ -242,30 +242,30 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
   }
 
   return (
-    <CommandGroup>
-      <div className="p-2 border-b flex gap-2">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={handleSelectAll}
-          className="flex-1 text-xs"
-          disabled={renderSafeSelectedRoles.length === renderSafeRoles.length}
-        >
-          Select All
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={handleClearAll}
-          className="flex-1 text-xs"
-          disabled={renderSafeSelectedRoles.length === 0}
-        >
-          Clear All
-        </Button>
-      </div>
-      {roleItems}
-    </CommandGroup>
-  );
+  <CommandGroup>
+    <div className="p-2 border-b flex gap-2">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={handleSelectAll}
+        className="flex-1 text-xs"
+        disabled={renderSafeSelectedRoles.length === renderSafeRoles.length}
+      >
+        Select All
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={handleClearAll}
+        className="flex-1 text-xs"
+        disabled={renderSafeSelectedRoles.length === 0}
+      >
+        Clear All
+      </Button>
+    </div>
+    {Array.isArray(roleItems) ? roleItems : null}
+  </CommandGroup>
+);
 })()}
 
           </Command>
