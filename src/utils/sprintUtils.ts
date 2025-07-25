@@ -41,8 +41,8 @@ export const generateSprints = (startDate: Date, numSprints: number): Sprint[] =
     const sprintNumber = calculateSprintNumber(sprintStartDate);
 
     sprints.push({
-      id: `sprint-${sprintNumber}`,
-      name: `Sprint ${sprintNumber}`,
+      id: `sprint-${sprintNumber + 1}`,
+      name: `Sprint ${sprintNumber + 1}`,
       startDate: sprintStartDate,
       endDate: sprintEndDate,
       workingDays
