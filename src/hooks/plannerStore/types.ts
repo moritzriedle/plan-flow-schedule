@@ -18,8 +18,8 @@ export interface PlannerStoreReturn {
   getEmployeeAllocations: (employeeId: string) => Allocation[];
   getProjectById: (id: string) => Project | undefined;
   getEmployeeById: (id: string) => Employee | undefined;
-  getTotalAllocationDays: (employeeId: string, sprintId: string) => number;
+  getTotalAllocationDays: (employeeId: string, sprint: Sprint) => number;
   getProjectAllocations: (projectId: string) => Allocation[];
   allocateToProjectTimeline: (employeeId: string, projectId: string, daysPerWeek: 1 | 3 | 5) => Promise<boolean>;
-  getAvailableDays: (employeeId: string, sprintId: string) => number;
+  getAvailableDays: (employeeId: string, sprint: Sprint) => number;
 }
