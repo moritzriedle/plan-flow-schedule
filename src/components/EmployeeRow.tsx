@@ -14,14 +14,6 @@ interface EmployeeRowProps {
 const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployeeEdit }) => {
   const { getTotalAllocationDays } = usePlanner();
 
-  // Utility to count how many vacation dates fall within this sprint
-  function countVacationDaysInSprint(vacationDates: string[], sprint: Sprint): number {
-    if (!Array.isArray(vacationDates) || !sprint.workingDays) return 0;
-
-    const sprintDays = new Set(sprint.workingDays.map(d => new Date(d).toDateString()));
-    return vacationDates.filter(dateStr => sprintDays.has(new Date(dateStr).toDateString())).length;
-  }
-
   // Total allocation across all sprints
   const totalAllocation = sprints.reduce((total, sprint) => {
     return total + getTotalAllocationDays(employee.id, sprint);
@@ -80,13 +72,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
 
       {/* Total allocation */}
       {totalAllocation > 0 && (
-        <div className="text-xs text-gray-500 mb-1">
+        <div className="text-xs text-gray-500">
           Total: {totalAllocation} days allocated
         </div>
       )}
-          return null;
-        })}
-      </div>
     </div>
   );
 };
