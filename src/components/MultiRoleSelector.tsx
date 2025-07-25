@@ -195,9 +195,9 @@ const MultiRoleSelector: React.FC<MultiRoleSelectorProps> = ({
           <div className="p-4 text-center text-sm text-gray-500">
             No roles available
           </div>
-        ) : (
-         {/* TEMPORARY: Replace Command while debugging */}
-<div className="p-2">
+              ) : (
+          <div className="p-2">
+            {/* TEMPORARY: Replace Command while debugging */}
   <div className="p-2 border-b flex gap-2">
     <Button
       size="sm"
