@@ -129,8 +129,8 @@ const ResourcePlanner: React.FC = () => {
   }
   
   const handleProjectTimelineOpen = (project: Project) => {
-    //setSelectedProject(project);
-    //setIsProjectTimelineOpen(true);
+    setSelectedProject(project);
+    setIsProjectTimelineOpen(true);
   };
 
   const handleEmployeeEdit = (employee: Employee) => {
