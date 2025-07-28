@@ -28,7 +28,7 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
   });
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto" style={{ height: '80vh' }}>
       <div className="min-w-max">
         {/* Fixed Header Row */}
         <div className="sticky top-0 z-10 bg-white border-b-2 border-gray-200 shadow-sm">
