@@ -21,6 +21,12 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
   const totalSprintsWidth = safeSprints.length * sprintColumnWidth;
   const activeSprint = findActiveSprint(safeSprints);
 
+   console.log('Today:', new Date());
+  console.log('Active Sprint:', activeSprint);
+  safeSprints.forEach((sprint) => {
+    console.log('Sprint:', sprint.name, sprint.startDate, sprint.endDate);
+  });
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="min-w-max">
