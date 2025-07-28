@@ -95,7 +95,7 @@ return (
     </div>
   </Card>
 );
-
+};
 
 interface ProjectsSidebarProps {
   onProjectTimelineOpen?: (project: Project) => void;
