@@ -58,41 +58,41 @@ return (
       opacity
     }}
   >
-    <div className="flex justify-between items-start mb-2">
-      <h4 className="font-medium text-sm truncate flex-1">{project.name}</h4>
-
-      {onTimelineOpen && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0 ml-2 flex-shrink-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            onTimelineOpen(project);
-          }}
-        >
-          <Eye className="h-3 w-3" />
-        </Button>
-      )}
-    </div>
-
-    {/* ✅ Jira ticket link */}
-    {project.ticketReference && (
-      <div className="text-xs mb-1">
-        <a
-          href={generateLink(project.ticketReference)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline"
-        >
-          {project.ticketReference}
-        </a>
+    <div className="flex justify-between items-start mb-1">
+      {/* Left side: Project name + lead */}
+      <div className="flex flex-col flex-1">
+        <h4 className="font-medium text-sm truncate">{project.name}</h4>
+        <div className="text-xs text-gray-500 truncate">
+          {leadName ? leadName : 'No lead assigned'}
+        </div>
       </div>
-    )}
 
-    {/* ✅ Lead name */}
-    <div className="text-xs text-gray-500 truncate">
-      {leadName ? leadName : 'No lead assigned'}
+      {/* Right side: Eye button + Jira ticket */}
+      <div className="flex flex-col items-end ml-2">
+        {onTimelineOpen && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 mb-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTimelineOpen(project);
+            }}
+          >
+            <Eye className="h-3 w-3" />
+          </Button>
+        )}
+        {project.ticketReference && (
+          <a
+            href={generateLink(project.ticketReference)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-blue-600 hover:underline"
+          >
+            {project.ticketReference}
+          </a>
+        )}
+      </div>
     </div>
   </Card>
 );
