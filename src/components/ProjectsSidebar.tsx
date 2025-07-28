@@ -23,7 +23,8 @@ const generateLink = (ticketRef: string) => {
 
 const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({ 
   project, 
-  onTimelineOpen 
+  onTimelineOpen, 
+  employees
 }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'ALLOCATION',
@@ -39,8 +40,8 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
   });
 
   const lead = project.leadId 
-  ? employees.find(emp => emp.id === project.leadId) 
-  : null;
+    ? employees.find(emp => emp.id === project.leadId) 
+    : null;
   const leadName = lead ? lead.name : null;
 
   const opacity = isDragging ? 0.4 : 1;
