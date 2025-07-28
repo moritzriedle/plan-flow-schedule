@@ -15,7 +15,7 @@ export const getSprintLabel = (sprintNumber: number, startDate: Date): string =>
 
 export const calculateSprintNumber = (date: Date): number => {
   const daysDiff = differenceInCalendarDays(date, referenceSprintStart);
-  return Math.floor(daysDiff / SPRINT_LENGTH_DAYS);
+  return Math.floor(daysDiff + 1 / SPRINT_LENGTH_DAYS);
 };
 
 export const generateSprints = (startDate: Date, numSprints: number): Sprint[] => {
