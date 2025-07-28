@@ -52,6 +52,11 @@ export const generateSprints = (startDate: Date, numSprints: number): Sprint[] =
   return sprints;
 };
 
+export const findActiveSprint = (sprints: Sprint[]): Sprint | undefined => {
+  const today = new Date();
+  return sprints.find(sprint => today >= sprint.startDate && today <= sprint.endDate);
+};
+
 export const getSprintDateRange = (sprint: Sprint): string => {
   return `${format(sprint.startDate, 'MMM d')} - ${format(sprint.endDate, 'MMM d')}`;
 };
