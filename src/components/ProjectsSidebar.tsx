@@ -11,7 +11,13 @@ import { Eye, Calendar, Search } from 'lucide-react';
 interface DraggableProjectItemProps {
   project: Project;
   onTimelineOpen?: (project: Project) => void;
+  employees: Employee[];  
 }
+
+const lead = project.leadId 
+  ? employees.find(emp => emp.id === project.leadId) 
+  : null;
+const leadName = lead ? lead.name : null;
 
 // ✅ Helper to generate Jira ticket URL
 const generateLink = (ticketRef: string) => {
@@ -53,6 +59,21 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
     >
       <div className="flex justify-between items-start mb-2">
         <h4 className="font-medium text-sm truncate flex-1">{project.name}</h4>
+        
+     {/* ✅ Jira ticket link */}
+        {project.ticketReference && (
+          <div className="mt-2 text-xs">
+              <a
+                href={generateLink(project.ticketReference)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+            {project.ticketReference}
+          </a>
+        </div>
+      )}
+        
         {onTimelineOpen && (
           <Button
             variant="ghost"
@@ -77,29 +98,12 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
             borderColor: `var(--project-${project.color})`
           }}
         >
-          {project.color}
-        </Badge>
-        
-        {project.leadId && (
-          <div className="text-xs text-gray-500">
-            Lead assigned
-          </div>
+         <div className="text-xs text-gray-500 truncate">
+            {/* Show lead name if available, else fallback */}
+            {leadName ? leadName : 'No lead assigned'}
+        </div>
         )}
       </div>
-
-      {/* ✅ Jira ticket link */}
-      {project.ticketReference && (
-        <div className="mt-2 text-xs">
-          <a
-            href={generateLink(project.ticketReference)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            {project.ticketReference}
-          </a>
-        </div>
-      )}
     </Card>
   );
 };
@@ -197,6 +201,7 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
             <DraggableProjectItem 
               project={project} 
               onTimelineOpen={onProjectTimelineOpen}
+              employees={employees}
             />
             {selectedEmployeeId && (
               <Button
