@@ -64,14 +64,13 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
                   </div>
                   {isActive && (
                     <div className="text-xs font-bold text-blue-600 mt-1">
-                      ACTIVE
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                     ACTIVE
           </div>
-        </div>
+        )}
+      </div>
+    );
+  })}
+</div>
 
         {/* Employee Rows */}
         <div className="divide-y divide-gray-200">
