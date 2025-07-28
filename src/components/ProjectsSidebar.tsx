@@ -44,69 +44,58 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
   });
 
   const opacity = isDragging ? 0.4 : 1;
+  
+return (
+  <Card 
+    ref={drag}
+    className={`p-3 cursor-move border-l-4 hover:shadow-md transition-shadow ${
+      isDragging ? 'opacity-40' : 'opacity-100'
+    }`}
+    style={{ 
+      borderLeftColor: `var(--project-${project.color})`,
+      backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.05)`,
+      opacity
+    }}
+  >
+    <div className="flex justify-between items-start mb-2">
+      <h4 className="font-medium text-sm truncate flex-1">{project.name}</h4>
 
-  return (
-    <Card 
-      ref={drag}
-      className={`p-3 cursor-move border-l-4 hover:shadow-md transition-shadow ${
-        isDragging ? 'opacity-40' : 'opacity-100'
-      }`}
-      style={{ 
-        borderLeftColor: `var(--project-${project.color})`,
-        backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.05)`,
-        opacity
-      }}
-    >
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium text-sm truncate flex-1">{project.name}</h4>
-        
-     {/* ✅ Jira ticket link */}
-        {project.ticketReference && (
-          <div className="mt-2 text-xs">
-              <a
-                href={generateLink(project.ticketReference)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-            {project.ticketReference}
-          </a>
-        </div>
-      )}
-        
-        {onTimelineOpen && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 ml-2 flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTimelineOpen(project);
-            }}
-          >
-            <Eye className="h-3 w-3" />
-          </Button>
-        )}
-      </div>
-      
-      <div className="flex items-center justify-between">
-        <Badge 
-          variant="outline" 
-          className="text-xs"
-          style={{ 
-            color: `var(--project-${project.color})`,
-            borderColor: `var(--project-${project.color})`
+      {onTimelineOpen && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 ml-2 flex-shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTimelineOpen(project);
           }}
         >
-         <div className="text-xs text-gray-500 truncate">
-            {/* Show lead name if available, else fallback */}
-            {leadName ? leadName : 'No lead assigned'}
-        </div>
-        )}
+          <Eye className="h-3 w-3" />
+        </Button>
+      )}
+    </div>
+
+    {/* ✅ Jira ticket link */}
+    {project.ticketReference && (
+      <div className="text-xs mb-1">
+        <a
+          href={generateLink(project.ticketReference)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          {project.ticketReference}
+        </a>
       </div>
-    </Card>
-  );
-};
+    )}
+
+    {/* ✅ Lead name */}
+    <div className="text-xs text-gray-500 truncate">
+      {leadName ? leadName : 'No lead assigned'}
+    </div>
+  </Card>
+);
+
 
 interface ProjectsSidebarProps {
   onProjectTimelineOpen?: (project: Project) => void;
