@@ -14,11 +14,6 @@ interface DraggableProjectItemProps {
   employees: Employee[];  
 }
 
-const lead = project.leadId 
-  ? employees.find(emp => emp.id === project.leadId) 
-  : null;
-const leadName = lead ? lead.name : null;
-
 // ✅ Helper to generate Jira ticket URL
 const generateLink = (ticketRef: string) => {
   if (!ticketRef.trim()) return null;
@@ -42,6 +37,11 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
       isDragging: monitor.isDragging(),
     }),
   });
+
+  const lead = project.leadId 
+  ? employees.find(emp => emp.id === project.leadId) 
+  : null;
+  const leadName = lead ? lead.name : null;
 
   const opacity = isDragging ? 0.4 : 1;
   
