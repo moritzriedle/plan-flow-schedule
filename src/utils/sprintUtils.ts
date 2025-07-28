@@ -1,8 +1,8 @@
 import { format, addWeeks, addDays, differenceInCalendarDays } from 'date-fns';
 import { Sprint } from '../types';
 
-// ✅ Global Reference: Sprint 0 starts on Dec 30, 2024 (Monday)
-export const referenceSprintStart = new Date(2024, 11, 30); // December is month 11
+// ✅ Global Reference: Sprint 0 starts on Jan 6, 2025 (Monday)
+export const referenceSprintStart = new Date(2025, 0, 6); // December is month 11
 
 // 🧠 Sprint 13 starts on June 23, 2025, which is 13 * 2 weeks after reference
 const SPRINT_LENGTH_DAYS = 14;
