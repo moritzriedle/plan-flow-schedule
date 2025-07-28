@@ -2,7 +2,7 @@
 import React from 'react';
 import EmployeeRow from './EmployeeRow';
 import DroppableCell from './DroppableCell';
-import { getSprintDateRange, isSprintActive } from '../utils/sprintUtils';
+import { getSprintDateRange, findActiveSprint} from '../utils/sprintUtils';
 import { Employee, Sprint } from '../types';
 
 interface ResourcePlannerGridProps {
@@ -21,6 +21,7 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
   const sprintColumnWidth = 150;
   const safeSprints = Array.isArray(sprints) ? sprints : [];
   const totalSprintsWidth = safeSprints.length * sprintColumnWidth;
+  const activeSprint = findActiveSprint(safeSprints);
 
   return (
     <div className="flex-1 overflow-auto">
@@ -38,16 +39,20 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
             
             {/* Sprint Headers */}
             <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
-              {safeSprints.map((sprint) => (
-                <div
-                  key={sprint.id}
-                  className={`flex-shrink-0 p-2 text-center text-sm font-medium border-r ${
-                    isSprintActive(sprint) 
-                      ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                      : 'text-gray-700 bg-gray-50'
-                  }`}
-                  style={{ width: `${sprintColumnWidth}px` }}
-                >
+             {safeSprints.map((sprint) => {
+                const isActive = activeSprint?.id === sprint.id;
+
+                return (
+                  <div
+                    key={sprint.id}
+                    className={`flex-shrink-0 p-2 text-center text-sm font-medium border-r ${
+                    isActive
+                        ? 'bg-blue-100 text-blue-800 border-blue-200'
+                        : 'text-gray-700 bg-gray-50'
+                    }`}
+                    style={{ width: `${sprintColumnWidth}px` }}
+                  >
+
                   <div className="truncate font-semibold" title={sprint.name}>
                     {sprint.name}
                   </div>
@@ -57,7 +62,7 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
                   <div className="text-xs text-gray-500 mt-1">
                     {sprint.workingDays?.length || 0} days
                   </div>
-                  {isSprintActive(sprint) && (
+                  {isActive && (
                     <div className="text-xs font-bold text-blue-600 mt-1">
                       ACTIVE
                     </div>
