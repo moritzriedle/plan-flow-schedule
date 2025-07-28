@@ -251,6 +251,10 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                 {projectLead && (
                   <div className="mt-1">Lead: {projectLead.name}</div>
                 )}
+        
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
                 {project.ticketReference && (
                   <div className="mt-1">
                     <a
@@ -263,9 +267,8 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                     </a>
                   </div>
                 )}
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
+
+              
               <Button 
                 variant="ghost" 
                 size="sm" 
