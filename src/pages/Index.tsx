@@ -44,7 +44,7 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <h1 className="text-2xl font-bold mb-6">Project Resource Management</h1>
+      <h1 className="text-2xl font-bold mb-6">ProPlanner</h1>
       
       <Tabs defaultValue="allocation" className="w-full">
         <TabsList className="mb-4">
