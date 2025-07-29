@@ -17,6 +17,11 @@ export const useAllocationOperations = (
 ) => {
   const { user, profile } = useAuth();
 
+  const hasAllocationPermission = !!profile && (
+  profile.is_admin ||
+  ['Manager', 'Product Manager', 'Product Owner', 'Technical Project Manager'].includes(profile.role)
+);
+
   const validateUserId = useCallback(async (userId: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase
@@ -36,8 +41,8 @@ export const useAllocationOperations = (
   };
 
   const addAllocation = useCallback(async (allocation: Omit<Allocation, 'id'>) => {
-    if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can manage allocations');
+   if (!user || !hasAllocationPermission) {
+      toast.error('Only authorized users can manage allocations');
       return null;
     }
 
@@ -78,8 +83,8 @@ export const useAllocationOperations = (
   }, [user, profile, validateUserId, sprints, projects, allocations]);
 
   const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
-    if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can update allocations');
+    if (!user || !hasAllocationPermission) {
+      toast.error('Only authorized users can update allocations');
       return false;
     }
 
@@ -107,8 +112,8 @@ export const useAllocationOperations = (
   }, [user, profile, setAllocations, projects, allocations]);
 
   const deleteAllocation = useCallback(async (id: string) => {
-    if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can delete allocations');
+    if (!user || !hasAllocationPermission) {
+      toast.error('Only authorized users can delete allocations');
       return false;
     }
 
@@ -137,8 +142,8 @@ export const useAllocationOperations = (
   }, [user, profile, allocations, projects]);
 
   const moveAllocation = useCallback(async (dragItem: DragItem, targetSprintId: string) => {
-    if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can move allocations');
+    if (!user || !hasAllocationPermission) {
+      toast.error('Only authorized users can move allocations');
       return false;
     }
 
@@ -223,10 +228,10 @@ export const useAllocationOperations = (
     projectId: string,
     daysPerWeek: 1 | 3 | 5
   ) => {
-    if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can allocate resources');
+   if (!user || !hasAllocationPermission) {
+      toast.error('Only authorized users can allocate resources');
       return false;
-    }
+  }
 
     try {
       const project = projects.find(p => p.id === projectId);
