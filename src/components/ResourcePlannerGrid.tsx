@@ -35,7 +35,7 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
           <div className="flex">
             {/* Employee Column Header */}
             <div
-              className="flex-shrink-0 p-4 font-semibold text-gray-700 border-r bg-gray-50"
+              className="flex-shrink-0 p-4 font-semibold text-gray-700 border-r bg-gray-50 sticky left-0 z-10"
               style={{ width: `${employeeColumnWidth}px` }}
             >
               Team Members
@@ -83,7 +83,7 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
             <div key={employee.id} className="flex hover:bg-gray-50/50">
               {/* Employee Info Column */}
               <div
-                className="flex-shrink-0 border-r bg-white"
+                className="flex-shrink-0 border-r bg-white sticky left-0 z-10"
                 style={{ width: `${employeeColumnWidth}px` }}
               >
                 <EmployeeRow
