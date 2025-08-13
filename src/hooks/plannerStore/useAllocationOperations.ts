@@ -61,6 +61,7 @@ export const useAllocationOperations = (
         .insert({
           user_id: allocation.employeeId,
           project_id: allocation.projectId,
+          sprint_id: allocation.sprintId, 
           week: sprintDate,
           days: allocation.days
         })
