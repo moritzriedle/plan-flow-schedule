@@ -1,0 +1,6 @@
+export type Project = {
+    // ...existing code...
+    startDate?: string; // ISO date string
+    endDate?: string;   // ISO date string
+    // ...existing code...
+}
