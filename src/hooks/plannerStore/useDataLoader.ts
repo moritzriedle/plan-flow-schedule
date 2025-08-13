@@ -107,18 +107,13 @@ export const useDataLoader = () => {
         if (allocationsError) {
           throw allocationsError;
         }
-        const mappedAllocations: Allocation[] = allocationsData.map(alloc => {
-  const sprintNumber = calculateSprintNumber(new Date(alloc.week));
-  const sprintId = `sprint-${sprintNumber}`;
-
-  return {
-    id: alloc.id,
-    employeeId: alloc.user_id,
-    projectId: alloc.project_id,
-    sprintId,
-    days: alloc.days
-  };
-});
+       const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
+  id: alloc.id,
+  employeeId: alloc.employee_id, // assuming your DB has this column
+  projectId: alloc.project_id,
+  sprintId: alloc.sprint_id,     // ✅ use sprint_id directly
+  days: alloc.days
+}));
 
         let finalProjects = mappedProjects;
         
