@@ -48,6 +48,16 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
           onSubmit={handleAdd}
           submitLabel="Create Project"
         />
+        {/* Project Lead selection field */}
+        <div className="mb-4">
+          <label className="block font-medium mb-1">
+            Project Lead <span className="text-red-500">*</span>
+          </label>
+          {/* ...existing code for select/input... */}
+          <div className="text-xs text-red-500 mt-1">
+            Please select a Project Lead before saving.
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
