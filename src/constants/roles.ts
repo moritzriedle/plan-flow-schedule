@@ -1,9 +1,10 @@
-
 export const ROLE_OPTIONS = [
   'Android',
   'Architect',
   'Backend',
   'Certification',
+  'Data Engineer',
+  'Data Scientist',
   'Electrical Engineering',
   'Electrical Testing',
   'Firmware',
