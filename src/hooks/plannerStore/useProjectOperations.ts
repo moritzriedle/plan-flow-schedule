@@ -51,9 +51,18 @@ export const useProjectOperations = (
     }
   }, [user, profile, setProjects]);
 
-  const updateProject = useCallback(async (updatedProject: Project) => {
-    if (!user || !profile?.is_admin) {
-      toast.error('Only administrators can update projects');
+ const updateProject = useCallback(async (updatedProject: Project) => {
+    const allowedRoles = [
+      'Manager',
+      'Product Manager',
+      'Product Owner',
+      'Technical Project Manager'
+    ];
+    const canUpdate =
+      profile?.is_admin || (profile?.role && allowedRoles.includes(profile.role));
+
+    if (!user || !canUpdate) {
+      toast.error('You do not have permission to update projects');
       return false;
     }
 
