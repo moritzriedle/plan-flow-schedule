@@ -47,3 +47,6 @@ export interface Week {
   endDate: Date;
   label: string;
 }
+
+// No type definitions for 'professions' or related entities.
+// Employee type is used for planner logic.
