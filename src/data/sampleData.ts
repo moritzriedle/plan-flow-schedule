@@ -1,4 +1,3 @@
-
 import { Employee, Project, Allocation } from '../types';
 
 // Sample employee data
@@ -63,3 +62,6 @@ export const sampleAllocations: Allocation[] = [
   { id: 'alloc5', employeeId: 'emp4', projectId: 'proj4', sprintId: 'sprint-1', days: 10 },
   { id: 'alloc6', employeeId: 'emp5', projectId: 'proj5', sprintId: 'sprint-2', days: 7 },
 ];
+
+// Sample data uses 'employees', 'projects', 'allocations', 'sprints'.
+// No sample data for 'professions' or 'public.professions'.
