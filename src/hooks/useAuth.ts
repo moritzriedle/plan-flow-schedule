@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Employee, Project, Allocation, Sprint } from '../../types';
+import { Employee, Project, Allocation, Sprint } from '@/types';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { generateSprints, referenceSprintStart, calculateSprintNumber } from '@/utils/sprintUtils';
+import { generateSprints, referenceSprintStart, calculateSprintNumber, calculateProjectDateRanges } from '@/utils/sprintUtils';
 
 export function useAuth() {
   // Replace with your actual authentication logic
@@ -114,13 +114,13 @@ export const useDataLoader = () => {
         if (allocationsError) {
           throw allocationsError;
         }
-       const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
-  id: alloc.id,
-  employeeId: alloc.employee_id, // assuming your DB has this column
-  projectId: alloc.project_id,
-  sprintId: alloc.sprint_id,     // ✅ use sprint_id directly
-  days: alloc.days
-}));
+    const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
+        id: alloc.id,
+        employeeId: alloc.user_id, // use user_id as employeeId
+        projectId: alloc.project_id,
+        sprintId: alloc.sprint_id, // use sprint_id instead of week
+        days: alloc.days
+    }));
 
         let finalProjects = mappedProjects;
         
