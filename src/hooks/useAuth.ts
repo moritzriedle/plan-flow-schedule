@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Employee, Project, Allocation, Sprint } from '@/types';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { generateSprints, referenceSprintStart, calculateSprintNumber, calculateProjectDateRanges } from '@/utils/sprintUtils';
+import { generateSprints, referenceSprintStart, calculateSprintNumber } from '@/utils/sprintUtils';
+import { calculateProjectDateRanges } from '@/hooks/plannerStore/utils';
 
 export function useAuth() {
   // Replace with your actual authentication logic
@@ -101,8 +102,8 @@ export const useDataLoader = () => {
           id: project.id,
           name: project.name,
           color: project.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
-          startDate: new Date(),  
-          endDate: new Date(),    
+          startDate: project.start_date ? new Date(project.start_date) : undefined,
+          endDate: project.end_date ? new Date(project.end_date) : undefined,
           leadId: project.lead_id || undefined,
           ticketReference: project.ticket_reference || undefined
         }));
