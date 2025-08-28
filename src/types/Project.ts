@@ -1,6 +1,10 @@
-export type Project = {
-    // ...existing code...
-    startDate?: string; // ISO date string
-    endDate?: string;   // ISO date string
-    // ...existing code...
+export interface Project {
+  id: string;
+  name: string;
+  color: 'blue' | 'purple' | 'pink' | 'orange' | 'green';
+  startDate?: Date;
+  endDate?: Date;
+  leadId?: string;
+  ticketReference?: string;
+  description?: string;
 }
