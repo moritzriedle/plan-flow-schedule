@@ -12,14 +12,11 @@ export const useDataLoader = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]); 
-  useEffect(() => {
-    console.log('useDataLoader: Generating sprints inside useEffect');
-    const generated = generateSprints(referenceSprintStart, 100);
-    setSprints(generated);
-
-    // Debug: Log generated sprint IDs for comparison
-    console.log('Generated Sprint IDs:', generated.map(s => s.id));
-  }, []);
+   useEffect(() => {
+  console.log('useDataLoader: Generating sprints inside useEffect');
+  const generated = generateSprints(referenceSprintStart, 100);
+  setSprints(generated);
+}, []);
   
   const [loading, setLoading] = useState(true);
   
@@ -110,16 +107,13 @@ export const useDataLoader = () => {
         if (allocationsError) {
           throw allocationsError;
         }
-        const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
-          id: alloc.id,
-          employeeId: alloc.employee_id,
-          projectId: alloc.project_id,
-          sprintId: alloc.sprint_id,
-          days: alloc.days
-        }));
-
-        // Debug: Log allocation sprint IDs for comparison
-        console.log('Allocation Sprint IDs:', mappedAllocations.map(a => a.sprintId));
+       const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
+  id: alloc.id,
+  employeeId: alloc.user_id, // use user_id as employeeId
+  projectId: alloc.project_id,
+  sprintId: alloc.sprint_id,     // ✅ use sprint_id directly
+  days: alloc.days
+}));
 
         let finalProjects = mappedProjects;
         
@@ -175,3 +169,6 @@ export const useDataLoader = () => {
     setSprints
   };
 };
+
+// Supabase queries use only 'profiles', 'projects', and 'allocations' tables.
+// No usage of 'professions' or 'public.professions' table.
