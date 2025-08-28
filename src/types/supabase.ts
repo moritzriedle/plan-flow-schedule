@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -104,6 +103,8 @@ export type Database = {
           name: string
           updated_at: string
           ticket_reference: string | null
+          start_date: string | null
+          end_date: string | null
         }
         Insert: {
           color: string
@@ -114,6 +115,8 @@ export type Database = {
           name: string
           updated_at?: string
           ticket_reference?: string | null
+          start_date?: string | null
+          end_date?: string | null
         }
         Update: {
           color?: string
@@ -124,6 +127,8 @@ export type Database = {
           name?: string
           updated_at?: string
           ticket_reference?: string | null
+          start_date?: string | null
+          end_date?: string | null
         }
         Relationships: []
       }
@@ -213,7 +218,7 @@ export type Tables<
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
         Database[PublicTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
       Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
@@ -285,3 +290,14 @@ export type Enums<
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
     : never
+
+export interface SupabaseProject {
+  id: string;
+  name: string;
+  color: 'blue' | 'purple' | 'pink' | 'orange' | 'green';
+  start_date: string | null;
+  end_date: string | null;
+  lead_id?: string | null;
+  ticket_reference?: string | null;
+  // ...other fields...
+}
