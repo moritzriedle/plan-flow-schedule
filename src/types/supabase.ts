@@ -19,6 +19,7 @@ export type Database = {
           user_id: string
           week: string
           week_label: string | null
+          sprint_id: string | null
         }
         Insert: {
           created_at?: string
@@ -29,6 +30,7 @@ export type Database = {
           user_id: string
           week: string
           week_label?: string | null
+          sprint_id?: string | null
         }
         Update: {
           created_at?: string
@@ -39,6 +41,7 @@ export type Database = {
           user_id?: string
           week?: string
           week_label?: string | null
+          sprint_id?: string | null
         }
         Relationships: []
       }
@@ -300,4 +303,16 @@ export interface SupabaseProject {
   lead_id?: string | null;
   ticket_reference?: string | null;
   // ...other fields...
+}
+
+export interface SupabaseAllocation {
+  id: string;
+  user_id: string;
+  project_id: string;
+  days: number;
+  created_at: string;
+  updated_at: string;
+  week: string;
+  week_label: string;
+  sprint_id?: string; // <-- Add this line
 }
