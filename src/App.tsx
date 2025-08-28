@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import { PlannerProvider } from "./contexts/PlannerContext";
 import './components/ProjectColors.css';
 import React, { ErrorInfo, ReactNode } from "react";
+import { AuthProvider } from "@/hooks/useAuth";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
     <TooltipProvider>
       <BrowserRouter>
         <ErrorBoundary>
+          <AuthProvider>
             <Toaster />
             <Sonner />
             <Routes>
@@ -70,6 +72,7 @@ const App = () => (
               } />
               <Route path="*" element={<NotFound />} />
             </Routes>
+          </AuthProvider>
         </ErrorBoundary>
       </BrowserRouter>
     </TooltipProvider>
