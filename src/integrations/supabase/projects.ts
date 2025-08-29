@@ -7,18 +7,24 @@ export async function updateProject(project: Project) {
         .from('projects')
         .update({
             name,
-            start_date: startDate,
-            end_date: endDate,
+            start_date: startDate ?? null,
+            end_date: endDate ?? null,
             ...rest
         })
         .eq('id', id)
 }
 
 export async function updateProjectInSupabase(project: Project) {
-  const { id, ...fields } = project;
+  const { id, name, startDate, endDate, ...rest } = project;
+  const updateFields = {
+    name,
+    start_date: startDate ?? null,
+    end_date: endDate ?? null,
+    ...rest
+  };
   const { error } = await supabase
     .from('projects')
-    .update(fields)
+    .update(updateFields)
     .eq('id', id);
 
   if (error) {
