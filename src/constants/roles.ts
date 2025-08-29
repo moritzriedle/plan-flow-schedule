@@ -23,7 +23,8 @@ export const ROLE_OPTIONS = [
   'System',
   'Technical Project Manager',
   'UI/UX Design',
-  'Wearable Engineering'
+  'Wearable Engineering',
+  'Graphics Designer' // added new role
 ] as const;
 
 export type Role = typeof ROLE_OPTIONS[number];
