@@ -1,17 +1,69 @@
-import { useState, useEffect } from 'react';
-import { Employee, Project, Allocation, Sprint } from '@/types';
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { generateSprints, referenceSprintStart, calculateSprintNumber } from '@/utils/sprintUtils';
+import { generateSprints, referenceSprintStart } from '@/utils/sprintUtils';
 import { calculateProjectDateRanges } from '@/hooks/plannerStore/utils';
+import { Employee, Project, Allocation, Sprint } from '@/types';
+
+type AuthUser = { id: string } | null;
+type AuthProfile = {
+  id: string;
+  name: string;
+  role: string;
+  image_url?: string;
+  is_admin?: boolean;
+  vacation_dates?: string[];
+} | null;
+
+const AuthContext = createContext<{
+  user: AuthUser;
+  profile: AuthProfile;
+  loading: boolean;
+}>({
+  user: null,
+  profile: null,
+  loading: false,
+});
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<AuthUser>(null);
+  const [profile, setProfile] = useState<AuthProfile>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUser({ id: session.user.id });
+        // Optionally fetch profile here
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ id: session.user.id });
+        // Optionally fetch profile here
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      listener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, profile, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
 export function useAuth() {
-  // Replace with your actual authentication logic
-  const [user, setUser] = useState<{ id: string } | null>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-
-  return { user, profile, loading };
+  return useContext(AuthContext);
 }
 
 export const useDataLoader = () => {
@@ -19,85 +71,54 @@ export const useDataLoader = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
-  const [sprints, setSprints] = useState<Sprint[]>([]); 
-   useEffect(() => {
-  console.log('useDataLoader: Generating sprints inside useEffect');
-  const generated = generateSprints(referenceSprintStart, 100);
-  setSprints(generated);
-}, []);
-  
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  console.log('useDataLoader: Hook called', { 
-    user: user?.id, 
-    authLoading, 
-    loading,
-    profileId: profile?.id
-  });
 
   useEffect(() => {
-    console.log('useDataLoader: useEffect triggered', { authLoading, user: user?.id });
-    
-    if (authLoading) {
-      console.log('useDataLoader: Waiting for auth to complete');
-      return;
-    }
-    
+    setSprints(generateSprints(referenceSprintStart, 100));
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
     if (!user) {
-      console.log('useDataLoader: No user, setting loading to false');
       setLoading(false);
       return;
     }
-    
-    if (sprints.length === 0) {
-      console.log('useDataLoader: Waiting for sprints to be generated');
-      return; // Don't load data until sprints are ready
-    }
-    
+    if (sprints.length === 0) return;
+
     let isCancelled = false;
+    setLoading(true);
+
+    const timeoutId = setTimeout(() => {
+      if (!isCancelled) {
+        setLoading(false);
+        toast.error('Loading timeout - please refresh the page');
+      }
+    }, 10000);
 
     async function loadInitialData() {
-      console.log('useDataLoader: Starting data load for user:', user.id);
-      setLoading(true);
-      
-      const timeoutId = setTimeout(() => {
-        console.error('useDataLoader: Data loading timeout after 10 seconds');
-        if (!isCancelled) {
-          setLoading(false);
-          toast.error('Loading timeout - please refresh the page');
-        }
-      }, 10000);
-      
       try {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, name, role, image_url, is_admin, vacation_dates')
-          .order('role', { ascending: true });  // or false for descending;
+          .order('role', { ascending: true });
 
-        console.log('👥 Loaded profiles:', profilesData, profilesError);
-          
-        if (profilesError) {
-          throw profilesError;
-        }
-        
-        console.log('Loaded profiles data:', profilesData);
-        
-        const mappedEmployees: Employee[] = profilesData.map(profile => ({
+        if (profilesError || !profilesData) throw profilesError || new Error('No profiles data');
+
+        const mappedEmployees: Employee[] = profilesData.map((profile: any) => ({
           id: profile.id,
           name: profile.name,
           role: profile.role,
-          imageUrl: profile.image_url || undefined,
-          vacationDates: Array.isArray(profile.vacation_dates) ? profile.vacation_dates as string[] : []
+          imageUrl: profile.image_url ?? undefined,
+          vacationDates: Array.isArray(profile.vacation_dates) ? profile.vacation_dates : []
         }));
-        
+
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
           .select('*');
-          
-        if (projectsError) {
-          throw projectsError;
-        }
-        
+
+        if (projectsError || !projectsData) throw projectsError || new Error('No projects data');
+
         const mappedProjects: Project[] = projectsData.map(project => ({
           id: project.id,
           name: project.name,
@@ -107,63 +128,47 @@ export const useDataLoader = () => {
           leadId: project.lead_id || undefined,
           ticketReference: project.ticket_reference || undefined
         }));
-        
+
         const { data: allocationsData, error: allocationsError } = await supabase
           .from('allocations')
           .select('*');
-          
-        if (allocationsError) {
-          throw allocationsError;
-        }
-    const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
-        id: alloc.id,
-        employeeId: alloc.user_id, // use user_id as employeeId
-        projectId: alloc.project_id,
-        sprintId: alloc.sprint_id, // use sprint_id instead of week
-        days: alloc.days
-    }));
+
+        if (allocationsError || !allocationsData) throw allocationsError || new Error('No allocations data');
+
+        const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
+          id: alloc.id,
+          employeeId: alloc.user_id,
+          projectId: alloc.project_id,
+          sprintId: alloc.sprint_id,
+          days: alloc.days
+        }));
 
         let finalProjects = mappedProjects;
-        
         if (mappedAllocations.length && finalProjects.length) {
           finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations, sprints);
         }
-        
-        // Sort projects alphabetically by name
         finalProjects.sort((a, b) => a.name.localeCompare(b.name));
-        
+
         setEmployees(mappedEmployees);
         setProjects(finalProjects);
         setAllocations(mappedAllocations);
-        
-        console.log('Loaded from Supabase:', { 
-          employees: mappedEmployees, 
-          projects: finalProjects, 
-          allocations: mappedAllocations 
-        });
       } catch (error) {
-        console.error('Error loading data from Supabase:', error);
         toast.error('Failed to load data');
-        
         setEmployees([]);
         setProjects([]);
         setAllocations([]);
       } finally {
         clearTimeout(timeoutId);
-        if (!isCancelled) {
-          setLoading(false);
-          console.log('useDataLoader: Data loading completed');
-        }
+        if (!isCancelled) setLoading(false);
       }
     }
-    
+
     loadInitialData();
-    
+
     return () => {
-      console.log('useDataLoader: Cleanup function called');
       isCancelled = true;
     };
-  }, [user?.id, authLoading, sprints]);
+  }, [user?.id, authLoading, sprints.length]);
 
   return {
     employees,
