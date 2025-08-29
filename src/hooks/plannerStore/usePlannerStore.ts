@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { generateSprints, referenceSprintStart, calculateSprintNumber } from '@/utils/sprintUtils';
 import {calculateProjectDateRanges } from './utils';
+import { updateProjectInSupabase } from '@/integrations/supabase/projects';
 
 export const useDataLoader = () => {
   const { user, profile, loading: authLoading } = useAuth();
@@ -172,3 +173,18 @@ export const useDataLoader = () => {
 
 // Data loading and mutations use 'profiles', 'projects', 'allocations'.
 // No queries to 'professions' or 'public.professions' table.
+
+const usePlannerStore = () => {
+  // ...existing code...
+  const updateProject = async (updatedProject: Project) => {
+    // Update local state
+    setProjects((prev) =>
+      prev.map((proj) =>
+        proj.id === updatedProject.id ? updatedProject : proj
+      )
+    );
+    // Update backend
+    await updateProjectInSupabase(updatedProject);
+  };
+  // ...existing code...
+};

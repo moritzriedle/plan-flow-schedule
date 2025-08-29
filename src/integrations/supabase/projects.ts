@@ -1,10 +1,7 @@
 import { supabase } from './client'
 import { Project } from '@/types/Project'
 
-// ...existing code...
-
 export async function updateProject(project: Project) {
-    // ...existing code...
     const { id, name, startDate, endDate, ...rest } = project
     const { data, error } = await supabase
         .from('projects')
@@ -15,7 +12,16 @@ export async function updateProject(project: Project) {
             ...rest
         })
         .eq('id', id)
-    // ...existing code...
 }
 
-// ...existing code...
+export async function updateProjectInSupabase(project: Project) {
+  const { id, ...fields } = project;
+  const { error } = await supabase
+    .from('projects')
+    .update(fields)
+    .eq('id', id);
+
+  if (error) {
+    throw error;
+  }
+}
