@@ -48,9 +48,9 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
       ...project,
       name,
       color,
-      leadId: leadId || undefined,
-      startDate,
-      endDate,
+      leadId: leadId === 'none' ? undefined : leadId,
+      startDate, // pass Date object
+      endDate,   // pass Date object
       ticketReference: ticketReference || undefined,
     };
 
