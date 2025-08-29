@@ -30,7 +30,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
   isOpen,
   onClose
 }) => {
-  const { updateProject, employees } = usePlanner();
+  const { updateProject, getProjectById, employees } = usePlanner();
 
   const [name, setName] = useState(project.name);
   const [color, setColor] = useState<Project['color']>(project.color);
@@ -41,7 +41,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const updatedProject: Project = {
@@ -49,12 +49,24 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
       name,
       color,
       leadId: leadId === 'none' ? undefined : leadId,
-      startDate, // pass Date object
-      endDate,   // pass Date object
+      startDate,
+      endDate,
       ticketReference: ticketReference || undefined,
     };
 
-    updateProject(updatedProject);
+    await updateProject(updatedProject);
+
+    // Fetch the latest project data after update
+    const refreshedProject = getProjectById(project.id);
+    if (refreshedProject) {
+      setStartDate(refreshedProject.startDate);
+      setEndDate(refreshedProject.endDate);
+      setName(refreshedProject.name);
+      setColor(refreshedProject.color);
+      setLeadId(refreshedProject.leadId || '');
+      setTicketReference(refreshedProject.ticketReference || '');
+    }
+
     onClose();
   };
 
