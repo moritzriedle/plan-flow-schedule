@@ -73,7 +73,9 @@ export const useProjectOperations = (
           name: updatedProject.name,
           color: updatedProject.color,
           lead_id: updatedProject.leadId,
-          ticket_reference: updatedProject.ticketReference
+          ticket_reference: updatedProject.ticketReference,
+          start_date: updatedProject.startDate,
+          end_date: updatedProject.endDate
         })
         .eq('id', updatedProject.id);
         
