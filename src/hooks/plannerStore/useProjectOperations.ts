@@ -74,8 +74,8 @@ export const useProjectOperations = (
           color: updatedProject.color,
           lead_id: updatedProject.leadId,
           ticket_reference: updatedProject.ticketReference,
-          start_date: updatedProject.startDate,
-          end_date: updatedProject.endDate
+          start_date: updatedProject.startDate ? updatedProject.startDate.toISOString() : null,
+          end_date: updatedProject.endDate ? updatedProject.endDate.toISOString() : null
         })
         .eq('id', updatedProject.id);
         
