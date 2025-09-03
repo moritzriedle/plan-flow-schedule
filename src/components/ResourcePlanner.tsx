@@ -51,6 +51,7 @@ const ResourcePlanner: React.FC = () => {
   
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -87,27 +88,39 @@ const ResourcePlanner: React.FC = () => {
     return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
 
- // Filter employees by selected roles with comprehensive safety checks
+ // Filter employees by selected roles and search term with comprehensive safety checks
   const filteredEmployees = React.useMemo(() => {
     try {
-      if (safeSelectedRoles.length === 0) {
-        return safeEmployees;
+      let filtered = safeEmployees;
+      
+      // Filter by roles
+      if (safeSelectedRoles.length > 0) {
+        filtered = filtered.filter(emp => {
+          if (!emp || !emp.role || typeof emp.role !== 'string') {
+            console.warn('ResourcePlanner: Employee missing valid role', { emp });
+            return false;
+          }
+          return safeSelectedRoles.includes(emp.role);
+        });
       }
       
-      const filtered = safeEmployees.filter(emp => {
-        if (!emp || !emp.role || typeof emp.role !== 'string') {
-          console.warn('ResourcePlanner: Employee missing valid role', { emp });
-          return false;
-        }
-        return safeSelectedRoles.includes(emp.role);
-      });
+      // Filter by search term
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase().trim();
+        filtered = filtered.filter(emp => {
+          if (!emp || !emp.name || typeof emp.name !== 'string') {
+            return false;
+          }
+          return emp.name.toLowerCase().includes(searchLower);
+        });
+      }
       
       return filtered;
     } catch (error) {
       console.error('ResourcePlanner: Error filtering employees', error);
       return safeEmployees;
     }
-  }, [safeEmployees, safeSelectedRoles]);
+  }, [safeEmployees, safeSelectedRoles, searchTerm]);
 
   const handleRoleChange = (roles: string[]) => {
     try {
@@ -215,6 +228,8 @@ const ResourcePlanner: React.FC = () => {
             selectedRoles={safeSelectedRoles}
             onRoleChange={handleRoleChange}
             availableRoles={safeRoleOptions}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
             onAddProject={() => setIsAddProjectDialogOpen(true)}
             onAddEmployee={() => setIsAddEmployeeDialogOpen(true)}
           />

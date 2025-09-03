@@ -1,27 +1,34 @@
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 
 export default function AuthCallback() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleRedirect = async () => {
-      const { error } = await supabase.auth.getSessionFromUrl();
-
-      if (error) {
-        console.error('Error restoring session from URL:', error.message);
-        toast.error('Verification failed.');
-        router.push('/login'); // or your fallback
-      } else {
-        toast.success('Email verified!');
-        router.push('/dashboard'); // or your intended post-login page
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error restoring session from URL:', error.message);
+          toast.error('Verification failed.');
+          navigate('/auth');
+        } else if (data?.session) {
+          toast.success('Email verified!');
+          navigate('/');
+        } else {
+          navigate('/auth');
+        }
+      } catch (error) {
+        console.error('Unexpected error during auth callback:', error);
+        navigate('/auth');
       }
     };
 
     handleRedirect();
-  }, []);
+  }, [navigate]);
 
   return <p>Verifying...</p>;
 }

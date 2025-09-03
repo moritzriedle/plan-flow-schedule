@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDrop } from 'react-dnd';
-import { DragItem } from '../types';
+import { DragItem, Sprint } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import AllocationItem from './AllocationItem';
 import { Loader2 } from 'lucide-react';

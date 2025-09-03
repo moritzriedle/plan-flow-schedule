@@ -108,11 +108,11 @@ export const useDataLoader = () => {
         if (allocationsError) {
           throw allocationsError;
         }
-       const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
+        const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
   id: alloc.id,
-  employeeId: alloc.employee_id, // assuming your DB has this column
+  employeeId: alloc.user_id, // use user_id from database  
   projectId: alloc.project_id,
-  sprintId: alloc.sprint_id,     // ✅ use sprint_id directly
+  sprintId: alloc.week_label || '', // use week_label as fallback for sprint_id
   days: alloc.days
 }));
 
@@ -174,17 +174,4 @@ export const useDataLoader = () => {
 // Data loading and mutations use 'profiles', 'projects', 'allocations'.
 // No queries to 'professions' or 'public.professions' table.
 
-const usePlannerStore = () => {
-  // ...existing code...
-  const updateProject = async (updatedProject: Project) => {
-    // Update local state
-    setProjects((prev) =>
-      prev.map((proj) =>
-        proj.id === updatedProject.id ? updatedProject : proj
-      )
-    );
-    // Update backend
-    await updateProjectInSupabase(updatedProject);
-  };
-  // ...existing code...
-};
+// This function is now handled in useProjectOperations.ts

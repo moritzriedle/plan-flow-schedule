@@ -111,7 +111,7 @@ const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
   id: alloc.id,
   employeeId: alloc.user_id, // use user_id as employeeId
   projectId: alloc.project_id,
-  sprintId: alloc.sprint_id, // use sprint_id instead of week
+  sprintId: alloc.week_label || '', // use week_label as fallback for sprint_id
   days: alloc.days
 }));
         let finalProjects = mappedProjects;
