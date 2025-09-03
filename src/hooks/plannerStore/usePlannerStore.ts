@@ -112,7 +112,7 @@ export const useDataLoader = () => {
   id: alloc.id,
   employeeId: alloc.user_id, // use user_id from database  
   projectId: alloc.project_id,
-  sprintId: alloc.week_label || '', // use week_label as fallback for sprint_id
+  sprintId: alloc.sprint_id,     // ✅ use sprint_id directly
   days: alloc.days
 }));
 
