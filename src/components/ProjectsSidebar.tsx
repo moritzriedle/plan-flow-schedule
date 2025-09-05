@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Eye, Calendar, Search } from 'lucide-react';
+import {Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command"
 
 interface DraggableProjectItemProps {
   project: Project;
@@ -163,21 +164,26 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
         </div>
       </div>
 
-      {/* Employee selector for detailed allocation */}
+      {/* Employee selector for detailed allocation with type-ahead */}
       <div className="mb-4">
         <label className="text-sm font-medium mb-2 block">Quick Allocate:</label>
-        <select 
-          value={selectedEmployeeId}
-          onChange={(e) => setSelectedEmployeeId(e.target.value)}
-          className="w-full p-2 border rounded text-sm"
-        >
-          <option value="">Select team member...</option>
-          {employees.map(employee => (
-            <option key={employee.id} value={employee.id}>
-              {employee.name} ({employee.role})
-            </option>
-          ))}
-        </select>
+        <Command className="border rounded-md">
+          <CommandInput placeholder="Type to search team member..." />
+          <CommandList>
+            <CommandEmpty>No team member found.</CommandEmpty>
+            <CommandGroup>
+              {employees.map((employee) => (
+                <CommandItem
+                  key={employee.id}
+                  value={employee.id}
+                  onSelect={() => setSelectedEmployeeId(employee.id)}
+                >
+                  {employee.name} <span className="text-xs text-gray-500 ml-1">({employee.role})</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </div>
 
       {/* Projects List */}
@@ -200,7 +206,7 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
                 className="w-full text-xs"
                 onClick={() => handleDetailedAllocation(project)}
               >
-                Allocate to {project.name}
+                Allocate {employees.find(emp => emp.id === selectedEmployeeId)?.name || ''} to {project.name}
               </Button>
             )}
           </div>
