@@ -120,17 +120,22 @@ const ProfessionView: React.FC = () => {
     // Iterate through each allocation to check if it falls within the specified month
     employeeAllocations.forEach(allocation => {
       const safeSprints = Array.isArray(sprints) ? sprints : [];
-      const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
-      if (sprint && sprint.startDate) {
-        const sprintYear = sprint.startDate.getFullYear();
-        const sprintMonth = sprint.startDate.getMonth();
 
-        // Check if the sprint falls within the specified month
-        if (sprintYear === year && sprintMonth === monthIndex) {
-          totalDays += allocation.days || 0;
-        }
-      }
-    });
+  const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
+  if (!sprint || !sprint.startDate || !sprint.endDate) return;
+
+  const monthStart = startOfMonth(month);
+  const monthEnd = endOfMonth(month);
+
+  // Calculate working days overlap between sprint and month
+  const overlapStart = sprint.startDate > monthStart ? sprint.startDate : monthStart;
+  const overlapEnd = sprint.endDate < monthEnd ? sprint.endDate : monthEnd;
+
+  if (overlapStart <= overlapEnd) {
+    totalDays += countWorkingDays(overlapStart, overlapEnd);
+  }
+});
+
   
     return totalDays;
   };
