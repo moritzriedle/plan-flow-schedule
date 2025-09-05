@@ -1,5 +1,5 @@
 
-import { format, startOfWeek, endOfWeek, addWeeks, getWeek } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addWeeks, getWeek, isWeekend, eachDayOfInterval } from 'date-fns';
 import { Week } from '../types';
 
 export const getWeekLabel = (date: Date): string => {
@@ -28,4 +28,9 @@ export const generateWeeks = (startDate: Date, numWeeks: number): Week[] => {
   }
   
   return weeks;
+};
+// ⬇️ NEW helper for working-day counts
+export const countWorkingDays = (start: Date, end: Date): number => {
+  const allDays = eachDayOfInterval({ start, end });
+  return allDays.filter(day => !isWeekend(day)).length;
 };

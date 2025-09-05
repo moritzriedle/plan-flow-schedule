@@ -4,6 +4,7 @@ import { usePlanner } from '../contexts/PlannerContext';
 import MultiRoleSelector from './MultiRoleSelector';
 import { startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, format } from 'date-fns';
 import { ROLE_OPTIONS } from '@/constants/roles';
+import { countWorkingDays } from '../utils/dateUtils'; // ⬅️ new import
 
 const ProfessionView: React.FC = () => {
   const { employees = [], allocations = [], projects = [], sprints = [] } = usePlanner();
@@ -87,8 +88,8 @@ const ProfessionView: React.FC = () => {
   const getWorkingDaysInMonth = (month: Date, employeeId?: string): number => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
-    const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    let workingDays = allDays.filter(day => !isWeekend(day)).length;
+    let workingDays = countWorkingDays(monthStart, monthEnd);
+
     
     // Deduct vacation days if employeeId is provided
     if (employeeId) {
