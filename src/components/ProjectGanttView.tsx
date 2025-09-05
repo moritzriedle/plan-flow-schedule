@@ -22,6 +22,8 @@ const ProjectGanttView = () => {
   const { projects, employees, getProjectAllocations } = usePlanner();
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState<string>(''); // ✅ NEW
+
   
   // Handle case where projects array is empty
   if (!projects.length) {
@@ -78,26 +80,33 @@ const ProjectGanttView = () => {
 }, [safeEmployees]);
 
   
-  // Filter projects based on selected roles
-  const filteredProjects = React.useMemo(() => {
-    if (!Array.isArray(projects)) {
-      console.warn('ProjectGanttView: projects is not an array', projects);
-      return [];
-    }
-    
-    console.log('ProjectGanttView: About to filter projects with safeSelectedRoles:', safeSelectedRoles);
-    if (!Array.isArray(safeSelectedRoles) || safeSelectedRoles.length === 0) {
-      return Array.isArray(projects) ? projects : []; // Show all projects when no roles selected
-    }
-    
-    return (Array.isArray(projects) ? projects : []).filter(project => {
+  // Filter projects based on selected roles and project
+const filteredProjects = React.useMemo(() => {
+  if (!Array.isArray(projects)) return [];
+
+  let base = projects;
+
+  // ✅ Filter by role (existing logic)
+  if (Array.isArray(safeSelectedRoles) && safeSelectedRoles.length > 0) {
+    base = base.filter(project => {
       const allocations = getProjectAllocations(project?.id) || [];
-      return (Array.isArray(allocations) ? allocations : []).some(alloc => {
-        const employee = (Array.isArray(safeEmployees) ? safeEmployees : []).find(emp => emp?.id === alloc?.employeeId);
-        return employee && Array.isArray(safeSelectedRoles) && safeSelectedRoles.includes(employee.role);
+      return allocations.some(alloc => {
+        const employee = safeEmployees.find(emp => emp?.id === alloc?.employeeId);
+        return employee && safeSelectedRoles.includes(employee.role);
       });
     });
-  }, [projects, safeSelectedRoles, getProjectAllocations, safeEmployees]);
+  }
+
+  // ✅ Filter by search term
+  if (searchTerm.trim()) {
+    base = base.filter(project =>
+      project?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+
+  return base;
+}, [projects, safeSelectedRoles, safeEmployees, getProjectAllocations, searchTerm]);
+
   
   // Rolling 12-month view: current month to 11 months forward
   const currentDate = new Date();
@@ -139,6 +148,16 @@ const ProjectGanttView = () => {
               placeholder="All Roles"
             />
           </div>
+            {/* Search filter */}
+            <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border rounded px-2 py-1 text-sm"
+              />
+            </div>
         </div>
       </div>
       
