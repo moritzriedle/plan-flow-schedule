@@ -1,14 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProjectForm from './ProjectForm'; // you can replace the whole form with ProjectForm component instead if preferred
 import { usePlanner } from '@/contexts/PlannerContext';
 import { Project } from '@/types';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +35,18 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
+ // 👇 NEW: Sync state whenever project or dialog open state changes
+  useEffect(() => {
+    if (project) {
+      setName(project.name);
+      setColor(project.color);
+      setLeadId(project.leadId || '');
+      setStartDate(project.startDate);
+      setEndDate(project.endDate);
+      setTicketReference(project.ticketReference || '');
+    }
+  }, [project, isOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -56,15 +62,19 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
 
     await updateProject(updatedProject);
 
-    // Fetch the latest project data after update
-    const refreshedProject = getProjectById(project.id);
-    if (refreshedProject) {
-      setStartDate(refreshedProject.startDate);
-      setEndDate(refreshedProject.endDate);
-      setName(refreshedProject.name);
-      setColor(refreshedProject.color);
-      setLeadId(refreshedProject.leadId || '');
-      setTicketReference(refreshedProject.ticketReference || '');
+   // 👇 CHANGE: await getProjectById if it’s async
+    try {
+      const refreshedProject = await getProjectById(project.id); // 👈 added await
+      if (refreshedProject) {
+        setStartDate(refreshedProject.startDate);
+        setEndDate(refreshedProject.endDate);
+        setName(refreshedProject.name);
+        setColor(refreshedProject.color);
+        setLeadId(refreshedProject.leadId || '');
+        setTicketReference(refreshedProject.ticketReference || '');
+      }
+    } catch (err) {
+      console.error("Failed to refresh project:", err);
     }
 
     onClose();
