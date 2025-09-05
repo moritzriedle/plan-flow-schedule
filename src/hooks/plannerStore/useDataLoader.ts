@@ -116,9 +116,10 @@ const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
 }));
         let finalProjects = mappedProjects;
         
-        if (mappedAllocations.length && finalProjects.length) {
-          finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations, sprints);
-        }
+       // TEMP: Skip allocation-based date calculation for testing
+// if (mappedAllocations.length && finalProjects.length) {
+//   finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations, sprints);
+// }
         
         // Sort projects alphabetically by name
         finalProjects.sort((a, b) => a.name.localeCompare(b.name));
