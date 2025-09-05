@@ -23,7 +23,9 @@ export const useProjectOperations = (
           name: project.name,
           color: project.color,
           lead_id: project.leadId,
-          ticket_reference: project.ticketReference
+          ticket_reference: project.ticketReference,
+          start_date: project.startDate ? project.startDate.toISOString().split('T')[0] : null,
+          end_date: project.endDate ? project.endDate.toISOString().split('T')[0] : null
         })
         .select()
         .single();
@@ -34,8 +36,8 @@ export const useProjectOperations = (
         id: data.id,
         name: data.name,
         color: data.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
-        startDate: project.startDate,
-        endDate: project.endDate,
+        startDate: (data as any).start_date ? new Date((data as any).start_date) : null,
+        endDate: (data as any).end_date ? new Date((data as any).end_date) : null,
         leadId: data.lead_id,
         ticketReference: data.ticket_reference
       };
@@ -74,8 +76,8 @@ export const useProjectOperations = (
           color: updatedProject.color,
           lead_id: updatedProject.leadId,
           ticket_reference: updatedProject.ticketReference,
-          start_date: updatedProject.startDate ? updatedProject.startDate.toISOString() : null,
-          end_date: updatedProject.endDate ? updatedProject.endDate.toISOString() : null
+          start_date: updatedProject.startDate ? updatedProject.startDate.toISOString().split('T')[0] : null,
+          end_date: updatedProject.endDate ? updatedProject.endDate.toISOString().split('T')[0] : null
         })
         .eq('id', updatedProject.id);
         

@@ -94,8 +94,8 @@ export const useDataLoader = () => {
           id: project.id,
           name: project.name,
           color: project.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
-          startDate: new Date(),  
-          endDate: new Date(),    
+          startDate: project.start_date ? new Date(project.start_date) : null,
+          endDate: project.end_date ? new Date(project.end_date) : null,
           leadId: project.lead_id || undefined,
           ticketReference: project.ticket_reference || undefined
         }));
