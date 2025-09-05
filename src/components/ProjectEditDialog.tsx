@@ -29,8 +29,8 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
   const [name, setName] = useState(project.name);
   const [color, setColor] = useState<Project['color']>(project.color);
   const [leadId, setLeadId] = useState(project.leadId || '');
-  const [startDate, setStartDate] = useState<Date>(project.startDate);
-  const [endDate, setEndDate] = useState<Date>(project.endDate);
+  const [startDate, setStartDate] = useState<Date | null>(project.startDate);
+  const [endDate, setEndDate] = useState<Date | null>(project.endDate);
   const [ticketReference, setTicketReference] = useState(project.ticketReference || '');
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
@@ -156,7 +156,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
                     className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(startDate, "PPP")}
+                    {startDate ? format(startDate, "PPP") : "Select start date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -179,7 +179,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
                     className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(endDate, "PPP")}
+                    {endDate ? format(endDate, "PPP") : "Select end date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
