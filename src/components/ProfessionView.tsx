@@ -313,10 +313,15 @@ const ProfessionView: React.FC = () => {
                           {utilizationPercentage}% of {workingDays}d
                         </div>
                         {projectsInMonth.length > 0 && (
-                          <div className="text-xs text-gray-700 mt-1 truncate" title={projectsInMonth.join(', ')}>
-                            {projectsInMonth.length === 1 ? projectsInMonth[0] : `${projectsInMonth.length} projects`}
+                          <div className="text-xs text-gray-700 mt-1 space-y-1">
+                            {projectsInMonth.map((projectName, idx) => (
+                              <div key={idx} className="truncate" title={projectName}>
+                                {projectName}
+                              </div>
+                            ))}
                           </div>
                         )}
+
                         <div className={`text-xs mt-1 ${
                           utilizationPercentage > 100 ? 'text-red-500' : 
                           utilizationPercentage > 80 ? 'text-orange-500' : 
