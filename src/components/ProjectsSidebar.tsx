@@ -111,6 +111,7 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
   const { projects = [], employees = [] } = usePlanner();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [employeeSearch, setEmployeeSearch] = useState<string>('');
 
   const filteredAndSortedProjects = useMemo(() => {
     try {
@@ -137,6 +138,15 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
       return [];
     }
   }, [projects, searchTerm]);
+
+    const filteredEmployees = useMemo(() => {
+    if (!employeeSearch.trim()) return [];
+    return employees.filter(
+      (emp) =>
+        emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+        emp.role.toLowerCase().includes(employeeSearch.toLowerCase())
+    );
+  }, [employees, employeeSearch]);
 
   const handleDetailedAllocation = (project: Project) => {
     if (selectedEmployeeId && onDetailedAllocation) {
@@ -168,20 +178,34 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
       <div className="mb-4">
         <label className="text-sm font-medium mb-2 block">Quick Allocate:</label>
         <Command className="border rounded-md">
-          <CommandInput placeholder="Type to search team member..." />
+          <CommandInput
+            placeholder="Type to search team member..."
+            value={employeeSearch}
+            onValueChange={setEmployeeSearch}
+          />
           <CommandList>
-            <CommandEmpty>No team member found.</CommandEmpty>
-            <CommandGroup>
-              {employees.map((employee) => (
-                <CommandItem
-                  key={employee.id}
-                  value={employee.id}
-                  onSelect={() => setSelectedEmployeeId(employee.id)}
-                >
-                  {employee.name} <span className="text-xs text-gray-500 ml-1">({employee.role})</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {employeeSearch.trim() ? (
+              <>
+                <CommandEmpty>No team member found.</CommandEmpty>
+                <CommandGroup>
+                  {filteredEmployees.map((employee) => (
+                    <CommandItem
+                      key={employee.id}
+                      value={employee.name}
+                      onSelect={() => {
+                        setSelectedEmployeeId(employee.id);
+                        setEmployeeSearch(employee.name); // show chosen name
+                      }}
+                    >
+                      {employee.name}{' '}
+                      <span className="text-xs text-gray-500 ml-1">
+                        ({employee.role})
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            ) : null}
           </CommandList>
         </Command>
       </div>
