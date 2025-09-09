@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, User, Briefcase, Calendar, Plus, Edit, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarDays, User, Briefcase, Calendar, Plus, Edit, Trash2, Camera } from 'lucide-react';
 import VacationDateRangeSelector from '@/components/VacationDateRangeSelector';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/sonner';
 import { format, isAfter, isBefore, startOfDay } from 'date-fns';
+import { ROLE_OPTIONS } from '@/constants/roles';
 
 interface VacationPeriod {
   id: string;
@@ -26,13 +28,18 @@ interface VacationPeriod {
 const Profile = () => {
   const { user, profile } = useAuth();
   const { employees, projects, allocations, sprints, updateEmployee } = usePlanner();
+  
+  // Get current user's employee data
+  const currentEmployee = employees.find(emp => emp.id === user?.id);
+  
   const [vacationDates, setVacationDates] = useState<string[]>((profile?.vacation_dates as string[]) || []);
   const [isVacationDialogOpen, setIsVacationDialogOpen] = useState(false);
   const [editingVacation, setEditingVacation] = useState<VacationPeriod | null>(null);
   const [vacationNote, setVacationNote] = useState('');
-
-  // Get current user's employee data
-  const currentEmployee = employees.find(emp => emp.id === user?.id);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isEditRoleOpen, setIsEditRoleOpen] = useState(false);
+  const [editRole, setEditRole] = useState(profile?.role || '');
+  const [editImageUrl, setEditImageUrl] = useState(currentEmployee?.imageUrl || '');
 
   // Get user's allocations
   const userAllocations = allocations.filter(alloc => alloc.employeeId === user?.id);
@@ -44,23 +51,36 @@ const Profile = () => {
   }, [userAllocations, projects]);
 
   // Get upcoming and past allocations
-  const { upcomingAllocations, pastAllocations } = useMemo(() => {
+  const { upcomingAllocations, pastAllocations, allocationsBySprint } = useMemo(() => {
     const today = startOfDay(new Date());
     const upcoming: typeof userAllocations = [];
     const past: typeof userAllocations = [];
+    const bySprint: Record<string, { sprint: any; allocations: typeof userAllocations }> = {};
 
     userAllocations.forEach(allocation => {
       const sprint = sprints.find(s => s.id === allocation.sprintId);
       if (sprint) {
         if (isAfter(sprint.endDate, today)) {
           upcoming.push(allocation);
+          
+          // Group by sprint for sprint-based view
+          if (!bySprint[sprint.id]) {
+            bySprint[sprint.id] = { sprint, allocations: [] };
+          }
+          bySprint[sprint.id].allocations.push(allocation);
         } else {
           past.push(allocation);
         }
       }
     });
 
-    return { upcomingAllocations: upcoming, pastAllocations: past };
+    return { 
+      upcomingAllocations: upcoming, 
+      pastAllocations: past,
+      allocationsBySprint: Object.values(bySprint).sort((a, b) => 
+        new Date(a.sprint.startDate).getTime() - new Date(b.sprint.startDate).getTime()
+      )
+    };
   }, [userAllocations, sprints]);
 
   // Parse vacation periods from vacation dates
@@ -144,6 +164,44 @@ const Profile = () => {
     setVacationDates(updatedDates);
   };
 
+  const handleProfileUpdate = async () => {
+    if (!currentEmployee) return;
+
+    try {
+      const updated = await updateEmployee({
+        ...currentEmployee,
+        imageUrl: editImageUrl
+      });
+
+      if (updated) {
+        toast.success('Profile picture updated successfully');
+        setIsEditProfileOpen(false);
+      }
+    } catch (error) {
+      console.error('Error updating profile picture:', error);
+      toast.error('Failed to update profile picture');
+    }
+  };
+
+  const handleRoleUpdate = async () => {
+    if (!currentEmployee) return;
+
+    try {
+      const updated = await updateEmployee({
+        ...currentEmployee,
+        role: editRole
+      });
+
+      if (updated) {
+        toast.success('Role updated successfully');
+        setIsEditRoleOpen(false);
+      }
+    } catch (error) {
+      console.error('Error updating role:', error);
+      toast.error('Failed to update role');
+    }
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -171,19 +229,111 @@ const Profile = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={currentEmployee?.imageUrl} />
-            <AvatarFallback className="text-lg">
-              {getInitials(profile.name)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-3xl font-bold">{profile.name}</h1>
-            <p className="text-muted-foreground">{user.email}</p>
-            <Badge variant="secondary" className="mt-1">
-              {profile.role}
-            </Badge>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={currentEmployee?.imageUrl} />
+                <AvatarFallback className="text-lg">
+                  {getInitials(profile.name)}
+                </AvatarFallback>
+              </Avatar>
+              <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full p-0"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Profile Picture</DialogTitle>
+                    <DialogDescription>
+                      Update your profile picture URL
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="imageUrl">Profile Picture URL</Label>
+                      <Input
+                        id="imageUrl"
+                        placeholder="https://example.com/avatar.jpg"
+                        value={editImageUrl}
+                        onChange={(e) => setEditImageUrl(e.target.value)}
+                      />
+                    </div>
+                    {editImageUrl && (
+                      <div className="flex justify-center">
+                        <Avatar className="h-20 w-20">
+                          <AvatarImage src={editImageUrl} />
+                          <AvatarFallback>{getInitials(profile.name)}</AvatarFallback>
+                        </Avatar>
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleProfileUpdate}>
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">{profile.name}</h1>
+              <p className="text-muted-foreground">{user.email}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary">
+                  {profile.role}
+                </Badge>
+                <Dialog open={isEditRoleOpen} onOpenChange={setIsEditRoleOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="ghost" className="h-6 px-2">
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Edit Role</DialogTitle>
+                      <DialogDescription>
+                        Update your role/profession
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="role">Role</Label>
+                        <Select value={editRole} onValueChange={setEditRole}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ROLE_OPTIONS.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {role}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsEditRoleOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleRoleUpdate}>
+                        Save Changes
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -260,33 +410,53 @@ const Profile = () => {
               </CardContent>
             </Card>
 
-            {/* Upcoming Allocations */}
+            {/* Upcoming Allocations by Sprint */}
             <Card>
               <CardHeader>
-                <CardTitle>Upcoming Allocations</CardTitle>
-                <CardDescription>Your scheduled work periods</CardDescription>
+                <CardTitle>Upcoming Allocations by Sprint</CardTitle>
+                <CardDescription>Your scheduled work periods organized by sprint</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {upcomingAllocations.map(allocation => {
-                    const project = projects.find(p => p.id === allocation.projectId);
-                    const sprint = sprints.find(s => s.id === allocation.sprintId);
+                <div className="space-y-6">
+                  {allocationsBySprint.map(({ sprint, allocations }) => {
+                    const totalDays = allocations.reduce((sum, alloc) => sum + alloc.days, 0);
                     return (
-                      <div key={allocation.id} className="flex items-center justify-between p-3 border rounded">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 rounded-full bg-${project?.color || 'gray'}-500`} />
+                      <div key={sprint.id} className="space-y-3">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-medium">{project?.name || 'Unknown Project'}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {sprint && format(sprint.startDate, 'MMM dd')} - {sprint && format(sprint.endDate, 'MMM dd, yyyy')}
-                            </div>
+                            <h3 className="font-semibold text-lg">{sprint.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {format(sprint.startDate, 'MMM dd')} - {format(sprint.endDate, 'MMM dd, yyyy')}
+                            </p>
                           </div>
+                          <Badge variant="secondary" className="text-sm">
+                            {totalDays} days total
+                          </Badge>
                         </div>
-                        <Badge variant="outline">{allocation.days} days</Badge>
+                        <div className="grid gap-2 ml-4">
+                          {allocations.map(allocation => {
+                            const project = projects.find(p => p.id === allocation.projectId);
+                            return (
+                              <div key={allocation.id} className="flex items-center justify-between p-3 border rounded bg-muted/30">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-3 h-3 rounded-full bg-${project?.color || 'gray'}-500`} />
+                                  <div>
+                                    <div className="font-medium">{project?.name || 'Unknown Project'}</div>
+                                    {project?.ticketReference && (
+                                      <div className="text-xs text-muted-foreground">{project.ticketReference}</div>
+                                    )}
+                                  </div>
+                                </div>
+                                <Badge variant="outline">{allocation.days} days</Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <Separator />
                       </div>
                     );
                   })}
-                  {upcomingAllocations.length === 0 && (
+                  {allocationsBySprint.length === 0 && (
                     <p className="text-center text-muted-foreground py-8">No upcoming allocations</p>
                   )}
                 </div>
