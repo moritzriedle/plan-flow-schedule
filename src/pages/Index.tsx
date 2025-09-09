@@ -43,11 +43,10 @@ const Index = () => {
   console.log('Index component rendering');
   
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <h1 className="text-2xl font-bold mb-6">ProPlanner</h1>
-      
-      <Tabs defaultValue="allocation" className="w-full">
-        <TabsList className="mb-4">
+  <div className="min-h-screen bg-gray-50 p-4">
+    <Tabs defaultValue="allocation" className="w-full">
+      <div className="flex items-center justify-between mb-6">
+        <TabsList>
           <TabsTrigger value="allocation" className="flex items-center gap-2">
             <FilterIcon className="w-4 h-4" />
             Resource Allocation
@@ -61,33 +60,37 @@ const Index = () => {
             By Role
           </TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="allocation">
-          <Suspense fallback={<div>Loading Resource Planner...</div>}>
-            <ComponentErrorBoundary name="ResourcePlanner">
-              <ResourcePlanner />
-            </ComponentErrorBoundary>
-          </Suspense>
-        </TabsContent>
-        
-        <TabsContent value="timeline">
-          <Suspense fallback={<div>Loading Project Timeline...</div>}>
-            <ComponentErrorBoundary name="ProjectGanttView">
-              <ProjectGanttView />
-            </ComponentErrorBoundary>
-          </Suspense>
-        </TabsContent>
-        
-        <TabsContent value="profession">
-          <Suspense fallback={<div>Loading Role View...</div>}>
-            <ComponentErrorBoundary name="ProfessionView">
-              <ProfessionView />
-            </ComponentErrorBoundary>
-          </Suspense>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+
+        <h1 className="text-2xl font-bold">ProPlanner</h1>
+      </div>
+
+      <TabsContent value="allocation">
+        <Suspense fallback={<div>Loading Resource Planner...</div>}>
+          <ComponentErrorBoundary name="ResourcePlanner">
+            <ResourcePlanner />
+          </ComponentErrorBoundary>
+        </Suspense>
+      </TabsContent>
+
+      <TabsContent value="timeline">
+        <Suspense fallback={<div>Loading Project Timeline...</div>}>
+          <ComponentErrorBoundary name="ProjectGanttView">
+            <ProjectGanttView />
+          </ComponentErrorBoundary>
+        </Suspense>
+      </TabsContent>
+
+      <TabsContent value="profession">
+        <Suspense fallback={<div>Loading Role View...</div>}>
+          <ComponentErrorBoundary name="ProfessionView">
+            <ProfessionView />
+          </ComponentErrorBoundary>
+        </Suspense>
+      </TabsContent>
+    </Tabs>
+  </div>
+);
+
 };
 
 export default Index;
