@@ -23,9 +23,9 @@ export const useEmployeeOperations = (
 const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
     const isOwnProfile = updatedEmployee.id === user?.id;
     const isAdmin = profile?.is_admin;
-    const isManager = profile?.role === 'Manager'; // Adjust as needed
+    const isManagerLike = ['Manager', 'Product Owner', 'Technical Project Manager'].includes(profile?.role || '');
 
-    if (!user || (!isOwnProfile && !isAdmin && !isManager)) {
+    if (!user || (!isOwnProfile && !isAdmin && !isManagerLike)) {
       toast.error('You do not have permission to update this profile');
       return false;
     }
