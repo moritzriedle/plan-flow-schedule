@@ -109,12 +109,12 @@ export const useDataLoader = () => {
           throw allocationsError;
         }
         const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
-  id: alloc.id,
-  employeeId: alloc.user_id, // use user_id from database  
-  projectId: alloc.project_id,
-  sprintId: alloc.sprint_id,     // ✅ use sprint_id directly
-  days: alloc.days
-}));
+          id: alloc.id,
+          employeeId: (alloc as any).user_id,     // use user_id directly
+          projectId: (alloc as any).project_id,
+          sprintId: (alloc as any).sprint_id || '',     // ✅ use sprint_id directly
+          days: alloc.days
+        }));
 
         let finalProjects = mappedProjects;
         

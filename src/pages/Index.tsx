@@ -3,9 +3,10 @@ import React, { ErrorInfo, ReactNode, Suspense, useState } from 'react';
 import ResourcePlanner from '@/components/ResourcePlanner';
 import ProjectGanttView from '@/components/ProjectGanttView';
 import ProfessionView from '@/components/ProfessionView';
+import Profile from '@/pages/Profile';
 import '@/components/ProjectColors.css';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FilterIcon, ChartGantt, Users } from 'lucide-react';
+import { FilterIcon, ChartGantt, Users, User } from 'lucide-react';
 
 // Component-specific error boundary for better error isolation
 class ComponentErrorBoundary extends React.Component<
@@ -46,6 +47,7 @@ const Index = () => {
   <div className="min-h-screen bg-gray-50 p-4">
     <Tabs defaultValue="allocation" className="w-full">
       <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">ProPlanner</h1>
         <TabsList>
           <TabsTrigger value="allocation" className="flex items-center gap-2">
             <FilterIcon className="w-4 h-4" />
@@ -59,9 +61,11 @@ const Index = () => {
             <Users className="w-4 h-4" />
             By Role
           </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="w-4 h-4" />
+            Profile
+          </TabsTrigger>
         </TabsList>
-
-        <h1 className="text-2xl font-bold">ProPlanner</h1>
       </div>
 
       <TabsContent value="allocation">
@@ -84,6 +88,14 @@ const Index = () => {
         <Suspense fallback={<div>Loading Role View...</div>}>
           <ComponentErrorBoundary name="ProfessionView">
             <ProfessionView />
+          </ComponentErrorBoundary>
+        </Suspense>
+      </TabsContent>
+
+      <TabsContent value="profile">
+        <Suspense fallback={<div>Loading Profile...</div>}>
+          <ComponentErrorBoundary name="Profile">
+            <Profile />
           </ComponentErrorBoundary>
         </Suspense>
       </TabsContent>

@@ -10,6 +10,7 @@ interface Profile {
   role: string;
   image_url?: string;
   is_admin: boolean;
+  vacation_dates?: string[];
 }
 
 interface AuthContextType {
@@ -35,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, name, role, image_url, is_admin, vacation_dates')
         .eq('id', userId)
         .single();
       
@@ -44,7 +45,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
-      setProfile(data);
+      setProfile({
+        ...data,
+        vacation_dates: Array.isArray(data.vacation_dates) ? data.vacation_dates as string[] : []
+      });
     } catch (error) {
       console.error('Error fetching profile:', error);
     }

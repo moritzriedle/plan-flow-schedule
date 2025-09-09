@@ -94,10 +94,10 @@ export const useDataLoader = () => {
           id: project.id,
           name: project.name,
           color: project.color as 'blue' | 'purple' | 'pink' | 'orange' | 'green',
-          startDate: project.start_date ? new Date(project.start_date) : null,
-          endDate: project.end_date ? new Date(project.end_date) : null,
-          leadId: project.lead_id || undefined,
-          ticketReference: project.ticket_reference || undefined
+          startDate: (project as any).start_date ? new Date((project as any).start_date) : null,
+          endDate: (project as any).end_date ? new Date((project as any).end_date) : null,
+          leadId: (project as any).lead_id || undefined,
+          ticketReference: (project as any).ticket_reference || undefined
         }));
         
         const { data: allocationsData, error: allocationsError } = await supabase
@@ -109,9 +109,9 @@ export const useDataLoader = () => {
         }
 const mappedAllocations: Allocation[] = allocationsData.map(alloc => ({
   id: alloc.id,
-  employeeId: alloc.user_id, // use user_id as employeeId
-  projectId: alloc.project_id,
-  sprintId: alloc.sprint_id, // use sprint_id instead of week
+  employeeId: (alloc as any).user_id, // use user_id as employeeId
+  projectId: (alloc as any).project_id,
+  sprintId: (alloc as any).sprint_id || '', // use sprint_id instead of week
   days: alloc.days
 }));
         let finalProjects = mappedProjects;
