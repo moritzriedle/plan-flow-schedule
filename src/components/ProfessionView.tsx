@@ -108,37 +108,36 @@ const ProfessionView: React.FC = () => {
 
   // Helper function to get allocations for a specific employee and month
   const getAllocationDaysForMonth = (employeeId: string, month: Date): number => {
-    const year = month.getFullYear();
-    const monthIndex = month.getMonth();
-  
-    // Filter allocations for the employee with safety checks
-    const safeAllocations = Array.isArray(allocations) ? allocations : [];
-    const employeeAllocations = safeAllocations.filter(alloc => alloc && alloc.employeeId === employeeId);
+  const safeAllocations = Array.isArray(allocations) ? allocations : [];
+  const employeeAllocations = safeAllocations.filter(
+    alloc => alloc && alloc.employeeId === employeeId
+  );
 
-    let totalDays = 0;
-
-    // Iterate through each allocation to check if it falls within the specified month
-    employeeAllocations.forEach(allocation => {
-      const safeSprints = Array.isArray(sprints) ? sprints : [];
-
-  const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
-  if (!sprint || !sprint.startDate || !sprint.endDate) return;
-
+  let totalDays = 0;
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
 
-  // Calculate working days overlap between sprint and month
-  const overlapStart = sprint.startDate > monthStart ? sprint.startDate : monthStart;
-  const overlapEnd = sprint.endDate < monthEnd ? sprint.endDate : monthEnd;
+  employeeAllocations.forEach(allocation => {
+    const safeSprints = Array.isArray(sprints) ? sprints : [];
+    const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
+    if (!sprint || !sprint.startDate || !sprint.endDate) return;
 
-  if (overlapStart <= overlapEnd) {
-    totalDays += countWorkingDays(overlapStart, overlapEnd);
-  }
-});
+    // ⬇️ Ensure these are real Date objects
+    const sprintStart = new Date(sprint.startDate);
+    const sprintEnd = new Date(sprint.endDate);
 
-  
-    return totalDays;
-  };
+    // Calculate working days overlap between sprint and month
+    const overlapStart = sprintStart > monthStart ? sprintStart : monthStart;
+    const overlapEnd = sprintEnd < monthEnd ? sprintEnd : monthEnd;
+
+    if (overlapStart <= overlapEnd) {
+      totalDays += countWorkingDays(overlapStart, overlapEnd);
+    }
+  });
+
+  return totalDays;
+};
+
 
   // Get projects for an employee in a specific month
   const getProjectsForMonth = (employeeId: string, month: Date): string[] => {
