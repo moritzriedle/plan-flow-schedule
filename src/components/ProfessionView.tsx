@@ -107,36 +107,50 @@ const ProfessionView: React.FC = () => {
   };
 
   // Helper function to get allocations for a specific employee and month
-  const getAllocationDaysForMonth = (employeeId: string, month: Date): number => {
+ const getAllocationDaysForMonth = (employeeId: string, month: Date): number => {
   const safeAllocations = Array.isArray(allocations) ? allocations : [];
   const employeeAllocations = safeAllocations.filter(
     alloc => alloc && alloc.employeeId === employeeId
   );
 
-  let totalDays = 0;
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
 
+  let totalDays = 0;
+
   employeeAllocations.forEach(allocation => {
-    const safeSprints = Array.isArray(sprints) ? sprints : [];
-    const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
+    const sprint = sprints.find(s => s && s.id === allocation.sprintId);
     if (!sprint || !sprint.startDate || !sprint.endDate) return;
 
-    // ⬇️ Ensure these are real Date objects
     const sprintStart = new Date(sprint.startDate);
     const sprintEnd = new Date(sprint.endDate);
 
-    // Calculate working days overlap between sprint and month
+    // Overlap between sprint and this month
     const overlapStart = sprintStart > monthStart ? sprintStart : monthStart;
     const overlapEnd = sprintEnd < monthEnd ? sprintEnd : monthEnd;
 
-    if (overlapStart <= overlapEnd) {
-      totalDays += countWorkingDays(overlapStart, overlapEnd);
-    }
+    if (overlapStart > overlapEnd) return; // no overlap
+
+    // 1. Total sprint working days
+    const sprintWorkingDays = countWorkingDays(sprintStart, sprintEnd);
+
+    // 2. Days allocated to this employee in this sprint (from DB, int4)
+    const allocatedDaysInSprint = allocation.days ?? 0;
+
+    // 3. Overlap working days inside this month
+    const overlapWorkingDays = countWorkingDays(overlapStart, overlapEnd);
+
+    // 4. Prorate allocation into this month
+    const proratedDays = Math.round(
+      (allocatedDaysInSprint / sprintWorkingDays) * overlapWorkingDays
+    );
+
+    totalDays += proratedDays;
   });
 
   return totalDays;
 };
+
 
 
   // Get projects for an employee in a specific month
