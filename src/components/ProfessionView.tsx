@@ -155,39 +155,42 @@ const ProfessionView: React.FC = () => {
 
   // Get projects for an employee in a specific month
   const getProjectsForMonth = (employeeId: string, month: Date): string[] => {
-    const year = month.getFullYear();
-    const monthIndex = month.getMonth();
-    
-    const safeAllocations = Array.isArray(allocations) ? allocations : [];
-    const safeProjects = Array.isArray(projects) ? projects : [];
-    const safeSprints = Array.isArray(sprints) ? sprints : [];
-    
-    const employeeAllocations = safeAllocations.filter(alloc => 
-      alloc && alloc.employeeId === employeeId
-    );
-    
-    const projectIds = new Set<string>();
-    
-    employeeAllocations.forEach(allocation => {
-      const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
-      if (sprint && sprint.startDate) {
-        const sprintYear = sprint.startDate.getFullYear();
-        const sprintMonth = sprint.startDate.getMonth();
-        if (sprintYear === year && sprintMonth === monthIndex) {
-          if (allocation.projectId) {
-            projectIds.add(allocation.projectId);
-          }
-        }
-      }
-    });
-    
-    console.log('ProfessionView: About to call Array.from with projectIds:', projectIds);
-    const projectIdsArray = Array.isArray(projectIds) ? Array.from(projectIds) : (projectIds ? Array.from(projectIds) : []);
-    return (projectIdsArray || []).map(projectId => {
-      const project = (safeProjects || []).find(p => p && p.id === projectId);
-      return project ? project.name : 'Unknown Project';
-    });
-  };
+  const monthStart = startOfMonth(month);
+  const monthEnd = endOfMonth(month);
+
+  const safeAllocations = Array.isArray(allocations) ? allocations : [];
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeSprints = Array.isArray(sprints) ? sprints : [];
+
+  const employeeAllocations = safeAllocations.filter(
+    alloc => alloc && alloc.employeeId === employeeId
+  );
+
+  const projectIds = new Set<string>();
+
+  employeeAllocations.forEach(allocation => {
+    const sprint = safeSprints.find(s => s && s.id === allocation.sprintId);
+    if (!sprint || !sprint.startDate || !sprint.endDate) return;
+
+    const sprintStart = new Date(sprint.startDate);
+    const sprintEnd = new Date(sprint.endDate);
+
+    // Calculate overlap with the month
+    const overlapStart = sprintStart > monthStart ? sprintStart : monthStart;
+    const overlapEnd = sprintEnd < monthEnd ? sprintEnd : monthEnd;
+
+    if (overlapStart <= overlapEnd && allocation.projectId) {
+      projectIds.add(allocation.projectId);
+    }
+  });
+
+  // Map project IDs to names
+  return Array.from(projectIds).map(projectId => {
+    const project = safeProjects.find(p => p && p.id === projectId);
+    return project ? project.name : 'Unknown Project';
+  });
+};
+
 
   // Calculate utilization percentage
   const getUtilizationPercentage = (employeeId: string, month: Date): number => {
