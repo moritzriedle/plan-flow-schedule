@@ -275,18 +275,23 @@ const ProfessionView: React.FC = () => {
                 const summary = getRoleSummaryForMonth(role, month);
                 
                 return (
-                  <div key={month.toISOString()} className="w-40 p-2 text-center border-r">
+                  <div
+                    key={month.toISOString()}
+                    className={`w-40 p-2 text-center border-r ${
+                      summary.utilization > 100
+                        ? 'bg-red-100'
+                        : summary.utilization > 80
+                        ? 'bg-orange-100'
+                        : 'bg-green-50'
+                    }`}
+                  >
                     <div className="text-sm font-bold text-blue-800">
                       {summary.totalUtilized}d / {summary.totalAvailable}d
                     </div>
                     <div className="text-xs text-blue-600 mt-1">
                       {summary.utilization}% utilized
                     </div>
-                    <div className={`text-xs mt-1 ${
-                      summary.utilization > 100 ? 'text-red-600' : 
-                      summary.utilization > 80 ? 'text-orange-600' : 
-                      'text-green-600'
-                    }`}>
+                    <div className="text-xs mt-1">
                       {summary.totalAvailable - summary.totalUtilized}d available
                     </div>
                   </div>
@@ -309,7 +314,16 @@ const ProfessionView: React.FC = () => {
                 const projectsInMonth = getProjectsForMonth(employee.id, month);
                 
                 return (
-                  <div key={month.toISOString()} className="w-40 p-2 text-center border-r">
+                  <div
+                    key={month.toISOString()}
+                    className={`w-40 p-2 text-center border-r ${
+                      utilizationPercentage > 100
+                        ? 'bg-red-100'
+                        : utilizationPercentage > 80
+                        ? 'bg-orange-100'
+                        : 'bg-green-50'
+                    }`}
+                  >
                     {monthlyAllocation > 0 ? (
                       <div>
                         <span className="text-sm font-medium text-blue-600">
@@ -328,22 +342,18 @@ const ProfessionView: React.FC = () => {
                           </div>
                         )}
 
-                        <div className={`text-xs mt-1 ${
-                          utilizationPercentage > 100 ? 'text-red-500' : 
-                          utilizationPercentage > 80 ? 'text-orange-500' : 
-                          'text-green-500'
-                        }`}>
-                          {utilizationPercentage > 100 ? 'Overallocated' : 
-                           utilizationPercentage > 80 ? 'High load' : 
-                           'Available'}
+                        <div className="text-xs mt-1">
+                          {utilizationPercentage > 100
+                            ? 'Overallocated'
+                            : utilizationPercentage > 80
+                            ? 'High load'
+                            : 'Available'}
                         </div>
                       </div>
                     ) : (
                       <div>
                         <span className="text-xs text-gray-400">-</span>
-                        <div className="text-xs text-green-500 mt-1">
-                          {workingDays}d available
-                        </div>
+                        <div className="text-xs mt-1">{workingDays}d available</div>
                       </div>
                     )}
                   </div>
