@@ -164,7 +164,7 @@ const filteredProjects = React.useMemo(() => {
      <div className="p-4 overflow-x-auto">
   <div className="min-w-max">
     {/* Month Headers */}
-    <div className="flex border-b sticky top-16 bg-white z-20">
+    <div className="flex border-b sticky top-2 bg-white z-20">
       <div className="w-64 flex-shrink-0"></div>
       <div className="flex flex-1">
         {months.map((month, index) => (
