@@ -161,65 +161,51 @@ const filteredProjects = React.useMemo(() => {
         </div>
       </div>
       
-     <div className="p-4 border-b sticky top-0 bg-white z-30">
-      <div className="flex justify-between items-center mb-4">
-         {/* Month Headers */}
-          <div className="flex border-b sticky top-0 bg-white z-20">
-            <div className="w-64 flex-shrink-0"></div>
-            <div className="flex flex-1">
-              {months.map((month, index) => (
-                <div 
-                  key={index} 
-                  className="flex-1 min-w-[100px] p-2 text-center font-medium border-r"
-                >
-                  {format(month, 'MMM yyyy')}
-                </div>
-              ))}
+     <div className="p-4 overflow-x-auto">
+  <div className="min-w-max">
+    {/* Month Headers */}
+    <div className="flex border-b sticky top-16 bg-white z-20">
+      <div className="w-64 flex-shrink-0"></div>
+      <div className="flex flex-1">
+        {months.map((month, index) => (
+          <div 
+            key={index} 
+            className="flex-1 min-w-[100px] p-2 text-center font-medium border-r"
+          >
+            {format(month, 'MMM yyyy')}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Project Rows */}
+    {(filteredProjects || []).map(project => (
+      <div key={project.id}>
+        <ProjectGanttRow 
+          project={project} 
+          months={months}
+          isExpanded={expandedProjects.has(project.id)}
+          onToggleExpand={() => toggleExpandProject(project.id)}
+        />
+
+        {expandedProjects.has(project.id) && (
+          <div className="bg-gray-50 border-b">
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {months.map(month => (
+                  <div key={month.getTime()}>
+                    <ProjectMonthDetails project={project} month={month} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-         
-          {/* Project Rows */}
-          {!Array.isArray(filteredProjects) ? (
-            console.warn('ProjectGanttView: filteredProjects is not an array', filteredProjects),
-            <div>No projects data available</div>
-          ) : (filteredProjects || []).map(project => (
-       <div key={project.id}>
-              <ProjectGanttRow 
-                project={project} 
-                months={months}
-                isExpanded={expandedProjects.has(project.id)}
-                onToggleExpand={() => toggleExpandProject(project.id)}
-              />
-              
-              {/* Expanded project details */}
-              {expandedProjects.has(project.id) && (
-                <div className="bg-gray-50 border-b">
-                  <div className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {months.map(month => {
-                        const allocations = getProjectAllocations(project.id);
-                        // Check if project has allocations in this month
-                        const hasAllocationsInMonth = allocations.some(alloc => {
-                          // This is a simplified check - ideally you'd map weekId to actual dates
-                          return true; // For now, show all months where project is active
-                        });
-                        
-                        if (!hasAllocationsInMonth) return null;
-                        
-                        return (
-                          <div key={month.getTime()}>
-                            <ProjectMonthDetails project={project} month={month} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        )}
       </div>
+    ))}
+  </div>
+</div>
+
     </div>
   );
 };
