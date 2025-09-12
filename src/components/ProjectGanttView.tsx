@@ -163,8 +163,8 @@ const filteredProjects = React.useMemo(() => {
       
       <div className="p-4 overflow-x-auto">
         <div className="min-w-max">
-          {/* Month Headers */}
-          <div className="flex border-b">
+         {/* Month Headers */}
+          <div className="flex border-b sticky top-0 bg-white z-20">
             <div className="w-64 flex-shrink-0"></div>
             <div className="flex flex-1">
               {months.map((month, index) => (
@@ -177,7 +177,7 @@ const filteredProjects = React.useMemo(() => {
               ))}
             </div>
           </div>
-          
+         
           {/* Project Rows */}
           {!Array.isArray(filteredProjects) ? (
             console.warn('ProjectGanttView: filteredProjects is not an array', filteredProjects),
