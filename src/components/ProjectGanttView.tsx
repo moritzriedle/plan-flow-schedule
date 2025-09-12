@@ -161,7 +161,7 @@ const filteredProjects = React.useMemo(() => {
         </div>
       </div>
       
-     <div className="p-4 overflow-x-auto">
+     <div className="p-4 overflow-x-auto relative">
   <div className="min-w-max">
     {/* Month Headers */}
     <div className="flex border-b sticky top-0 bg-white z-20">
