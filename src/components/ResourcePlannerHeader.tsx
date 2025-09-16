@@ -3,7 +3,7 @@ import React from 'react';
 import { ROLE_OPTIONS } from '@/constants/roles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, UserPlus, Search } from 'lucide-react';
+import { Plus, UserPlus, Search, Users } from 'lucide-react';
 import TimeframeSelector from './TimeframeSelector';
 import MultiRoleSelector from './MultiRoleSelector';
 import { TimeframeOption } from './TimeframeSelector';
@@ -16,6 +16,8 @@ interface ResourcePlannerHeaderProps {
   availableRoles?: string[];
   searchTerm?: string;
   onSearchChange: (searchTerm: string) => void;
+  showUnallocatedOnly?: boolean;
+  onShowUnallocatedChange: (show: boolean) => void;
   onAddProject: () => void;
   onAddEmployee: () => void;
 }
@@ -28,6 +30,8 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
   availableRoles = ROLE_OPTIONS,
   searchTerm = '',
   onSearchChange = () => {},
+  showUnallocatedOnly = false,
+  onShowUnallocatedChange = () => {},
   onAddProject = () => {},
   onAddEmployee = () => {}
 }) => {
@@ -110,6 +114,19 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
           onRoleChange={handleRoleChange}
           placeholder="All Roles"
         />
+      </div>
+
+      {/* Unallocated Filter */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant={showUnallocatedOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => onShowUnallocatedChange(!showUnallocatedOnly)}
+          className="flex items-center gap-2"
+        >
+          <Users className="h-4 w-4" />
+          {showUnallocatedOnly ? "Show All" : "Unallocated Only"}
+        </Button>
       </div>
     </div>
   </div>

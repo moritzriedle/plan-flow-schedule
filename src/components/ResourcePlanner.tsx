@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import ProjectTimelineView from './ProjectTimelineView';
 import { ROLE_OPTIONS } from '@/constants/roles';
+import { findActiveSprint } from '@/utils/sprintUtils';
 
 const ResourcePlanner: React.FC = () => {
   const plannerData = usePlanner();
@@ -52,6 +53,7 @@ const ResourcePlanner: React.FC = () => {
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showUnallocatedOnly, setShowUnallocatedOnly] = useState(false);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -115,12 +117,23 @@ const ResourcePlanner: React.FC = () => {
         });
       }
       
+      // Filter by unallocated in active sprint
+      if (showUnallocatedOnly) {
+        const activeSprint = findActiveSprint(sprints);
+        if (activeSprint) {
+          filtered = filtered.filter(emp => {
+            const employeeAllocations = plannerData.getEmployeeAllocations(emp.id);
+            return !employeeAllocations.some(allocation => allocation.sprintId === activeSprint.id);
+          });
+        }
+      }
+      
       return filtered;
     } catch (error) {
       console.error('ResourcePlanner: Error filtering employees', error);
       return safeEmployees;
     }
-  }, [safeEmployees, safeSelectedRoles, searchTerm]);
+  }, [safeEmployees, safeSelectedRoles, searchTerm, showUnallocatedOnly, sprints, plannerData]);
 
   const handleRoleChange = (roles: string[]) => {
     try {
@@ -230,6 +243,8 @@ const ResourcePlanner: React.FC = () => {
             availableRoles={safeRoleOptions}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            showUnallocatedOnly={showUnallocatedOnly}
+            onShowUnallocatedChange={setShowUnallocatedOnly}
             onAddProject={() => setIsAddProjectDialogOpen(true)}
             onAddEmployee={() => setIsAddEmployeeDialogOpen(true)}
           />
