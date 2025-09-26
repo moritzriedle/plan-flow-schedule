@@ -5,7 +5,7 @@ import { usePlanner } from '../contexts/PlannerContext';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Minus, Plus, Loader2 } from 'lucide-react';
+import { Minus, Plus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface AllocationItemProps {
   id: string;
@@ -22,7 +22,7 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
   days, 
   sprintId 
 }) => {
-  const { getProjectById, deleteAllocation, updateAllocation, getAvailableDays, getTotalAllocationDays } = usePlanner();
+  const { getProjectById, deleteAllocation, updateAllocation, getAvailableDays, getTotalAllocationDays, addAllocation, sprints } = usePlanner();
   const project = getProjectById(projectId);
   const [isUpdating, setIsUpdating] = useState(false);
   
@@ -52,6 +52,16 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
 
   const availableDays = getAvailableDays(employeeId, sprint);
   const totalAllocated = getTotalAllocationDays(employeeId, sprint);
+
+  // Find adjacent sprints for copy functionality
+  const findAdjacentSprints = () => {
+    const currentSprintNumber = parseInt(sprintId.split('-')[1]);
+    const previousSprint = sprints.find(s => s.id === `sprint-${currentSprintNumber - 1}`);
+    const nextSprint = sprints.find(s => s.id === `sprint-${currentSprintNumber + 1}`);
+    return { previousSprint, nextSprint };
+  };
+
+  const { previousSprint, nextSprint } = findAdjacentSprints();
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -102,6 +112,40 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
     }
   };
 
+  const handleCopyToPrevious = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!previousSprint || isUpdating) return;
+    
+    setIsUpdating(true);
+    try {
+      await addAllocation({
+        employeeId,
+        projectId,
+        sprintId: previousSprint.id,
+        days
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCopyToNext = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!nextSprint || isUpdating) return;
+    
+    setIsUpdating(true);
+    try {
+      await addAllocation({
+        employeeId,
+        projectId,
+        sprintId: nextSprint.id,
+        days
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const opacity = isDragging ? 0.4 : 1;
 
   drag(ref);
@@ -119,7 +163,21 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
       }}
     >
       <div className="flex justify-between items-center">
-        <div className="flex-1 min-w-0">
+        {/* Copy to Previous Sprint Button */}
+        {previousSprint && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-4 w-4 p-0 text-gray-400 hover:text-gray-600 flex-shrink-0"
+            onClick={handleCopyToPrevious}
+            disabled={isUpdating}
+            title={`Copy to ${previousSprint.name}`}
+          >
+            <ChevronLeft className="h-3 w-3" />
+          </Button>
+        )}
+
+        <div className="flex-1 min-w-0 mx-1">
           <div className="font-medium text-xs truncate">{project.name}</div>
           <div className="flex items-center gap-1 mt-1">
             <Button 
@@ -154,17 +212,34 @@ const AllocationItem: React.FC<AllocationItemProps> = ({
             </Button>
           </div>
         </div>
-        {isUpdating ? (
-          <Loader2 className="h-3 w-3 animate-spin text-gray-400 flex-shrink-0" />
-        ) : (
-          <button 
-            onClick={handleDelete}
-            className="text-gray-400 hover:text-red-500 transition-colors text-xs flex-shrink-0 ml-1"
-            disabled={isUpdating}
-          >
-            &times;
-          </button>
-        )}
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Copy to Next Sprint Button */}
+          {nextSprint && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 text-gray-400 hover:text-gray-600"
+              onClick={handleCopyToNext}
+              disabled={isUpdating}
+              title={`Copy to ${nextSprint.name}`}
+            >
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          )}
+
+          {isUpdating ? (
+            <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+          ) : (
+            <button 
+              onClick={handleDelete}
+              className="text-gray-400 hover:text-red-500 transition-colors text-xs"
+              disabled={isUpdating}
+            >
+              &times;
+            </button>
+          )}
+        </div>
       </div>
     </Card>
   );
