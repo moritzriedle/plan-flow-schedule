@@ -161,16 +161,16 @@ const filteredProjects = React.useMemo(() => {
         </div>
       </div>
       
-     <div className="p-4 overflow-x-auto relative">
+     <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)] relative">
   <div className="min-w-max">
     {/* Month Headers */}
-    <div className="flex border-b sticky top-0 bg-white z-20">
-      <div className="w-64 flex-shrink-0"></div>
+    <div className="flex border-b sticky top-0 bg-white z-20 shadow-sm">
+      <div className="w-64 flex-shrink-0 bg-white"></div>
       <div className="flex flex-1">
         {months.map((month, index) => (
           <div 
             key={index} 
-            className="flex-1 min-w-[100px] p-2 text-center font-medium border-r"
+            className="flex-1 min-w-[100px] p-2 text-center font-medium border-r bg-white"
           >
             {format(month, 'MMM yyyy')}
           </div>
