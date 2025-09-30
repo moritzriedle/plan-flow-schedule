@@ -262,16 +262,16 @@ const ProfessionView: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-auto">
+      <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)] relative">
         <div className="min-w-max">
             {/* Month Headers */}
-            <div className="flex border-b-2 border-gray-200 bg-gray-50">
-              <div className="w-48 p-3 font-semibold border-r">Team Member</div>
+            <div className="flex border-b-2 border-gray-200 bg-gray-50 sticky top-0 z-20 shadow-sm">
+              <div className="w-48 p-3 font-semibold border-r bg-gray-50">Team Member</div>
               {!Array.isArray(months) ? (
                 console.warn('ProfessionView: months is not an array', months),
                 <div>No months data available</div>
               ) : (months || []).map((month) => (
-              <div key={month.toISOString()} className="w-40 p-2 text-center text-sm font-medium border-r">
+              <div key={month.toISOString()} className="w-40 p-2 text-center text-sm font-medium border-r bg-gray-50">
                 <div>{format(month, 'MMM yyyy')}</div>
                 <div className="text-xs text-gray-500 mt-1">
                   Working days (avg: {getWorkingDaysInMonth(month)})
