@@ -3,6 +3,7 @@ import EmployeeRow from './EmployeeRow';
 import DroppableCell from './DroppableCell';
 import { getSprintDateRange, findActiveSprint } from '../utils/sprintUtils';
 import { Employee, Sprint } from '../types';
+import { usePlanner } from '../contexts/PlannerContext';
 
 interface ResourcePlannerGridProps {
   filteredEmployees: Employee[];
@@ -15,11 +16,26 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
   sprints,
   onEmployeeEdit,
 }) => {
+  const { getTotalAllocationDays, getAvailableDays } = usePlanner();
   const employeeColumnWidth = 200;
   const sprintColumnWidth = 150;
   const safeSprints = Array.isArray(sprints) ? sprints : [];
   const totalSprintsWidth = safeSprints.length * sprintColumnWidth;
   const activeSprint = findActiveSprint(safeSprints);
+
+  // Calculate allocation percentage for a sprint
+  const calculateSprintAllocation = (sprint: Sprint) => {
+    let totalAllocated = 0;
+    let totalAvailable = 0;
+
+    filteredEmployees.forEach((employee) => {
+      totalAllocated += getTotalAllocationDays(employee.id, sprint);
+      totalAvailable += getAvailableDays(employee.id, sprint);
+    });
+
+    if (totalAvailable === 0) return 0;
+    return Math.round((totalAllocated / totalAvailable) * 100);
+  };
 
    console.log('Today:', new Date());
   console.log('Active Sprint:', activeSprint);
@@ -45,6 +61,7 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
             <div className="flex" style={{ width: `${totalSprintsWidth}px` }}>
               {safeSprints.map((sprint) => {
                 const isActive = activeSprint?.id === sprint.id;
+                const allocationPercentage = calculateSprintAllocation(sprint);
 
                 return (
                   <div
@@ -64,6 +81,13 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       {sprint.workingDays?.length || 0} days
+                    </div>
+                    <div className={`text-xs font-semibold mt-1 ${
+                      allocationPercentage >= 90 ? 'text-red-600' :
+                      allocationPercentage >= 70 ? 'text-orange-600' :
+                      'text-green-600'
+                    }`}>
+                      {allocationPercentage}% allocated
                     </div>
                     {isActive && (
                       <div className="text-xs font-bold text-blue-600 mt-1">
