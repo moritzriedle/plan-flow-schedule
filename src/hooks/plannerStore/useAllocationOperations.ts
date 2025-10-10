@@ -46,6 +46,13 @@ export const useAllocationOperations = (
       return null;
     }
 
+    // Check if project is archived
+    const project = projects.find(p => p.id === allocation.projectId);
+    if (project?.archived) {
+      toast.error('Cannot allocate to an archived project');
+      return null;
+    }
+
     try {
       const isValidUser = await validateUserId(allocation.employeeId);
       if (!isValidUser) throw new Error('Invalid employee ID');
@@ -86,6 +93,13 @@ export const useAllocationOperations = (
   const updateAllocation = useCallback(async (updatedAllocation: Allocation) => {
     if (!user || !hasAllocationPermission) {
       toast.error('Only authorized users can update allocations');
+      return false;
+    }
+
+    // Check if project is archived
+    const project = projects.find(p => p.id === updatedAllocation.projectId);
+    if (project?.archived) {
+      toast.error('Cannot modify allocations for an archived project');
       return false;
     }
 

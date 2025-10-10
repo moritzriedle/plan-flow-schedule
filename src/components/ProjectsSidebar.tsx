@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Eye, Calendar, Search } from 'lucide-react';
 import {Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command"
 
@@ -112,6 +113,7 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [employeeSearch, setEmployeeSearch] = useState<string>('');
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
   const filteredAndSortedProjects = useMemo(() => {
     try {
@@ -126,6 +128,11 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
         typeof project.name === 'string'
       );
       
+      // Filter archived projects
+      if (!showArchived) {
+        filtered = filtered.filter(project => !project.archived);
+      }
+      
       if (searchTerm.trim()) {
         filtered = filtered.filter(project =>
           project.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -137,7 +144,7 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
       console.error('ProjectsSidebar: Error filtering/sorting projects', error);
       return [];
     }
-  }, [projects, searchTerm]);
+  }, [projects, searchTerm, showArchived]);
 
     const filteredEmployees = useMemo(() => {
     if (!employeeSearch.trim()) return [];
@@ -172,6 +179,20 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
             className="pl-10"
           />
         </div>
+      </div>
+
+      {/* Show Archived Toggle */}
+      <div className="flex items-center space-x-2 mb-4">
+        <input
+          type="checkbox"
+          id="showArchived"
+          checked={showArchived}
+          onChange={(e) => setShowArchived(e.target.checked)}
+          className="w-4 h-4"
+        />
+        <Label htmlFor="showArchived" className="cursor-pointer text-sm">
+          Show archived projects
+        </Label>
       </div>
 
       {/* Employee selector for detailed allocation with type-ahead */}
@@ -218,12 +239,19 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
       ) : (
         filteredAndSortedProjects.map((project) => (
           <div key={project.id} className="space-y-1">
-            <DraggableProjectItem 
-              project={project} 
-              onTimelineOpen={onProjectTimelineOpen}
-              employees={employees}
-            />
-            {selectedEmployeeId && (
+            <div className={project.archived ? 'opacity-50' : ''}>
+              <DraggableProjectItem 
+                project={project} 
+                onTimelineOpen={onProjectTimelineOpen}
+                employees={employees}
+              />
+              {project.archived && (
+                <Badge variant="secondary" className="mt-1 text-xs">
+                  Archived
+                </Badge>
+              )}
+            </div>
+            {selectedEmployeeId && !project.archived && (
               <Button
                 variant="outline"
                 size="sm"

@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -20,6 +20,7 @@ export type Database = {
           days: number
           id: string
           project_id: string
+          sprint_id: string
           updated_at: string
           user_id: string
           week: string
@@ -30,6 +31,7 @@ export type Database = {
           days: number
           id?: string
           project_id: string
+          sprint_id?: string
           updated_at?: string
           user_id: string
           week: string
@@ -40,6 +42,7 @@ export type Database = {
           days?: number
           id?: string
           project_id?: string
+          sprint_id?: string
           updated_at?: string
           user_id?: string
           week?: string
@@ -61,24 +64,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      professions: {
-        Row: {
-          created_at: string
-          id: string
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          title: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          title?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -115,32 +100,41 @@ export type Database = {
       }
       projects: {
         Row: {
+          archived: boolean
           color: string
           created_at: string
           description: string | null
+          end_date: string | null
           id: string
           lead_id: string | null
           name: string
+          start_date: string | null
           ticket_reference: string | null
           updated_at: string
         }
         Insert: {
+          archived?: boolean
           color: string
           created_at?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           lead_id?: string | null
           name: string
+          start_date?: string | null
           ticket_reference?: string | null
           updated_at?: string
         }
         Update: {
+          archived?: boolean
           color?: string
           created_at?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           lead_id?: string | null
           name?: string
+          start_date?: string | null
           ticket_reference?: string | null
           updated_at?: string
         }
@@ -153,69 +147,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_professions: {
-        Row: {
-          created_at: string
-          id: string
-          profession_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          profession_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          profession_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_professions_profession_id_fkey"
-            columns: ["profession_id"]
-            isOneToOne: false
-            referencedRelation: "professions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_professions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      users: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          image_url: string | null
-          name: string
-          role: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          image_url?: string | null
-          name: string
-          role: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          image_url?: string | null
-          name?: string
-          role?: string
-        }
-        Relationships: []
       }
     }
     Views: {

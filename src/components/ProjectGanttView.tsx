@@ -22,7 +22,8 @@ const ProjectGanttView = () => {
   const { projects, employees, getProjectAllocations } = usePlanner();
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState<string>(''); // ✅ NEW
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
   
   // Handle case where projects array is empty
@@ -86,6 +87,11 @@ const filteredProjects = React.useMemo(() => {
 
   let base = projects;
 
+  // Filter archived projects
+  if (!showArchived) {
+    base = base.filter(project => !project.archived);
+  }
+
   // ✅ Filter by role (existing logic)
   if (Array.isArray(safeSelectedRoles) && safeSelectedRoles.length > 0) {
     base = base.filter(project => {
@@ -105,7 +111,7 @@ const filteredProjects = React.useMemo(() => {
   }
 
   return base;
-}, [projects, safeSelectedRoles, safeEmployees, getProjectAllocations, searchTerm]);
+}, [projects, safeSelectedRoles, safeEmployees, getProjectAllocations, searchTerm, showArchived]);
 
   
   // Rolling 12-month view: current month to 11 months forward
@@ -157,6 +163,19 @@ const filteredProjects = React.useMemo(() => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border rounded px-2 py-1 text-sm"
               />
+            </div>
+            {/* Show Archived Toggle */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="showArchivedGantt"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="showArchivedGantt" className="text-sm cursor-pointer">
+                Show archived
+              </label>
             </div>
         </div>
       </div>
@@ -243,7 +262,7 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
 
   return (
     <>
-      <div className="flex border-b hover:bg-gray-50">
+      <div className={`flex border-b hover:bg-gray-50 ${project.archived ? 'bg-gray-100 opacity-60' : ''}`}>
         <div 
           className="w-64 flex-shrink-0 p-3 border-r"
           style={{ borderLeftColor: `var(--project-${project.color})`, borderLeftWidth: '4px' }}
@@ -251,6 +270,9 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
           <div className="flex justify-between items-center">
             <div>
               <div className="font-medium">{project.name}</div>
+              {project.archived && (
+                <Badge variant="secondary" className="text-xs mt-1">Archived</Badge>
+              )}
               <div className="text-xs text-gray-500 mt-1">
                 <span className="font-medium">{totalAllocation} days</span> allocated
                 {projectLead && (

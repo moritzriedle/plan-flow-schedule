@@ -7,4 +7,5 @@ export interface Project {
   leadId?: string;
   ticketReference?: string;
   description?: string;
+  archived?: boolean;
 }

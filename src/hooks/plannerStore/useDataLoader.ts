@@ -97,7 +97,8 @@ export const useDataLoader = () => {
           startDate: (project as any).start_date ? new Date((project as any).start_date) : null,
           endDate: (project as any).end_date ? new Date((project as any).end_date) : null,
           leadId: (project as any).lead_id || undefined,
-          ticketReference: (project as any).ticket_reference || undefined
+          ticketReference: (project as any).ticket_reference || undefined,
+          archived: (project as any).archived || false
         }));
         
         const { data: allocationsData, error: allocationsError } = await supabase

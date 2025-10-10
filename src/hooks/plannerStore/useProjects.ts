@@ -18,6 +18,7 @@ export const useProjects = () => {
           description: project.description,
           start_date: project.startDate ? project.startDate.toISOString().split('T')[0] : null,
           end_date: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+          archived: project.archived || false,
         })
         .eq('id', project.id);
 

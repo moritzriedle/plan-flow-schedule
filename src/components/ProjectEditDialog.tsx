@@ -32,6 +32,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
   const [startDate, setStartDate] = useState<Date | null>(project.startDate);
   const [endDate, setEndDate] = useState<Date | null>(project.endDate);
   const [ticketReference, setTicketReference] = useState(project.ticketReference || '');
+  const [archived, setArchived] = useState(project.archived || false);
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
@@ -44,6 +45,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
       setStartDate(project.startDate);
       setEndDate(project.endDate);
       setTicketReference(project.ticketReference || '');
+      setArchived(project.archived || false);
     }
   }, [project, isOpen]);
 
@@ -58,6 +60,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
       startDate,
       endDate,
       ticketReference: ticketReference || undefined,
+      archived,
     };
 
     await updateProject(updatedProject);
@@ -72,6 +75,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
         setColor(refreshedProject.color);
         setLeadId(refreshedProject.leadId || '');
         setTicketReference(refreshedProject.ticketReference || '');
+        setArchived(refreshedProject.archived || false);
       }
     } catch (err) {
       console.error("Failed to refresh project:", err);
@@ -192,6 +196,19 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
                 </PopoverContent>
               </Popover>
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2 py-4">
+            <input
+              type="checkbox"
+              id="archived"
+              checked={archived}
+              onChange={(e) => setArchived(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <Label htmlFor="archived" className="cursor-pointer">
+              Archive this project (prevents new allocations)
+            </Label>
           </div>
 
           <DialogFooter>
