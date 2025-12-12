@@ -56,15 +56,20 @@ useEffect(() => {
   const totalDays = getTotalAllocationDays(employeeId, sprint);
   const availableDays = getAvailableDays(employeeId, sprint);
   const isOverallocated = totalDays > availableDays;
+  const isEmployeeArchived = employee?.archived || false;
 
   const [{ isOverCurrent }, drop] = useDrop({
     accept: 'ALLOCATION',
+    canDrop: () => !isEmployeeArchived, // Prevent drops on archived employees
     drop: (item: DragItem) => {
+      if (isEmployeeArchived) return; // Extra safety check
       handleDrop(item);
       return { sprintId };
     },
     hover: () => {
-      setIsOver(true);
+      if (!isEmployeeArchived) {
+        setIsOver(true);
+      }
     },
     collect: (monitor) => ({
       isOverCurrent: monitor.isOver({ shallow: true }),
@@ -110,7 +115,7 @@ useEffect(() => {
       ref={drop}
       className={`droppable-cell p-2 h-full min-h-[120px] border-r border-b ${
         isOver ? 'active bg-primary/10' : ''
-      } ${isOverallocated ? 'bg-red-50' : ''} ${isProcessing ? 'bg-gray-50' : ''}`}
+      } ${isOverallocated ? 'bg-red-50' : ''} ${isProcessing ? 'bg-gray-50' : ''} ${isEmployeeArchived ? 'cursor-not-allowed opacity-50' : ''}`}
     >
       <div className="mb-1 flex justify-between items-center">
         <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>

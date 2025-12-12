@@ -4,6 +4,7 @@ export interface Employee {
   role: string;
   imageUrl?: string;
   vacationDates?: string[]; // Array of date strings in YYYY-MM-DD format
+  archived?: boolean;
 }
 
 export interface Project {

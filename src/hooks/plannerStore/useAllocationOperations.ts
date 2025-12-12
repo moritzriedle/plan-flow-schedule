@@ -53,6 +53,13 @@ export const useAllocationOperations = (
       return null;
     }
 
+    // Check if employee is archived
+    const employee = employees.find(e => e.id === allocation.employeeId);
+    if (employee?.archived) {
+      toast.error('Cannot allocate to an archived team member');
+      return null;
+    }
+
     try {
       const isValidUser = await validateUserId(allocation.employeeId);
       if (!isValidUser) throw new Error('Invalid employee ID');

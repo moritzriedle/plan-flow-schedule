@@ -3,7 +3,7 @@ import React from 'react';
 import { ROLE_OPTIONS } from '@/constants/roles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, UserPlus, Search, Users } from 'lucide-react';
+import { Plus, UserPlus, Search, Users, Archive } from 'lucide-react';
 import TimeframeSelector from './TimeframeSelector';
 import MultiRoleSelector from './MultiRoleSelector';
 import { TimeframeOption } from './TimeframeSelector';
@@ -18,6 +18,8 @@ interface ResourcePlannerHeaderProps {
   onSearchChange: (searchTerm: string) => void;
   showUnallocatedOnly?: boolean;
   onShowUnallocatedChange: (show: boolean) => void;
+  showArchivedEmployees?: boolean;
+  onShowArchivedEmployeesChange: (show: boolean) => void;
   onAddProject: () => void;
   onAddEmployee: () => void;
 }
@@ -32,6 +34,8 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
   onSearchChange = () => {},
   showUnallocatedOnly = false,
   onShowUnallocatedChange = () => {},
+  showArchivedEmployees = false,
+  onShowArchivedEmployeesChange = () => {},
   onAddProject = () => {},
   onAddEmployee = () => {}
 }) => {
@@ -126,6 +130,19 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
         >
           <Users className="h-4 w-4" />
           {showUnallocatedOnly ? "Show All" : "Unallocated Only"}
+        </Button>
+      </div>
+
+      {/* Archived Employees Toggle */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant={showArchivedEmployees ? "default" : "outline"}
+          size="sm"
+          onClick={() => onShowArchivedEmployeesChange(!showArchivedEmployees)}
+          className="flex items-center gap-2"
+        >
+          <Archive className="h-4 w-4" />
+          {showArchivedEmployees ? "Hide Archived" : "Show Archived"}
         </Button>
       </div>
     </div>
