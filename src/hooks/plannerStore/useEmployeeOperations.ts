@@ -37,8 +37,8 @@ const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
         name: updatedEmployee.name,
         role: updatedEmployee.role,
         image_url: updatedEmployee.imageUrl || null,
-        vacation_dates: updatedEmployee.vacationDates || []  // <-- send array directly
-
+        vacation_dates: updatedEmployee.vacationDates || [],
+        archived: updatedEmployee.archived || false
       };
       
       console.log('Update data being sent:', updateData);

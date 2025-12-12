@@ -63,7 +63,7 @@ export const useDataLoader = () => {
       try {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, name, role, image_url, is_admin, vacation_dates')
+          .select('id, name, role, image_url, is_admin, vacation_dates, archived')
           .order('role', { ascending: true });  // or false for descending;
 
         console.log('👥 Loaded profiles:', profilesData, profilesError);
@@ -79,7 +79,8 @@ export const useDataLoader = () => {
           name: profile.name,
           role: profile.role,
           imageUrl: profile.image_url || undefined,
-          vacationDates: Array.isArray(profile.vacation_dates) ? profile.vacation_dates as string[] : []
+          vacationDates: Array.isArray(profile.vacation_dates) ? profile.vacation_dates as string[] : [],
+          archived: profile.archived || false
         }));
         
         const { data: projectsData, error: projectsError } = await supabase

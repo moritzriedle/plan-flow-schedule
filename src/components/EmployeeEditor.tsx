@@ -10,6 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { ROLE_OPTIONS } from '@/constants/roles';
 import VacationDateRangeSelector from './VacationDateRangeSelector';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EmployeeEditorProps {
   employee: Employee;
@@ -27,6 +28,7 @@ const EmployeeEditor: React.FC<EmployeeEditorProps> = ({
   const [role, setRole] = useState(employee.role);
   const [imageUrl, setImageUrl] = useState(employee.imageUrl || '');
   const [vacationDates, setVacationDates] = useState(employee.vacationDates || []);
+  const [archived, setArchived] = useState(employee.archived || false);
 
   // Get initials from name
   const getInitials = (name: string) => {
@@ -53,7 +55,8 @@ const success = await updateEmployee({
       name,
       role,
       imageUrl: imageUrl || undefined,
-      vacationDates
+      vacationDates,
+      archived
     });
     
   
@@ -129,6 +132,23 @@ const success = await updateEmployee({
               onDatesChange={setVacationDates}
             />
           </div>
+
+          <div className="flex items-center space-x-2 pt-4 border-t">
+            <Checkbox
+              id="archived"
+              checked={archived}
+              onCheckedChange={(checked) => setArchived(checked === true)}
+            />
+            <label
+              htmlFor="archived"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Archive this team member
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Archived team members are hidden from the Resource Allocation view by default.
+          </p>
           
           <SheetFooter className="pt-4">
             <Button type="submit">Save Changes</Button>

@@ -67,6 +67,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          archived: boolean
           created_at: string
           id: string
           image_url: string | null
@@ -77,6 +78,7 @@ export type Database = {
           vacation_dates: Json | null
         }
         Insert: {
+          archived?: boolean
           created_at?: string
           id: string
           image_url?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           vacation_dates?: Json | null
         }
         Update: {
+          archived?: boolean
           created_at?: string
           id?: string
           image_url?: string | null

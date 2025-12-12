@@ -54,6 +54,7 @@ const ResourcePlanner: React.FC = () => {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showUnallocatedOnly, setShowUnallocatedOnly] = useState(false);
+  const [showArchivedEmployees, setShowArchivedEmployees] = useState(false);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -95,6 +96,11 @@ const ResourcePlanner: React.FC = () => {
     try {
       let filtered = safeEmployees;
       
+      // Filter out archived employees unless toggle is on
+      if (!showArchivedEmployees) {
+        filtered = filtered.filter(emp => !emp.archived);
+      }
+      
       // Filter by roles
       if (safeSelectedRoles.length > 0) {
         filtered = filtered.filter(emp => {
@@ -133,7 +139,7 @@ const ResourcePlanner: React.FC = () => {
       console.error('ResourcePlanner: Error filtering employees', error);
       return safeEmployees;
     }
-  }, [safeEmployees, safeSelectedRoles, searchTerm, showUnallocatedOnly, sprints, plannerData]);
+  }, [safeEmployees, safeSelectedRoles, searchTerm, showUnallocatedOnly, showArchivedEmployees, sprints, plannerData]);
 
   const handleRoleChange = (roles: string[]) => {
     try {
@@ -245,6 +251,8 @@ const ResourcePlanner: React.FC = () => {
             onSearchChange={setSearchTerm}
             showUnallocatedOnly={showUnallocatedOnly}
             onShowUnallocatedChange={setShowUnallocatedOnly}
+            showArchivedEmployees={showArchivedEmployees}
+            onShowArchivedEmployeesChange={setShowArchivedEmployees}
             onAddProject={() => setIsAddProjectDialogOpen(true)}
             onAddEmployee={() => setIsAddEmployeeDialogOpen(true)}
           />

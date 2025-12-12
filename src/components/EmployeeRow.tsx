@@ -3,7 +3,8 @@ import { Employee, Sprint } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Edit, Archive } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -38,7 +39,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
   };
 
   return (
-    <div className="p-3 h-full min-h-[120px] flex flex-col justify-between">
+    <div className={`p-3 h-full min-h-[120px] flex flex-col justify-between ${employee.archived ? 'opacity-60 bg-gray-100' : ''}`}>
       {/* Top: Avatar, name, role, edit button */}
       <div className="flex items-center gap-2 mb-2">
         <Avatar className="h-8 w-8 flex-shrink-0">
@@ -51,8 +52,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee, sprints, onEmployee
           )}
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate" title={employee.name}>
+          <div className="font-medium text-sm truncate flex items-center gap-1" title={employee.name}>
             {employee.name}
+            {employee.archived && (
+              <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+                <Archive className="h-2.5 w-2.5 mr-0.5" />
+                Archived
+              </Badge>
+            )}
           </div>
           <div className="text-xs text-gray-500 truncate" title={employee.role}>
             {employee.role}
