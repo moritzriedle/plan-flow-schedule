@@ -300,18 +300,12 @@ const ProjectGanttView = () => {
               />
 
               {expandedProjects.has(project.id) && (
-                <div className="bg-gray-50 border-b">
-                  <div className={compact ? 'p-3' : 'p-4'}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {months.map((month) => (
-                        <div key={month.getTime()}>
-                          <ProjectMonthDetails project={project} month={month} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+  <ProjectMonthDetails
+    project={project}
+    month={months[0]} // kept only for prop compatibility
+  />
+)}
+
             </div>
           ))}
         </div>
