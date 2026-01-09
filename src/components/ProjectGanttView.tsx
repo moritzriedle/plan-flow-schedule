@@ -24,7 +24,7 @@ const ProjectGanttView = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  // ✅ new: compact mode (default on)
+  // ✅ compact mode (default on)
   const [compact, setCompact] = useState<boolean>(true);
 
   // Handle case where projects array is empty
@@ -176,7 +176,7 @@ const ProjectGanttView = () => {
               </label>
             </div>
 
-            {/* ✅ Compact Toggle */}
+            {/* Compact Toggle */}
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -282,14 +282,46 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
   // Get project lead name
   const projectLead = project.leadId ? getEmployeeById(project.leadId) : null;
 
+  const jiraUrl = project.ticketReference ? generateLink(project.ticketReference) : null;
+
+  // Progressive disclosure:
+  // - compact: show only title; show meta on hover (via group-hover)
+  // - non-compact: show meta always
+  const showMetaAlways = !compact;
+
+  const metaLine = (
+    <div className={compact ? 'text-[11px] text-gray-500 leading-tight' : 'text-xs text-gray-500 mt-1'}>
+      <span className="font-medium">{totalAllocation}d</span> allocated
+      {projectLead && <span> · Lead: {projectLead.name}</span>}
+      {jiraUrl && (
+        <>
+          <span> · </span>
+          <a
+            href={jiraUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={compact ? 'text-blue-600 hover:underline' : 'text-blue-600 hover:underline'}
+          >
+            {project.ticketReference}
+          </a>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <>
-      <div className={`flex border-b hover:bg-gray-50 ${project.archived ? 'bg-gray-100 opacity-60' : ''}`}>
+      <div
+        className={[
+          'flex border-b hover:bg-gray-50',
+          project.archived ? 'bg-gray-100 opacity-60' : '',
+        ].join(' ')}
+      >
         {/* Left column */}
         <div
           className={[
             leftColClass,
-            'flex-shrink-0 border-r',
+            'flex-shrink-0 border-r group',
             compact ? 'px-2 py-2' : 'p-3',
           ].join(' ')}
           style={{ borderLeftColor: `var(--project-${project.color})`, borderLeftWidth: '4px' }}
@@ -309,24 +341,17 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                 </Badge>
               )}
 
-              <div className={compact ? 'text-[11px] text-gray-500 mt-1 leading-tight' : 'text-xs text-gray-500 mt-1'}>
-                <span className="font-medium">{totalAllocation}d</span> allocated
-                {projectLead && <div className="mt-0.5">Lead: {projectLead.name}</div>}
-              </div>
+              {/* Meta: always visible in non-compact, hover-reveal in compact */}
+              {showMetaAlways ? (
+                metaLine
+              ) : (
+                <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {metaLine}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-1 flex-shrink-0">
-              {project.ticketReference && (
-                <a
-                  href={generateLink(project.ticketReference) || undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={compact ? 'text-blue-600 hover:underline text-xs' : 'text-blue-600 hover:underline'}
-                >
-                  {project.ticketReference}
-                </a>
-              )}
-
               <Button
                 variant="ghost"
                 size="sm"
@@ -361,39 +386,13 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
 
             return (
               <div key={index} className={['flex-1 border-r relative', monthColMinW].join(' ')}>
+                {/* ✅ Active = background highlight only. No badge. No dot. No drama. */}
                 {isActive && (
                   <div
-                    className={[
-                      'h-full w-full',
-                      compact ? 'px-1 py-0.5 flex items-center justify-center' : 'p-2 flex items-center justify-center',
-                    ].join(' ')}
+                    className="h-full w-full"
                     style={{ backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.2)` }}
-                  >
-                    {/* In compact mode: tiny marker, not a full badge */}
-                    {compact ? (
-                      <span
-                        className="text-[10px] px-1.5 py-0.5 rounded-full border"
-                        style={{
-                          borderColor: `var(--project-${project.color})`,
-                          color: `var(--project-${project.color})`,
-                          backgroundColor: 'rgba(255,255,255,0.6)',
-                        }}
-                        title="active"
-                      >
-                        •
-                      </span>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        style={{
-                          borderColor: `var(--project-${project.color})`,
-                          color: `var(--project-${project.color})`,
-                        }}
-                      >
-                        active
-                      </Badge>
-                    )}
-                  </div>
+                    title="active"
+                  />
                 )}
               </div>
             );
