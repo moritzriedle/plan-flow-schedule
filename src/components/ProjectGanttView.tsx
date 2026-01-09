@@ -27,6 +27,9 @@ const ProjectGanttView = () => {
   // ✅ compact mode (default on)
   const [compact, setCompact] = useState<boolean>(true);
 
+  // ✅ new: hovered row inspector (compact only)
+  const [hoveredProjectId, setHoveredProjectId] = useState<string | null>(null);
+
   // Handle case where projects array is empty
   if (!projects.length) {
     return (
@@ -48,7 +51,8 @@ const ProjectGanttView = () => {
       console.warn('ProjectGanttView: employees is not a valid array', { employees });
       return [];
     }
-    return employees.filter((emp) => emp && emp.role && typeof emp.role === 'string');
+    // keep only plausible employee objects
+    return employees.filter((emp) => emp && typeof emp === 'object');
   }, [employees]);
 
   const safeSelectedRoles = useMemo(() => {
@@ -63,7 +67,7 @@ const ProjectGanttView = () => {
   const uniqueRoles = useMemo(() => {
     try {
       const validRoles = Array.isArray(safeEmployees)
-        ? safeEmployees.map((emp) => emp?.role).filter((role) => typeof role === 'string')
+        ? safeEmployees.map((emp: any) => emp?.role).filter((role) => typeof role === 'string')
         : [];
 
       const roleSet = new Set(validRoles);
@@ -95,8 +99,8 @@ const ProjectGanttView = () => {
     if (Array.isArray(safeSelectedRoles) && safeSelectedRoles.length > 0) {
       base = base.filter((project) => {
         const allocations = getProjectAllocations(project?.id) || [];
-        return allocations.some((alloc) => {
-          const employee = safeEmployees.find((emp) => emp?.id === alloc?.employeeId);
+        return allocations.some((alloc: any) => {
+          const employee = safeEmployees.find((emp: any) => emp?.id === alloc?.employeeId);
           return employee && safeSelectedRoles.includes(employee.role);
         });
       });
@@ -126,8 +130,29 @@ const ProjectGanttView = () => {
     setExpandedProjects(newExpanded);
   };
 
-  const leftColClass = compact ? 'w-56' : 'w-64';
-  const monthColMinW = compact ? 'min-w-[80px]' : 'min-w-[100px]';
+  // ✅ give project names more room; reduce month width a bit
+  const leftColClass = compact ? 'w-[360px]' : 'w-[420px]';
+  const monthColMinW = compact ? 'min-w-[70px]' : 'min-w-[90px]';
+
+  // ✅ hovered project inspector content (compact only)
+  const hoveredProject = useMemo(() => {
+    if (!compact || !hoveredProjectId) return null;
+    return (filteredProjects || []).find((p) => p.id === hoveredProjectId) || null;
+  }, [compact, hoveredProjectId, filteredProjects]);
+
+  const hoveredMeta = useMemo(() => {
+    if (!hoveredProject) return null;
+
+    const allocations = getProjectAllocations(hoveredProject.id) || [];
+    const totalAllocation = allocations.reduce((sum: number, alloc: any) => sum + (alloc?.days || 0), 0);
+
+    const lead =
+      hoveredProject.leadId ? (safeEmployees.find((e: any) => e?.id === hoveredProject.leadId) as any) : null;
+
+    const jiraUrl = hoveredProject.ticketReference ? generateLink(hoveredProject.ticketReference) : null;
+
+    return { totalAllocation, leadName: lead?.name || null, jiraUrl };
+  }, [hoveredProject, getProjectAllocations, safeEmployees]);
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -196,7 +221,7 @@ const ProjectGanttView = () => {
       <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)] relative">
         <div className="min-w-max">
           {/* Month Headers */}
-          <div className="flex border-b sticky top-0 bg-white z-20 shadow-sm">
+          <div className="flex border-b sticky top-0 bg-white z-30 shadow-sm">
             <div className={`${leftColClass} flex-shrink-0 bg-white`} />
             <div className="flex flex-1">
               {months.map((month, index) => (
@@ -214,6 +239,52 @@ const ProjectGanttView = () => {
             </div>
           </div>
 
+          {/* ✅ Compact hover inspector (no vertical whitespace inside rows) */}
+          {compact && (
+            <div className="sticky top-[33px] z-20 bg-white border-b">
+              <div className="flex">
+                <div className={`${leftColClass} flex-shrink-0 px-2 py-1 text-xs text-muted-foreground`}>
+                  {hoveredProject && hoveredMeta ? (
+                    <div className="truncate">
+                      <span className="font-medium text-foreground">{hoveredProject.name}</span>
+                      <span className="ml-2">{hoveredMeta.totalAllocation}d</span>
+                      {hoveredMeta.leadName && <span className="ml-2">Lead: {hoveredMeta.leadName}</span>}
+                      {hoveredProject.ticketReference && hoveredMeta.jiraUrl && (
+                        <>
+                          <span className="ml-2">·</span>
+                          <a
+                            href={hoveredMeta.jiraUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-blue-600 hover:underline"
+                          >
+                            {hoveredProject.ticketReference}
+                          </a>
+                        </>
+                      )}
+                      {hoveredProject.archived && (
+                        <span className="ml-2 inline-flex align-middle">
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                            Archived
+                          </Badge>
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="opacity-60">Hover a project to see details</span>
+                  )}
+                </div>
+
+                {/* filler cells to keep grid aligned */}
+                <div className="flex flex-1">
+                  {months.map((_, i) => (
+                    <div key={i} className={['flex-1 border-r', monthColMinW].join(' ')} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Project Rows */}
           {(filteredProjects || []).map((project) => (
             <div key={project.id}>
@@ -225,6 +296,7 @@ const ProjectGanttView = () => {
                 compact={compact}
                 leftColClass={leftColClass}
                 monthColMinW={monthColMinW}
+                onHoverChange={(isHovering) => setHoveredProjectId(isHovering ? project.id : null)}
               />
 
               {expandedProjects.has(project.id) && (
@@ -256,6 +328,7 @@ interface ProjectGanttRowProps {
   compact?: boolean;
   leftColClass: string;
   monthColMinW: string;
+  onHoverChange?: (isHovering: boolean) => void;
 }
 
 const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
@@ -266,6 +339,7 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
   compact = false,
   leftColClass,
   monthColMinW,
+  onHoverChange,
 }) => {
   const { getProjectAllocations, getEmployeeById } = usePlanner();
   const allocations = getProjectAllocations(project.id);
@@ -281,33 +355,7 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
 
   // Get project lead name
   const projectLead = project.leadId ? getEmployeeById(project.leadId) : null;
-
   const jiraUrl = project.ticketReference ? generateLink(project.ticketReference) : null;
-
-  // Progressive disclosure:
-  // - compact: show only title; show meta on hover (via group-hover)
-  // - non-compact: show meta always
-  const showMetaAlways = !compact;
-
-  const metaLine = (
-    <div className={compact ? 'text-[11px] text-gray-500 leading-tight' : 'text-xs text-gray-500 mt-1'}>
-      <span className="font-medium">{totalAllocation}d</span> allocated
-      {projectLead && <span> · Lead: {projectLead.name}</span>}
-      {jiraUrl && (
-        <>
-          <span> · </span>
-          <a
-            href={jiraUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={compact ? 'text-blue-600 hover:underline' : 'text-blue-600 hover:underline'}
-          >
-            {project.ticketReference}
-          </a>
-        </>
-      )}
-    </div>
-  );
 
   return (
     <>
@@ -316,19 +364,22 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
           'flex border-b hover:bg-gray-50',
           project.archived ? 'bg-gray-100 opacity-60' : '',
         ].join(' ')}
+        onMouseEnter={() => onHoverChange?.(true)}
+        onMouseLeave={() => onHoverChange?.(false)}
       >
         {/* Left column */}
         <div
           className={[
             leftColClass,
-            'flex-shrink-0 border-r group',
-            compact ? 'px-2 py-2' : 'p-3',
+            'flex-shrink-0 border-r',
+            compact ? 'px-2 py-1.5' : 'p-3',
           ].join(' ')}
           style={{ borderLeftColor: `var(--project-${project.color})`, borderLeftWidth: '4px' }}
         >
           <div className="flex justify-between items-start gap-2">
             <div className="min-w-0">
-              <div className={compact ? 'text-sm font-medium leading-tight truncate' : 'font-medium'}>
+              {/* More space + allow bulky names to wrap a bit when not compact */}
+              <div className={compact ? 'text-sm font-medium leading-tight truncate' : 'font-medium leading-tight'}>
                 {project.name}
               </div>
 
@@ -341,12 +392,19 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                 </Badge>
               )}
 
-              {/* Meta: always visible in non-compact, hover-reveal in compact */}
-              {showMetaAlways ? (
-                metaLine
-              ) : (
-                <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {metaLine}
+              {/* Non-compact keeps meta visible (compact uses the sticky inspector instead) */}
+              {!compact && (
+                <div className="text-xs text-gray-500 mt-1 leading-tight">
+                  <span className="font-medium">{totalAllocation}d</span> allocated
+                  {projectLead && <span> · Lead: {projectLead.name}</span>}
+                  {project.ticketReference && jiraUrl && (
+                    <>
+                      <span> · </span>
+                      <a href={jiraUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        {project.ticketReference}
+                      </a>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -386,12 +444,11 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
 
             return (
               <div key={index} className={['flex-1 border-r relative', monthColMinW].join(' ')}>
-                {/* ✅ Active = background highlight only. No badge. No dot. No drama. */}
+                {/* Active = background highlight only */}
                 {isActive && (
                   <div
                     className="h-full w-full"
                     style={{ backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.2)` }}
-                    title="active"
                   />
                 )}
               </div>
