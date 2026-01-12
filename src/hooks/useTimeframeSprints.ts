@@ -4,7 +4,7 @@ import { Sprint } from '../types';
 import { TimeframeOption } from '../components/TimeframeSelector';
 
 export const useTimeframeSprints = () => {
-  const [timeframe, setTimeframe] = useState<TimeframeOption>('6sprints');
+  const [timeframe, setTimeframe] = useState<TimeframeOption>('8sprints');
 
   const sprints = useMemo<Sprint[]>(() => {
     const totalSprintsToGenerate = 100; // Ensure we cover a wide range
