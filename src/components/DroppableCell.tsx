@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
 import { DragItem, Sprint } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
@@ -18,58 +18,36 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
     getTotalAllocationDays,
     getAvailableDays,
     getEmployeeById,
-    getSprintById,
-    sprints,
   } = usePlanner();
 
- const [isOver, setIsOver] = useState(false);
-const [isProcessing, setIsProcessing] = useState(false);
+  const [isOver, setIsOver] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-const employee = getEmployeeById(employeeId);
+  const employee = getEmployeeById(employeeId);
+  const isEmployeeArchived = employee?.archived || false;
 
-useEffect(() => {
-  function normalizeDate(date: string | Date): string {
-    return new Date(date).toISOString().split('T')[0];
-  }
-
-  if (employee && sprint) {
-    console.log('🟦 Sprint:', sprint.name);
-    console.log('📅 Working days:', sprint.workingDays.map(normalizeDate));
-    console.log('🏖 Vacation days:', (employee.vacationDates || []).map(normalizeDate));
-    console.log('✅ Available days:', getAvailableDays(employee.id, sprint));
-    console.log('🧮 Total allocated days:', getTotalAllocationDays(employee.id, sprint));
-  }
-}, [
-  employeeId,
-  sprintId,
-  sprint,
-  getAvailableDays,
-  getTotalAllocationDays,
-  getEmployeeById,
-]);
-
-
-  const cellAllocations = allocations.filter(
-    (alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId
+  const cellAllocations = useMemo(
+    () => allocations.filter((alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId),
+    [allocations, employeeId, sprintId]
   );
 
   const totalDays = getTotalAllocationDays(employeeId, sprint);
   const availableDays = getAvailableDays(employeeId, sprint);
+
   const isOverallocated = totalDays > availableDays;
-  const isEmployeeArchived = employee?.archived || false;
+  const utilizationPct =
+    availableDays <= 0 ? 0 : Math.min(150, Math.round((totalDays / availableDays) * 100)); // cap visual
 
   const [{ isOverCurrent }, drop] = useDrop({
     accept: 'ALLOCATION',
-    canDrop: () => !isEmployeeArchived, // Prevent drops on archived employees
+    canDrop: () => !isEmployeeArchived && !isProcessing,
     drop: (item: DragItem) => {
-      if (isEmployeeArchived) return; // Extra safety check
+      if (isEmployeeArchived || isProcessing) return;
       handleDrop(item);
       return { sprintId };
     },
     hover: () => {
-      if (!isEmployeeArchived) {
-        setIsOver(true);
-      }
+      if (!isEmployeeArchived && !isProcessing) setIsOver(true);
     },
     collect: (monitor) => ({
       isOverCurrent: monitor.isOver({ shallow: true }),
@@ -79,7 +57,7 @@ useEffect(() => {
   const handleDrop = async (item: DragItem) => {
     setIsProcessing(true);
     try {
-      let allocationDays = item.days ?? 10;
+      const allocationDays = item.days ?? 10;
 
       const dragItemWithEmployee = {
         ...item,
@@ -87,7 +65,6 @@ useEffect(() => {
         days: allocationDays,
       };
 
-      // IMPORTANT: Assumes moveAllocation internally handles splitting across sprints
       await moveAllocation(dragItemWithEmployee, sprintId);
     } catch (error) {
       console.error('Drop failed:', error);
@@ -97,54 +74,86 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    if (!isOverCurrent) {
-      setIsOver(false);
-    }
+    if (!isOverCurrent) setIsOver(false);
   }, [isOverCurrent]);
 
-  // Utility to count how many vacation dates fall within this sprint
-  function countVacationDaysInSprint(vacationDates: string[], sprint: Sprint): number {
-    if (!Array.isArray(vacationDates) || !sprint.workingDays) return 0;
+  // Utility: count vacation dates within sprint working days
+  const vacationCount = useMemo(() => {
+    if (!employee?.vacationDates || !Array.isArray(employee.vacationDates)) return 0;
+    if (!sprint?.workingDays || !Array.isArray(sprint.workingDays)) return 0;
 
-    const sprintDays = new Set(sprint.workingDays.map(d => new Date(d).toDateString()));
-    return vacationDates.filter(dateStr => sprintDays.has(new Date(dateStr).toDateString())).length;
-  }
+    const sprintDays = new Set(sprint.workingDays.map((d) => new Date(d).toDateString()));
+    return employee.vacationDates.filter((dateStr) => sprintDays.has(new Date(dateStr).toDateString())).length;
+  }, [employee?.vacationDates, sprint?.workingDays]);
 
   return (
     <div
       ref={drop}
-      className={`droppable-cell p-2 h-full min-h-[120px] border-r border-b ${
-        isOver ? 'active bg-primary/10' : ''
-      } ${isOverallocated ? 'bg-red-50' : ''} ${isProcessing ? 'bg-gray-50' : ''} ${isEmployeeArchived ? 'cursor-not-allowed opacity-50' : ''}`}
+      className={[
+        'droppable-cell p-2 h-full min-h-[110px] border-r border-b relative',
+        isEmployeeArchived ? 'cursor-not-allowed opacity-50 bg-gray-50' : 'bg-white',
+        isOver ? 'bg-primary/5 ring-1 ring-primary/30' : '',
+        isOverallocated ? 'bg-red-50' : '',
+        isProcessing ? 'bg-gray-50' : '',
+      ].join(' ')}
     >
-      <div className="mb-1 flex justify-between items-center">
-        <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>
-          {totalDays}/{availableDays} days
-        </span>
-        {isOverallocated && <span className="text-xs text-red-500 font-bold">!</span>}
-        {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+      {/* Top compact meta row */}
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className={[
+              'text-[11px] font-medium',
+              isOverallocated ? 'text-red-600' : 'text-gray-600',
+            ].join(' ')}
+            title={`${totalDays}/${availableDays} days`}
+          >
+            {totalDays}/{availableDays}
+          </span>
+
+          {/* tiny progress bar, fast to parse */}
+          <div className="h-1.5 w-16 rounded bg-gray-200 overflow-hidden">
+            <div
+              className={[
+                'h-full',
+                isOverallocated ? 'bg-red-500' : utilizationPct >= 80 ? 'bg-orange-500' : 'bg-green-500',
+              ].join(' ')}
+              style={{ width: `${Math.min(100, utilizationPct)}%` }}
+            />
+          </div>
+
+          {vacationCount > 0 && (
+            <span className="text-[10px] text-amber-700 whitespace-nowrap" title="Vacation in this sprint">
+              {vacationCount} vac
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {isOverallocated && <span className="text-[11px] text-red-600 font-bold" title="Overallocated">!</span>}
+          {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+        </div>
       </div>
 
-      {/* Vacation display just for this sprint */}
-      {employee && sprint && employee.vacationDates && (() => {
-        const vacationCount = countVacationDaysInSprint(employee.vacationDates, sprint);
-        return vacationCount > 0 ? (
-          <div className="text-[11px] text-amber-700 mb-1">
-            {vacationCount} vacation day{vacationCount > 1 ? 's' : ''}
-          </div>
-        ) : null;
-      })()}
+      {/* Allocations list */}
+      <div className="space-y-1">
+        {cellAllocations.map((allocation) => (
+          <AllocationItem
+            key={allocation.id}
+            id={allocation.id}
+            employeeId={allocation.employeeId}
+            projectId={allocation.projectId}
+            days={allocation.days}
+            sprintId={allocation.sprintId}
+          />
+        ))}
+      </div>
 
-      {cellAllocations.map((allocation) => (
-        <AllocationItem
-          key={allocation.id}
-          id={allocation.id}
-          employeeId={allocation.employeeId}
-          projectId={allocation.projectId}
-          days={allocation.days}
-          sprintId={allocation.sprintId}
-        />
-      ))}
+      {/* Empty state hint (only when not archived) */}
+      {cellAllocations.length === 0 && !isEmployeeArchived && (
+        <div className="text-[11px] text-gray-300 mt-2 select-none">
+          Drop here
+        </div>
+      )}
     </div>
   );
 };
