@@ -1,9 +1,10 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ROLE_OPTIONS } from '@/constants/roles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, UserPlus, Search, Users, Archive } from 'lucide-react';
+import { Plus, UserPlus, Search, Users, Archive, LayoutGrid } from 'lucide-react';
 import TimeframeSelector from './TimeframeSelector';
 import MultiRoleSelector from './MultiRoleSelector';
 import { TimeframeOption } from './TimeframeSelector';
@@ -144,6 +145,16 @@ const ResourcePlannerHeader: React.FC<ResourcePlannerHeaderProps> = ({
           <Archive className="h-4 w-4" />
           {showArchivedEmployees ? "Hide Archived" : "Show Archived"}
         </Button>
+      </div>
+
+      {/* Alignment Hub Link */}
+      <div className="flex items-center gap-2 ml-auto">
+        <Link to="/alignment-hub">
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Alignment Hub
+          </Button>
+        </Link>
       </div>
     </div>
   </div>
