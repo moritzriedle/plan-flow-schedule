@@ -101,6 +101,41 @@ export type Database = {
         }
         Relationships: []
       }
+      project_support_requests: {
+        Row: {
+          created_at: string
+          id: string
+          needed_roles: string[]
+          project_id: string
+          support_needed: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          needed_roles?: string[]
+          project_id: string
+          support_needed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          needed_roles?: string[]
+          project_id?: string
+          support_needed?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_support_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           archived: boolean

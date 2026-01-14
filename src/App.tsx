@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AlignmentHub from "./pages/AlignmentHub";
 import NotFound from "./pages/NotFound";
 import { PlannerProvider } from "./contexts/PlannerContext";
 import './components/ProjectColors.css';
@@ -68,6 +69,11 @@ const App = () => (
                   <PlannerProvider>
                     <Index />
                   </PlannerProvider>
+                </ProtectedRoute>
+              } />
+              <Route path="/alignment-hub" element={
+                <ProtectedRoute>
+                  <AlignmentHub />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />
