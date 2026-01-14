@@ -25,15 +25,34 @@ const AlignmentHubView: React.FC = () => {
     return safeSprints.slice(activeIndex, activeIndex + 3);
   }, [sprints]);
 
-  // Filter projects by search term (excluding archived)
+  // ✅ Sort by color (blue last), then by name
+  const colorRank = (color?: string) => {
+    if (!color) return 50;
+    const c = color.toLowerCase();
+    if (c === 'blue') return 999;
+
+    // Customize this order to match your design system
+    const order = ['red', 'orange', 'yellow', 'green', 'teal', 'purple', 'pink', 'gray'];
+    const idx = order.indexOf(c);
+    return idx === -1 ? 50 : idx;
+  };
+
+  // Filter projects by search term (excluding archived) + sort by color
   const filteredProjects = useMemo(() => {
     const safeProjects = Array.isArray(projects) ? projects : [];
     const activeProjects = safeProjects.filter((p) => p && !p.archived);
 
-    if (!searchTerm.trim()) return activeProjects;
+    const base = !searchTerm.trim()
+      ? activeProjects
+      : activeProjects.filter((p) =>
+          (p?.name || '').toLowerCase().includes(searchTerm.toLowerCase().trim())
+        );
 
-    const q = searchTerm.toLowerCase().trim();
-    return activeProjects.filter((p) => (p?.name || '').toLowerCase().includes(q));
+    return [...base].sort((a, b) => {
+      const r = colorRank(a.color) - colorRank(b.color);
+      if (r !== 0) return r;
+      return (a.name || '').localeCompare(b.name || '');
+    });
   }, [projects, searchTerm]);
 
   // Calculate overallocated employees across relevant sprints
@@ -65,7 +84,7 @@ const AlignmentHubView: React.FC = () => {
     return overallocated;
   }, [employees, allocations, relevantSprints]);
 
-  // ✅ Unallocated employees PER sprint (and show all names)
+  // ✅ Unallocated employees PER sprint (show all names)
   const unallocatedBySprint = useMemo(() => {
     const safeEmployees = Array.isArray(employees) ? employees : [];
     const activeEmployees = safeEmployees.filter((e) => e && !e.archived);
@@ -78,7 +97,6 @@ const AlignmentHubView: React.FC = () => {
         return !hasAllocations;
       });
 
-      // Sort names to make scanning less painful
       unallocated.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
       return { sprint, employees: unallocated };
@@ -96,7 +114,7 @@ const AlignmentHubView: React.FC = () => {
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <div className="bg-background border-b sticky top-0 z-10">
+      <div className="bg-background border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
@@ -123,10 +141,10 @@ const AlignmentHubView: React.FC = () => {
         </div>
       </div>
 
-      {/* Alerts Section */}
       <div className="max-w-7xl mx-auto px-4 py-4">
+        {/* Alerts Section */}
         <div className="flex flex-wrap gap-4 mb-6">
-          {/* Overallocated Alert (kept aggregated) */}
+          {/* Overallocated Alert (aggregated) */}
           {overallocatedEmployees.size > 0 && (
             <div className="bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3 flex items-start gap-3 max-w-full">
               <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
@@ -145,7 +163,7 @@ const AlignmentHubView: React.FC = () => {
             </div>
           )}
 
-          {/* ✅ Unallocated Alerts PER sprint, show ALL names */}
+          {/* Unallocated Alerts PER sprint, show ALL names */}
           {unallocatedBySprint
             .filter(({ employees }) => employees.length > 0)
             .map(({ sprint, employees: unalloc }, idx) => {
@@ -158,14 +176,15 @@ const AlignmentHubView: React.FC = () => {
                     isCurrent ? 'bg-amber-500/10 border-amber-500/30' : 'bg-muted/40 border-border',
                   ].join(' ')}
                 >
-                  <UserMinus className={['w-5 h-5 mt-0.5', isCurrent ? 'text-amber-600' : 'text-muted-foreground'].join(' ')} />
+                  <UserMinus
+                    className={['w-5 h-5 mt-0.5', isCurrent ? 'text-amber-600' : 'text-muted-foreground'].join(' ')}
+                  />
                   <div className="min-w-0">
                     <p className={['font-medium', isCurrent ? 'text-amber-700' : 'text-foreground'].join(' ')}>
                       {unalloc.length} unallocated in {sprint.name}
                       {isCurrent ? ' (current)' : ''}
                     </p>
 
-                    {/* Names as wrapping chips so nothing gets hidden behind “+9 more” */}
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {unalloc.map((e) => (
                         <span
@@ -183,30 +202,33 @@ const AlignmentHubView: React.FC = () => {
             })}
         </div>
 
-        {/* Sprint Headers */}
-        <div className="grid grid-cols-[300px_1fr] gap-4 mb-4">
-          <div className="font-medium text-muted-foreground">Project</div>
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: `repeat(${relevantSprints.length}, 1fr)` }}
-          >
-            {relevantSprints.map((sprint, index) => (
-              <div key={sprint.id} className="text-center">
-                <div className={`font-medium ${index === 0 ? 'text-primary' : 'text-foreground'}`}>
-                  {sprint.name}
+        {/* ✅ Sticky Sprint Headers */}
+        {/* Note: top offset must be below the sticky app header. Adjust if your header height differs. */}
+        <div className="sticky top-[92px] z-10 bg-muted/30 pt-2">
+          <div className="grid grid-cols-[300px_1fr] gap-4 pb-3 border-b">
+            <div className="font-medium text-muted-foreground">Project</div>
+            <div
+              className="grid gap-4"
+              style={{ gridTemplateColumns: `repeat(${relevantSprints.length}, 1fr)` }}
+            >
+              {relevantSprints.map((sprint, index) => (
+                <div key={sprint.id} className="text-center">
+                  <div className={`font-medium ${index === 0 ? 'text-primary' : 'text-foreground'}`}>
+                    {sprint.name}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {' - '}
+                    {new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  {' - '}
-                  {new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Project Cards */}
-        <div className="space-y-4">
+        <div className="space-y-4 mt-4">
           {filteredProjects.map((project) => (
             <ProjectAlignmentCard
               key={project.id}
