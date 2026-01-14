@@ -202,30 +202,37 @@ const AlignmentHubView: React.FC = () => {
             })}
         </div>
 
-        {/* ✅ Sticky Sprint Headers */}
-        {/* Note: top offset must be below the sticky app header. Adjust if your header height differs. */}
-        <div className="sticky top-[92px] z-10 bg-muted/30 pt-2">
-          <div className="grid grid-cols-[300px_1fr] gap-4 pb-3 border-b">
-            <div className="font-medium text-muted-foreground">Project</div>
-            <div
-              className="grid gap-4"
-              style={{ gridTemplateColumns: `repeat(${relevantSprints.length}, 1fr)` }}
-            >
-              {relevantSprints.map((sprint, index) => (
-                <div key={sprint.id} className="text-center">
-                  <div className={`font-medium ${index === 0 ? 'text-primary' : 'text-foreground'}`}>
-                    {sprint.name}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    {' - '}
-                    {new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </div>
-                </div>
-              ))}
+        {/* Sprint Headers (sticky: sprint name + dates together) */}
+<div className="sticky top-[72px] z-20 bg-background border-b">
+  {/* top offset: adjust if your page header height differs */}
+  <div className="max-w-7xl mx-auto px-4 py-3">
+    <div className="grid grid-cols-[300px_1fr] gap-4">
+      <div className="font-medium text-muted-foreground">Project</div>
+
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${relevantSprints.length}, 1fr)` }}
+      >
+        {relevantSprints.map((sprint, index) => (
+          <div
+            key={sprint.id}
+            className="text-center bg-background"
+          >
+            <div className={`font-medium ${index === 0 ? 'text-primary' : 'text-foreground'}`}>
+              {sprint.name}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {' - '}
+              {new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           </div>
-        </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
+
 
         {/* Project Cards */}
         <div className="space-y-4 mt-4">
