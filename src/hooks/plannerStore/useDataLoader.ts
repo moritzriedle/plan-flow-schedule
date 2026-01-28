@@ -4,7 +4,37 @@ import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { generateSprints, referenceSprintStart } from '@/utils/sprintUtils';
-// import { calculateProjectDateRanges } from './utils'; // still optional
+
+const PAGE_SIZE = 1000;
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Fetch all rows for a query using PostgREST range pagination (avoids the ~1000 row limit).
+ * You must provide a stable order column that exists in the selected columns.
+ */
+async function fetchAllPaged<T>(
+  fetchPage: (from: number, to: number) => Promise<{ data: T[] | null; error: any }>
+): Promise<T[]> {
+  let from = 0;
+  const all: T[] = [];
+
+  while (true) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await fetchPage(from, to);
+    if (error) throw error;
+
+    const rows = data ?? [];
+    all.push(...rows);
+
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return all;
+}
 
 export const useDataLoader = () => {
   const { user, profile, loading: authLoading } = useAuth();
@@ -50,10 +80,6 @@ export const useDataLoader = () => {
 
     let isCancelled = false;
 
-    const sprintStartToId = new Map<string, string>(
-      sprints.map((s) => [new Date(s.startDate).toISOString().slice(0, 10), s.id])
-    );
-
     async function loadInitialData() {
       console.log('useDataLoader: Starting data load for user:', user.id);
       setLoading(true);
@@ -67,6 +93,38 @@ export const useDataLoader = () => {
       }, 10000);
 
       try {
+        // --- Determine window: current sprint + next 30 ---
+        const today = new Date();
+
+        const activeIdx = sprints.findIndex((s) => {
+          const start = new Date(s.startDate);
+          const end = new Date(s.endDate);
+          return start <= today && today <= end;
+        });
+
+        const nextFutureIdx =
+          activeIdx >= 0
+            ? activeIdx
+            : Math.max(
+                0,
+                sprints.findIndex((s) => new Date(s.startDate) >= today)
+              );
+
+        const windowSprints = sprints.slice(nextFutureIdx, nextFutureIdx + 31);
+
+        const windowStart = windowSprints[0];
+        const windowEnd = windowSprints[windowSprints.length - 1];
+
+        const windowStartStr = windowStart ? isoDate(new Date(windowStart.startDate)) : null;
+        const windowEndStr = windowEnd ? isoDate(new Date(windowEnd.endDate)) : null;
+
+        const sprintIdsInWindow = windowSprints.map((s) => s.id);
+
+        // Lookup: sprint start date -> sprint id (used for week fallback mapping)
+        const sprintStartToId = new Map<string, string>(
+          windowSprints.map((s) => [isoDate(new Date(s.startDate)), s.id])
+        );
+
         // PROFILES
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
@@ -74,7 +132,6 @@ export const useDataLoader = () => {
           .order('role', { ascending: true });
 
         console.log('👥 Loaded profiles:', profilesData, profilesError);
-
         if (profilesError) throw profilesError;
 
         const mappedEmployees: Employee[] = (profilesData ?? []).map((p) => ({
@@ -102,19 +159,48 @@ export const useDataLoader = () => {
         }));
 
         // ALLOCATIONS
-        // Select explicit columns so we can safely fallback to week
-        const { data: allocationsData, error: allocationsError } = await supabase
-          .from('allocations')
-          .select('id, user_id, project_id, sprint_id, week, days');
+        // We fetch by week-range (captures older rows without sprint_id),
+        // AND by sprint_id IN (...) (captures rows where week might be null).
+        // Both are paginated to avoid the 1000 cap.
 
-        if (allocationsError) throw allocationsError;
+        const byWeek: any[] =
+          windowStartStr && windowEndStr
+            ? await fetchAllPaged<any>(async (from, to) => {
+                return await supabase
+                  .from('allocations')
+                  .select('id, user_id, project_id, sprint_id, week, days')
+                  .gte('week', windowStartStr)
+                  .lte('week', windowEndStr)
+                  .order('id', { ascending: true })
+                  .range(from, to);
+              })
+            : [];
 
-        const mappedAllocations: Allocation[] = (allocationsData ?? []).map((alloc: any) => {
-          // Prefer sprint_id, but for older rows derive from week (YYYY-MM-DD)
+        const bySprintId: any[] =
+          sprintIdsInWindow.length > 0
+            ? await fetchAllPaged<any>(async (from, to) => {
+                return await supabase
+                  .from('allocations')
+                  .select('id, user_id, project_id, sprint_id, week, days')
+                  .in('sprint_id', sprintIdsInWindow)
+                  .order('id', { ascending: true })
+                  .range(from, to);
+              })
+            : [];
+
+        // De-dupe (same row can appear in both queries)
+        const mergedMap = new Map<string, any>();
+        for (const row of byWeek) mergedMap.set(row.id, row);
+        for (const row of bySprintId) mergedMap.set(row.id, row);
+
+        const mergedAllocationsRaw = Array.from(mergedMap.values());
+
+        const mappedAllocations: Allocation[] = mergedAllocationsRaw.map((alloc: any) => {
+          // Prefer sprint_id; if missing, derive from week (YYYY-MM-DD)
           let sprintId: string = alloc.sprint_id || '';
 
           if (!sprintId && alloc.week) {
-            const weekStr = String(alloc.week).slice(0, 10); // "YYYY-MM-DD"
+            const weekStr = String(alloc.week).slice(0, 10);
             sprintId = sprintStartToId.get(weekStr) || '';
           }
 
@@ -127,25 +213,24 @@ export const useDataLoader = () => {
           };
         });
 
-        // Optional: derive project ranges from allocations (kept disabled as in your file)
-        let finalProjects = mappedProjects;
-
-        // if (mappedAllocations.length && finalProjects.length) {
-        //   finalProjects = calculateProjectDateRanges(finalProjects, mappedAllocations, sprints);
-        // }
-
-        finalProjects.sort((a, b) => a.name.localeCompare(b.name));
+        // Sort projects alphabetically
+        mappedProjects.sort((a, b) => a.name.localeCompare(b.name));
 
         if (!isCancelled) {
           setEmployees(mappedEmployees);
-          setProjects(finalProjects);
+          setProjects(mappedProjects);
           setAllocations(mappedAllocations);
         }
 
         console.log('Loaded from Supabase:', {
           employees: mappedEmployees,
-          projects: finalProjects,
-          allocations: mappedAllocations,
+          projects: mappedProjects,
+          allocationsCount: mappedAllocations.length,
+          window: {
+            start: windowStartStr,
+            end: windowEndStr,
+            sprintCount: windowSprints.length,
+          },
         });
       } catch (error) {
         console.error('Error loading data from Supabase:', error);
