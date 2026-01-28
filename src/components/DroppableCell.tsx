@@ -64,8 +64,13 @@ const QuickAllocateDialog: React.FC<{
   const safeProjects: QuickProject[] = useMemo(() => {
     const list = Array.isArray(projects) ? projects : [];
     return list
-      .filter((p) => p && p.id && p.name && !p.archived) // ignore archived projects here
-      .map((p) => ({ id: p.id, name: p.name, color: (p as any).color, archived: (p as any).archived }));
+      .filter((p) => p && (p as any).id && (p as any).name && !(p as any).archived)
+      .map((p) => ({
+        id: (p as any).id,
+        name: (p as any).name,
+        color: (p as any).color,
+        archived: (p as any).archived,
+      }));
   }, [projects]);
 
   const filteredProjects = useMemo(() => {
@@ -79,17 +84,17 @@ const QuickAllocateDialog: React.FC<{
   const canSave = !disabled && !!selectedProject && days > 0 && Number.isFinite(days);
 
   const onSave = async () => {
-    if (!selectedProject) return;
-    if (!canSave) return;
+    if (!selectedProject || !canSave) return;
 
     setSaving(true);
     try {
+      // DragItem requires type + id (per your TS error).
+      // We generate a synthetic id and DO NOT set sourceSprintId so moveAllocation won't delete anything.
       const dragItem: DragItem = {
-        type: 'PROJECT',
-        projectId: selectedProject.id,
-        name: selectedProject.name,
-        color: selectedProject.color,
+        type: 'ALLOCATION',
+        id: `quick-${employeeId}-${sprintId}-${selectedProject.id}-${Date.now()}`,
         employeeId,
+        projectId: selectedProject.id,
         days,
       };
 
@@ -112,7 +117,6 @@ const QuickAllocateDialog: React.FC<{
         </DialogHeader>
 
         <div className="space-y-3">
-          {/* Project picker */}
           <div className="space-y-2">
             <div className="text-sm font-medium">Project</div>
             <Command className="border rounded-md">
@@ -147,7 +151,6 @@ const QuickAllocateDialog: React.FC<{
             )}
           </div>
 
-          {/* Days input */}
           <div className="space-y-2">
             <div className="text-sm font-medium">Days</div>
             <Input
@@ -193,7 +196,6 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
 
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-
   const [quickOpen, setQuickOpen] = useState(false);
 
   const employee = getEmployeeById(employeeId);
@@ -207,17 +209,37 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
   const isOverallocated = totalDays > availableDays;
   const isEmployeeArchived = employee?.archived || false;
 
-  // Suggest a default: remaining capacity (at least 1)
   const suggestedDays = useMemo(() => {
     const remaining = Math.max(availableDays - totalDays, 0);
     return Math.max(1, remaining || 1);
   }, [availableDays, totalDays]);
 
+  const handleDrop = async (item: DragItem) => {
+    if (isEmployeeArchived) return;
+
+    setIsProcessing(true);
+    try {
+      const allocationDays = item.days ?? 10;
+
+      const dragItemWithEmployee: DragItem = {
+        ...item,
+        employeeId,
+        days: allocationDays,
+        // keep item.id and item.type intact
+      };
+
+      await moveAllocation(dragItemWithEmployee, sprintId);
+    } catch (error) {
+      console.error('Drop failed:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const [{ isOverCurrent }, drop] = useDrop({
     accept: 'ALLOCATION',
-    canDrop: () => !isEmployeeArchived, // Prevent drops on archived employees
+    canDrop: () => !isEmployeeArchived,
     drop: (item: DragItem) => {
-      if (isEmployeeArchived) return;
       handleDrop(item);
       return { sprintId };
     },
@@ -229,35 +251,16 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
     }),
   });
 
-  const handleDrop = async (item: DragItem) => {
-    setIsProcessing(true);
-    try {
-      const allocationDays = item.days ?? 10;
-
-      const dragItemWithEmployee: DragItem = {
-        ...item,
-        employeeId,
-        days: allocationDays,
-      };
-
-      await moveAllocation(dragItemWithEmployee, sprintId);
-    } catch (error) {
-      console.error('Drop failed:', error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   useEffect(() => {
     if (!isOverCurrent) setIsOver(false);
   }, [isOverCurrent]);
 
-  // Utility to count how many vacation dates fall within this sprint
-  function countVacationDaysInSprint(vacationDates: string[], sprint: Sprint): number {
-    if (!Array.isArray(vacationDates) || !sprint.workingDays) return 0;
-
-    const sprintDays = new Set(sprint.workingDays.map((d) => new Date(d).toDateString()));
-    return vacationDates.filter((dateStr) => sprintDays.has(new Date(dateStr).toDateString())).length;
+  function countVacationDaysInSprint(vacationDates: string[], sprintArg: Sprint): number {
+    if (!Array.isArray(vacationDates) || !sprintArg.workingDays) return 0;
+    const sprintDays = new Set(sprintArg.workingDays.map((d) => new Date(d).toDateString()));
+    return vacationDates.filter((dateStr) =>
+      sprintDays.has(new Date(dateStr).toDateString())
+    ).length;
   }
 
   return (
@@ -272,14 +275,12 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
           isEmployeeArchived ? 'cursor-not-allowed opacity-50' : '',
         ].join(' ')}
       >
-        {/* Header row: allocation summary + quick add */}
         <div className="mb-1 flex justify-between items-center gap-2">
           <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>
             {totalDays}/{availableDays} days
           </span>
 
           <div className="flex items-center gap-1">
-            {/* Quick add button */}
             <Button
               variant="ghost"
               size="sm"
@@ -299,7 +300,6 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
           </div>
         </div>
 
-        {/* Vacation display just for this sprint */}
         {employee && sprint && employee.vacationDates && (() => {
           const vacationCount = countVacationDaysInSprint(employee.vacationDates, sprint);
           return vacationCount > 0 ? (
@@ -309,7 +309,6 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
           ) : null;
         })()}
 
-        {/* Existing allocations */}
         {cellAllocations.map((allocation) => (
           <AllocationItem
             key={allocation.id}
@@ -322,7 +321,6 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
         ))}
       </div>
 
-      {/* Quick allocate dialog */}
       <QuickAllocateDialog
         open={quickOpen}
         onOpenChange={setQuickOpen}
