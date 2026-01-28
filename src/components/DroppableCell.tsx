@@ -194,6 +194,8 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
     getEmployeeById,
   } = usePlanner();
 
+console.log('alloc sample', allocations?.[0]);
+
   const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
