@@ -11,9 +11,21 @@ import MultiRoleSelector from './MultiRoleSelector';
 
 // ✅ Helper to generate Jira ticket URL
 const generateLink = (ticketRef: string) => {
-  if (!ticketRef.trim()) return null;
+  if (!ticketRef?.trim()) return null;
   const projectKey = ticketRef.split('-')[0];
   return `https://proglove.atlassian.net/jira/polaris/projects/${projectKey}/ideas/view/3252935?selectedIssue=${ticketRef.trim()}`;
+};
+
+const toDate = (d: any): Date | null => {
+  if (!d) return null;
+  if (d instanceof Date) return Number.isNaN(d.getTime()) ? null : d;
+  const parsed = new Date(d);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatShortDate = (d: Date | null) => {
+  if (!d) return null;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
 const ProjectGanttView = () => {
@@ -30,8 +42,7 @@ const ProjectGanttView = () => {
   // ✅ new: hovered row inspector (compact only)
   const [hoveredProjectId, setHoveredProjectId] = useState<string | null>(null);
 
-  // Handle case where projects array is empty
-  if (!projects.length) {
+  if (!projects?.length) {
     return (
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b">
@@ -45,22 +56,15 @@ const ProjectGanttView = () => {
     );
   }
 
-  // Ensure arrays are safe with comprehensive checks
   const safeEmployees = useMemo(() => {
-    if (!employees || !Array.isArray(employees)) {
-      console.warn('ProjectGanttView: employees is not a valid array', { employees });
-      return [];
-    }
-    // keep only plausible employee objects
+    if (!employees || !Array.isArray(employees)) return [];
     return employees.filter((emp) => emp && typeof emp === 'object');
   }, [employees]);
 
   const safeSelectedRoles = useMemo(() => {
-    if (!selectedRoles || !Array.isArray(selectedRoles)) {
-      console.warn('ProjectGanttView: selectedRoles is not a valid array', { selectedRoles });
-      return [];
-    }
-    return selectedRoles.filter((role) => role && typeof role === 'string');
+    return Array.isArray(selectedRoles)
+      ? selectedRoles.filter((role) => role && typeof role === 'string')
+      : [];
   }, [selectedRoles]);
 
   // Get unique roles from employees
@@ -69,34 +73,23 @@ const ProjectGanttView = () => {
       const validRoles = Array.isArray(safeEmployees)
         ? safeEmployees.map((emp: any) => emp?.role).filter((role) => typeof role === 'string')
         : [];
-
-      const roleSet = new Set(validRoles);
-
-      if (roleSet && typeof roleSet[Symbol.iterator] === 'function') {
-        return Array.from(roleSet).sort();
-      } else {
-        console.warn('ProjectGanttView: roleSet is not iterable', roleSet);
-        return [];
-      }
-    } catch (error) {
-      console.error('ProjectGanttView: Error computing uniqueRoles', error);
+      return Array.from(new Set(validRoles)).sort();
+    } catch {
       return [];
     }
   }, [safeEmployees]);
 
-  // Filter projects based on selected roles and project
+  // Filter projects
   const filteredProjects = useMemo(() => {
     if (!Array.isArray(projects)) return [];
 
     let base = projects;
 
-    // Filter archived projects
     if (!showArchived) {
       base = base.filter((project) => !project.archived);
     }
 
-    // ✅ Filter by role
-    if (Array.isArray(safeSelectedRoles) && safeSelectedRoles.length > 0) {
+    if (safeSelectedRoles.length > 0) {
       base = base.filter((project) => {
         const allocations = getProjectAllocations(project?.id) || [];
         return allocations.some((alloc: any) => {
@@ -106,21 +99,18 @@ const ProjectGanttView = () => {
       });
     }
 
-    // ✅ Filter by search term
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       base = base.filter((project) => project?.name?.toLowerCase().includes(q));
     }
 
     return base;
-  }, [projects, safeSelectedRoles, safeEmployees, getProjectAllocations, searchTerm, showArchived]);
+  }, [projects, showArchived, safeSelectedRoles, safeEmployees, getProjectAllocations, searchTerm]);
 
-  // Rolling 12-month view: current month to 11 months forward
+  // Rolling 12-month view
   const currentDate = new Date();
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(addMonths(currentDate, 11));
-
-  // Generate an array of months for the header
   const months = eachMonthOfInterval({ start: startDate, end: endDate });
 
   const toggleExpandProject = (projectId: string) => {
@@ -130,7 +120,6 @@ const ProjectGanttView = () => {
     setExpandedProjects(newExpanded);
   };
 
-  // ✅ give project names more room; reduce month width a bit
   const leftColClass = compact ? 'w-[360px]' : 'w-[420px]';
   const monthColMinW = compact ? 'min-w-[70px]' : 'min-w-[90px]';
 
@@ -144,14 +133,26 @@ const ProjectGanttView = () => {
     if (!hoveredProject) return null;
 
     const allocations = getProjectAllocations(hoveredProject.id) || [];
-    const totalAllocation = allocations.reduce((sum: number, alloc: any) => sum + (alloc?.days || 0), 0);
+    const totalAllocation = allocations.reduce(
+      (sum: number, alloc: any) => sum + (alloc?.days || 0),
+      0
+    );
 
-    const lead =
-      hoveredProject.leadId ? (safeEmployees.find((e: any) => e?.id === hoveredProject.leadId) as any) : null;
+    const leadId = (hoveredProject as any)?.leadId ?? (hoveredProject as any)?.lead_id ?? null;
+    const lead = leadId ? safeEmployees.find((e: any) => e?.id === leadId) : null;
 
     const jiraUrl = hoveredProject.ticketReference ? generateLink(hoveredProject.ticketReference) : null;
 
-    return { totalAllocation, leadName: lead?.name || null, jiraUrl };
+    const start = toDate((hoveredProject as any)?.startDate ?? (hoveredProject as any)?.start_date ?? null);
+    const end = toDate((hoveredProject as any)?.endDate ?? (hoveredProject as any)?.end_date ?? null);
+
+    return {
+      totalAllocation,
+      leadName: (lead as any)?.name || null,
+      jiraUrl,
+      start,
+      end,
+    };
   }, [hoveredProject, getProjectAllocations, safeEmployees]);
 
   return (
@@ -239,7 +240,7 @@ const ProjectGanttView = () => {
             </div>
           </div>
 
-          {/* ✅ Compact hover inspector (no vertical whitespace inside rows) */}
+          {/* ✅ Compact hover inspector (this REPLACES any hover tooltip UI) */}
           {compact && (
             <div className="sticky top-[33px] z-20 bg-white border-b">
               <div className="flex">
@@ -247,8 +248,18 @@ const ProjectGanttView = () => {
                   {hoveredProject && hoveredMeta ? (
                     <div className="truncate">
                       <span className="font-medium text-foreground">{hoveredProject.name}</span>
+
                       <span className="ml-2">{hoveredMeta.totalAllocation}d</span>
+
                       {hoveredMeta.leadName && <span className="ml-2">Lead: {hoveredMeta.leadName}</span>}
+
+                      {(hoveredMeta.start || hoveredMeta.end) && (
+                        <span className="ml-2">
+                          {formatShortDate(hoveredMeta.start) ?? 'No start'} →{' '}
+                          {formatShortDate(hoveredMeta.end) ?? 'No end'}
+                        </span>
+                      )}
+
                       {hoveredProject.ticketReference && hoveredMeta.jiraUrl && (
                         <>
                           <span className="ml-2">·</span>
@@ -262,6 +273,7 @@ const ProjectGanttView = () => {
                           </a>
                         </>
                       )}
+
                       {hoveredProject.archived && (
                         <span className="ml-2 inline-flex align-middle">
                           <Badge variant="secondary" className="text-[10px] px-1 py-0">
@@ -296,16 +308,13 @@ const ProjectGanttView = () => {
                 compact={compact}
                 leftColClass={leftColClass}
                 monthColMinW={monthColMinW}
+                // ✅ in compact, we keep this to drive the inspector (NOT a tooltip)
                 onHoverChange={(isHovering) => setHoveredProjectId(isHovering ? project.id : null)}
               />
 
               {expandedProjects.has(project.id) && (
-  <ProjectMonthDetails
-    project={project}
-    month={months[0]} // kept only for prop compatibility
-  />
-)}
-
+                <ProjectMonthDetails project={project} month={months[0]} />
+              )}
             </div>
           ))}
         </div>
@@ -336,19 +345,25 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
   onHoverChange,
 }) => {
   const { getProjectAllocations, getEmployeeById } = usePlanner();
-  const allocations = getProjectAllocations(project.id);
-  const totalAllocation = allocations.reduce((sum, alloc) => sum + alloc.days, 0);
+  const allocations = getProjectAllocations(project.id) || [];
+  const totalAllocation = allocations.reduce((sum, alloc: any) => sum + (alloc?.days || 0), 0);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // Check if project is active in a given month
+  const projectStart = toDate((project as any)?.startDate ?? (project as any)?.start_date ?? null);
+  const projectEnd = toDate((project as any)?.endDate ?? (project as any)?.end_date ?? null);
+
   const isActiveInMonth = (month: Date) => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
-    return project.startDate <= monthEnd && project.endDate >= monthStart;
+
+    // If dates are missing, don’t paint anything
+    if (!projectStart || !projectEnd) return false;
+
+    return projectStart <= monthEnd && projectEnd >= monthStart;
   };
 
-  // Get project lead name
-  const projectLead = project.leadId ? getEmployeeById(project.leadId) : null;
+  const projectLeadId = (project as any)?.leadId ?? (project as any)?.lead_id ?? null;
+  const projectLead = projectLeadId ? getEmployeeById(projectLeadId) : null;
   const jiraUrl = project.ticketReference ? generateLink(project.ticketReference) : null;
 
   return (
@@ -358,6 +373,7 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
           'flex border-b hover:bg-gray-50',
           project.archived ? 'bg-gray-100 opacity-60' : '',
         ].join(' ')}
+        // ✅ Hover drives the inspector. Tooltip code should not exist elsewhere.
         onMouseEnter={() => onHoverChange?.(true)}
         onMouseLeave={() => onHoverChange?.(false)}
       >
@@ -372,7 +388,6 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
         >
           <div className="flex justify-between items-start gap-2">
             <div className="min-w-0">
-              {/* More space + allow bulky names to wrap a bit when not compact */}
               <div className={compact ? 'text-sm font-medium leading-tight truncate' : 'font-medium leading-tight'}>
                 {project.name}
               </div>
@@ -386,7 +401,7 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                 </Badge>
               )}
 
-              {/* Non-compact keeps meta visible (compact uses the sticky inspector instead) */}
+              {/* Non-compact keeps meta visible */}
               {!compact && (
                 <div className="text-xs text-gray-500 mt-1 leading-tight">
                   <span className="font-medium">{totalAllocation}d</span> allocated
@@ -394,7 +409,12 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
                   {project.ticketReference && jiraUrl && (
                     <>
                       <span> · </span>
-                      <a href={jiraUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      <a
+                        href={jiraUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
                         {project.ticketReference}
                       </a>
                     </>
@@ -438,7 +458,6 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
 
             return (
               <div key={index} className={['flex-1 border-r relative', monthColMinW].join(' ')}>
-                {/* Active = background highlight only */}
                 {isActive && (
                   <div
                     className="h-full w-full"
@@ -451,7 +470,6 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
         </div>
       </div>
 
-      {/* Project edit dialog */}
       <ProjectEditDialog project={project} isOpen={isEditDialogOpen} onClose={() => setIsEditDialogOpen(false)} />
     </>
   );
