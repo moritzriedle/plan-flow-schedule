@@ -213,7 +213,7 @@ const QuickAllocateDialog: React.FC<{
               min={1}
               step={1}
               value={Number.isFinite(days) ? days : 1}
-              onChange={(e) => setDays(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+              on taxChange={(e) => setDays(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
             />
             <div className="text-xs text-muted-foreground">
               Whole days only. Fractional reality is not supported by this timeline.
@@ -304,6 +304,19 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
   const availableDays = getAvailableDays(employeeId, sprint);
   const isOverallocated = totalDays > availableDays;
 
+  const percent = useMemo(() => {
+    if (!availableDays || availableDays <= 0) return 0;
+    return Math.round((totalDays / availableDays) * 100);
+  }, [totalDays, availableDays]);
+
+  const fillPct = Math.min(100, Math.max(0, availableDays > 0 ? (totalDays / availableDays) * 100 : 0));
+
+  const barClass = isOverallocated
+    ? 'bg-red-500'
+    : totalDays === 0
+    ? 'bg-gray-300'
+    : 'bg-green-600';
+
   const suggestedDays = useMemo(() => {
     const remaining = Math.max(availableDays - totalDays, 0);
     return Math.max(1, remaining || 1);
@@ -365,10 +378,25 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
           isEmployeeArchived ? 'cursor-not-allowed opacity-50' : '',
         ].join(' ')}
       >
-        <div className="mb-1 flex justify-between items-center gap-2">
-          <span className={`text-xs font-medium ${isOverallocated ? 'text-red-500' : 'text-gray-500'}`}>
-            {totalDays}/{availableDays} days
-          </span>
+        {/* Header: progress instead of plain text */}
+        <div className="mb-1 flex justify-between items-start gap-2">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className={`text-[11px] font-medium ${isOverallocated ? 'text-red-600' : 'text-gray-600'}`}>
+                {totalDays}/{availableDays}d
+              </span>
+              <span className={`text-[11px] ${isOverallocated ? 'text-red-600' : 'text-gray-500'}`}>
+                {percent}%
+              </span>
+            </div>
+
+            <div className="h-2 w-full rounded bg-gray-200 overflow-hidden">
+              <div
+                className={['h-full rounded', barClass].join(' ')}
+                style={{ width: `${fillPct}%` }}
+              />
+            </div>
+          </div>
 
           <div className="flex items-center gap-1">
             <Button
