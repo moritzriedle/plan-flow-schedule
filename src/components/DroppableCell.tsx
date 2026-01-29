@@ -378,7 +378,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
           isEmployeeArchived ? 'cursor-not-allowed opacity-50' : '',
         ].join(' ')}
       >
-        {/* Header: compact bar with numbers inside */}
+        {/* Header: slim progress bar + % */}
 <div className="mb-1 flex justify-between items-center gap-2">
   <div className="flex-1 min-w-0">
     {(() => {
@@ -386,9 +386,11 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
       const used = Math.max(totalDays || 0, 0);
 
       const ratio = cap > 0 ? used / cap : 0;
+      const pct = cap > 0 ? Math.round(ratio * 100) : 0;
       const fillPct = Math.min(100, Math.max(0, cap > 0 ? ratio * 100 : 0));
 
-      const isLow = cap > 0 ? ratio < 0.3 : used === 0; // <30% is "too little"
+      // color logic
+      const isLow = cap > 0 ? ratio < 0.3 : used === 0; // <30% = low allocation
       const isNearFull = cap > 0 ? ratio >= 0.9 && ratio <= 1 : false;
 
       const barClass = isOverallocated
@@ -402,28 +404,18 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
       const trackClass = isOverallocated ? 'bg-red-100' : 'bg-gray-200';
 
       return (
-        <div className="relative h-6 w-full rounded overflow-hidden">
-          {/* Track */}
-          <div className={`absolute inset-0 ${trackClass}`} />
-
-          {/* Fill */}
-          <div
-            className={`absolute inset-y-0 left-0 ${barClass}`}
-            style={{ width: `${fillPct}%` }}
-          />
-
-          {/* Text inside bar */}
-          <div className="absolute inset-0 flex items-center justify-center px-2">
-            <span className="text-[11px] font-medium text-gray-900">
-              {used}/{cap}d
-              {cap > 0 ? (
-                <span className="text-gray-700"> · {Math.round(ratio * 100)}%</span>
-              ) : null}
-              {isLow && used > 0 && !isOverallocated ? (
-                <span className="text-gray-700"> · low</span>
-              ) : null}
-            </span>
+        <div className="flex items-center gap-2">
+          <div className="relative h-1.5 flex-1 rounded-full overflow-hidden">
+            <div className={`absolute inset-0 ${trackClass}`} />
+            <div
+              className={`absolute inset-y-0 left-0 ${barClass}`}
+              style={{ width: `${fillPct}%` }}
+            />
           </div>
+
+          <span className={`text-[11px] font-medium tabular-nums ${isOverallocated ? 'text-red-600' : 'text-gray-600'}`}>
+            {pct}%
+          </span>
         </div>
       );
     })()}
@@ -448,6 +440,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
     {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
   </div>
 </div>
+
 
 
         {vacationCount > 0 ? (
