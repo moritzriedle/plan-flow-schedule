@@ -10,7 +10,14 @@ import ProjectAlignmentCard from './ProjectAlignmentCard';
 import { Employee } from '../../types';
 
 const AlignmentHubView: React.FC = () => {
-  const { employees = [], projects = [], allocations = [], loading } = usePlanner();
+  const {
+    employees = [],
+    projects = [],
+    allocations = [],
+    loading,
+    getAvailableDays,
+  } = usePlanner();
+
   const { sprints } = useTimeframeSprints();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -25,13 +32,17 @@ const AlignmentHubView: React.FC = () => {
     return safeSprints.slice(activeIndex, activeIndex + 3);
   }, [sprints]);
 
+  // Highlight the upcoming sprint (middle column)
+  const highlightedSprintId = useMemo(() => {
+    return relevantSprints?.[1]?.id ?? null;
+  }, [relevantSprints]);
+
   // ✅ Sort by color (blue last), then by name
   const colorRank = (color?: string) => {
     if (!color) return 50;
     const c = color.toLowerCase();
     if (c === 'blue') return 999;
 
-    // Customize this order to match your design system
     const order = ['red', 'orange', 'yellow', 'green', 'teal', 'purple', 'pink', 'gray'];
     const idx = order.indexOf(c);
     return idx === -1 ? 50 : idx;
@@ -84,24 +95,32 @@ const AlignmentHubView: React.FC = () => {
     return overallocated;
   }, [employees, allocations, relevantSprints]);
 
-  // ✅ Unallocated employees PER sprint (show all names)
+  // ✅ Unallocated employees PER sprint (exclude full-sprint vacation / 0 available days)
   const unallocatedBySprint = useMemo(() => {
-    const safeEmployees = Array.isArray(employees) ? employees : [];
-    const activeEmployees = safeEmployees.filter((e) => e && !e.archived);
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const activeEmployees = safeEmployees.filter((e) => e && !e.archived);
 
-    return relevantSprints.map((sprint) => {
-      const unallocated = activeEmployees.filter((employee) => {
-        const hasAllocations = allocations.some(
-          (a) => a.employeeId === employee.id && a.sprintId === sprint.id
-        );
-        return !hasAllocations;
-      });
+  return relevantSprints.map((sprint) => {
+    const unallocated = activeEmployees.filter((employee) => {
+      const hasAllocations = allocations.some(
+        (a) => a.employeeId === employee.id && a.sprintId === sprint.id
+      );
 
-      unallocated.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      // ✅ getAvailableDays expects a Sprint (not a string id)
+      const availableDays =
+        typeof getAvailableDays === 'function'
+          ? getAvailableDays(employee.id, sprint)
+          : 10;
 
-      return { sprint, employees: unallocated };
+      return !hasAllocations && availableDays > 0;
     });
-  }, [employees, allocations, relevantSprints]);
+
+    unallocated.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    return { sprint, employees: unallocated };
+  });
+}, [employees, allocations, relevantSprints, getAvailableDays]);
+
 
   if (loading) {
     return (
@@ -177,10 +196,18 @@ const AlignmentHubView: React.FC = () => {
                   ].join(' ')}
                 >
                   <UserMinus
-                    className={['w-5 h-5 mt-0.5', isCurrent ? 'text-amber-600' : 'text-muted-foreground'].join(' ')}
+                    className={[
+                      'w-5 h-5 mt-0.5',
+                      isCurrent ? 'text-amber-600' : 'text-muted-foreground',
+                    ].join(' ')}
                   />
                   <div className="min-w-0">
-                    <p className={['font-medium', isCurrent ? 'text-amber-700' : 'text-foreground'].join(' ')}>
+                    <p
+                      className={[
+                        'font-medium',
+                        isCurrent ? 'text-amber-700' : 'text-foreground',
+                      ].join(' ')}
+                    >
                       {unalloc.length} unallocated in {sprint.name}
                       {isCurrent ? ' (current)' : ''}
                     </p>
@@ -202,37 +229,62 @@ const AlignmentHubView: React.FC = () => {
             })}
         </div>
 
-        {/* Sprint Headers (sticky: sprint name + dates together) */}
-<div className="sticky top-[72px] z-20 bg-background border-b">
-  {/* top offset: adjust if your page header height differs */}
-  <div className="max-w-7xl mx-auto px-4 py-3">
-    <div className="grid grid-cols-[300px_1fr] gap-4">
-      <div className="font-medium text-muted-foreground">Project</div>
+        {/* Sprint Headers */}
+        <div className="sticky top-[72px] z-20 bg-background border-b">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="grid grid-cols-[300px_1fr] gap-4">
+              <div className="font-medium text-muted-foreground">Project</div>
 
-      <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: `repeat(${relevantSprints.length}, 1fr)` }}
-      >
-        {relevantSprints.map((sprint, index) => (
-          <div
-            key={sprint.id}
-            className="text-center bg-background"
-          >
-            <div className={`font-medium ${index === 0 ? 'text-primary' : 'text-foreground'}`}>
-              {sprint.name}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              {' - '}
-              {new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              <div
+                className="grid gap-4"
+                style={{ gridTemplateColumns: `repeat(${relevantSprints.length}, 1fr)` }}
+              >
+                {relevantSprints.map((sprint, index) => {
+                  const isCurrent = index === 0;
+                  const isUpcoming = sprint.id === highlightedSprintId;
+
+                  return (
+                    <div
+                      key={sprint.id}
+                      className={[
+                        'text-center bg-background rounded-md px-2 py-2',
+                        isUpcoming ? 'ring-2 ring-primary/40 bg-primary/5' : '',
+                      ].join(' ')}
+                    >
+                      <div
+                        className={[
+                          'font-medium',
+                          isCurrent ? 'text-primary' : 'text-foreground',
+                          isUpcoming ? 'text-primary' : '',
+                        ].join(' ')}
+                      >
+                        {sprint.name}
+                        {isUpcoming ? ' (upcoming)' : ''}
+                      </div>
+
+                      <div
+                        className={[
+                          'text-sm',
+                          isUpcoming ? 'text-foreground' : 'text-muted-foreground',
+                        ].join(' ')}
+                      >
+                        {new Date(sprint.startDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                        {' - '}
+                        {new Date(sprint.endDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</div>
-
+        </div>
 
         {/* Project Cards */}
         <div className="space-y-4 mt-4">
@@ -244,6 +296,7 @@ const AlignmentHubView: React.FC = () => {
               allocations={allocations}
               employees={employees}
               overallocatedEmployees={overallocatedEmployees}
+              highlightSprintId={highlightedSprintId}
             />
           ))}
 
