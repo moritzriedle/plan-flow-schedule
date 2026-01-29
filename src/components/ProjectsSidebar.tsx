@@ -7,14 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search } from 'lucide-react';
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from '@/components/ui/command';
 
 interface DraggableProjectItemProps {
   project: Project;
@@ -88,8 +80,6 @@ const ProjectsSidebar: React.FC = () => {
   const { projects = [], employees = [] } = usePlanner();
 
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [employeeSearch, setEmployeeSearch] = useState<string>('');
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(''); // informational only
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
   const filteredAndSortedProjects = useMemo(() => {
@@ -111,19 +101,6 @@ const ProjectsSidebar: React.FC = () => {
       return [];
     }
   }, [projects, searchTerm, showArchived]);
-
-  const filteredEmployees = useMemo(() => {
-    if (!employeeSearch.trim()) return [];
-    const q = employeeSearch.toLowerCase();
-    return (employees || []).filter(
-      (emp: Employee) => emp.name.toLowerCase().includes(q) || emp.role.toLowerCase().includes(q)
-    );
-  }, [employees, employeeSearch]);
-
-  const selectedEmployee = useMemo(
-    () => employees.find((e: Employee) => e.id === selectedEmployeeId) || null,
-    [employees, selectedEmployeeId]
-  );
 
   return (
     <div className="space-y-2">
@@ -154,46 +131,6 @@ const ProjectsSidebar: React.FC = () => {
         <Label htmlFor="showArchived" className="cursor-pointer text-sm">
           Show archived projects
         </Label>
-      </div>
-
-      {/* Optional employee selection (context only) */}
-      <div className="mb-2">
-        <label className="text-sm font-medium mb-2 block">Selected Team Member (optional)</label>
-        <Command className="border rounded-md">
-          <CommandInput
-            placeholder="Type to search team member..."
-            value={employeeSearch}
-            onValueChange={setEmployeeSearch}
-          />
-          <CommandList>
-            {employeeSearch.trim() ? (
-              <>
-                <CommandEmpty>No team member found.</CommandEmpty>
-                <CommandGroup>
-                  {filteredEmployees.map((employee: Employee) => (
-                    <CommandItem
-                      key={employee.id}
-                      value={employee.name}
-                      onSelect={() => {
-                        setSelectedEmployeeId(employee.id);
-                        setEmployeeSearch(employee.name);
-                      }}
-                    >
-                      {employee.name}{' '}
-                      <span className="text-xs text-gray-500 ml-1">({employee.role})</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
-            ) : null}
-          </CommandList>
-        </Command>
-
-        {selectedEmployee && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            Selected: <span className="font-medium text-foreground">{selectedEmployee.name}</span>
-          </div>
-        )}
       </div>
 
       {/* Projects List */}
