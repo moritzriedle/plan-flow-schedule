@@ -18,6 +18,9 @@ interface ProjectEditDialogProps {
   onClose: () => void;
 }
 
+const POPOVER_CONTENT_CLASS =
+  'w-[320px] p-2 max-h-[calc(100vh-120px)] overflow-y-auto';
+
 const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, onClose }) => {
   const { updateProject, getProjectById, employees } = usePlanner();
 
@@ -31,7 +34,6 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
-  // Sync state whenever project or dialog open state changes
   useEffect(() => {
     if (!project) return;
 
@@ -60,7 +62,6 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
 
     await updateProject(updatedProject);
 
-    // Refresh from store/db if getProjectById is async (yours might not be, but this is safe)
     try {
       const refreshedProject = await getProjectById(project.id);
       if (refreshedProject) {
@@ -89,7 +90,12 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="project-name">Project Name</Label>
-            <Input id="project-name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input
+              id="project-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -102,7 +108,10 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
                 {colorOptions.map((colorOption) => (
                   <SelectItem key={colorOption} value={colorOption}>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: `var(--project-${colorOption})` }} />
+                      <div
+                        className="w-4 h-4 rounded mr-2"
+                        style={{ backgroundColor: `var(--project-${colorOption})` }}
+                      />
                       <span className="capitalize">{colorOption}</span>
                     </div>
                   </SelectItem>
@@ -130,7 +139,11 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
 
           <div className="space-y-2">
             <Label htmlFor="ticketReference">Ticket Reference</Label>
-            <TicketReferenceInput value={ticketReference} onChange={setTicketReference} placeholder="e.g., PPT-82" />
+            <TicketReferenceInput
+              value={ticketReference}
+              onChange={setTicketReference}
+              placeholder="e.g., PPT-82"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -146,20 +159,19 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
                 </PopoverTrigger>
 
                 <PopoverContent
-  className="w-[320px] p-2 max-h-[calc(100vh-120px)] overflow-y-auto"
-  align="start"
-  side="bottom"
-  sideOffset={8}
-  avoidCollisions={false}
->
-  <Calendar
-    mode="single"
-    selected={endDate ?? undefined}
-    onSelect={(date) => date && setEndDate(date)}
-    initialFocus
-  />
-</PopoverContent>
-
+                  className={POPOVER_CONTENT_CLASS}
+                  align="start"
+                  side="bottom"
+                  sideOffset={8}
+                  avoidCollisions={false}
+                >
+                  <Calendar
+                    mode="single"
+                    selected={startDate ?? undefined}
+                    onSelect={(date) => date && setStartDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
               </Popover>
             </div>
 
@@ -175,7 +187,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
                 </PopoverTrigger>
 
                 <PopoverContent
-                  className="w-[320px] p-2"
+                  className={POPOVER_CONTENT_CLASS}
                   align="start"
                   side="bottom"
                   sideOffset={8}
