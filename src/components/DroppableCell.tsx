@@ -378,45 +378,77 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
           isEmployeeArchived ? 'cursor-not-allowed opacity-50' : '',
         ].join(' ')}
       >
-        {/* Header: progress instead of plain text */}
-        <div className="mb-1 flex justify-between items-start gap-2">
-          <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-medium ${isOverallocated ? 'text-red-600' : 'text-gray-600'}`}>
-                {totalDays}/{availableDays}d
-              </span>
-              <span className={`text-[11px] ${isOverallocated ? 'text-red-600' : 'text-gray-500'}`}>
-                {percent}%
-              </span>
-            </div>
+        {/* Header: compact bar with numbers inside */}
+<div className="mb-1 flex justify-between items-center gap-2">
+  <div className="flex-1 min-w-0">
+    {(() => {
+      const cap = Math.max(availableDays || 0, 0);
+      const used = Math.max(totalDays || 0, 0);
 
-            <div className="h-2 w-full rounded bg-gray-200 overflow-hidden">
-              <div
-                className={['h-full rounded', barClass].join(' ')}
-                style={{ width: `${fillPct}%` }}
-              />
-            </div>
-          </div>
+      const ratio = cap > 0 ? used / cap : 0;
+      const fillPct = Math.min(100, Math.max(0, cap > 0 ? ratio * 100 : 0));
 
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              disabled={isEmployeeArchived}
-              title={isEmployeeArchived ? 'Archived employee' : 'Allocate to a project'}
-              onClick={(e) => {
-                e.stopPropagation();
-                setQuickOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+      const isLow = cap > 0 ? ratio < 0.3 : used === 0; // <30% is "too little"
+      const isNearFull = cap > 0 ? ratio >= 0.9 && ratio <= 1 : false;
 
-            {isOverallocated && <span className="text-xs text-red-500 font-bold">!</span>}
-            {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+      const barClass = isOverallocated
+        ? 'bg-red-500'
+        : isLow
+        ? 'bg-gray-400'
+        : isNearFull
+        ? 'bg-amber-500'
+        : 'bg-blue-600';
+
+      const trackClass = isOverallocated ? 'bg-red-100' : 'bg-gray-200';
+
+      return (
+        <div className="relative h-6 w-full rounded overflow-hidden">
+          {/* Track */}
+          <div className={`absolute inset-0 ${trackClass}`} />
+
+          {/* Fill */}
+          <div
+            className={`absolute inset-y-0 left-0 ${barClass}`}
+            style={{ width: `${fillPct}%` }}
+          />
+
+          {/* Text inside bar */}
+          <div className="absolute inset-0 flex items-center justify-center px-2">
+            <span className="text-[11px] font-medium text-gray-900">
+              {used}/{cap}d
+              {cap > 0 ? (
+                <span className="text-gray-700"> · {Math.round(ratio * 100)}%</span>
+              ) : null}
+              {isLow && used > 0 && !isOverallocated ? (
+                <span className="text-gray-700"> · low</span>
+              ) : null}
+            </span>
           </div>
         </div>
+      );
+    })()}
+  </div>
+
+  <div className="flex items-center gap-1">
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-6 w-6 p-0"
+      disabled={isEmployeeArchived}
+      title={isEmployeeArchived ? 'Archived employee' : 'Allocate to a project'}
+      onClick={(e) => {
+        e.stopPropagation();
+        setQuickOpen(true);
+      }}
+    >
+      <Plus className="h-4 w-4" />
+    </Button>
+
+    {isOverallocated && <span className="text-xs text-red-500 font-bold">!</span>}
+    {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+  </div>
+</div>
+
 
         {vacationCount > 0 ? (
           <div className="text-[11px] text-amber-700 mb-1">
