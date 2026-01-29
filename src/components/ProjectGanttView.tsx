@@ -23,11 +23,6 @@ const toDate = (d: any): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const formatShortDate = (d: Date | null) => {
-  if (!d) return null;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
 const ProjectGanttView = () => {
   const { projects, employees, getProjectAllocations } = usePlanner();
 
@@ -38,9 +33,6 @@ const ProjectGanttView = () => {
 
   // ✅ compact mode (default on)
   const [compact, setCompact] = useState<boolean>(true);
-
-  // ✅ new: hovered row inspector (compact only)
-  const [hoveredProjectId, setHoveredProjectId] = useState<string | null>(null);
 
   if (!projects?.length) {
     return (
@@ -122,38 +114,6 @@ const ProjectGanttView = () => {
 
   const leftColClass = compact ? 'w-[360px]' : 'w-[420px]';
   const monthColMinW = compact ? 'min-w-[70px]' : 'min-w-[90px]';
-
-  // ✅ hovered project inspector content (compact only)
-  const hoveredProject = useMemo(() => {
-    if (!compact || !hoveredProjectId) return null;
-    return (filteredProjects || []).find((p) => p.id === hoveredProjectId) || null;
-  }, [compact, hoveredProjectId, filteredProjects]);
-
-  const hoveredMeta = useMemo(() => {
-    if (!hoveredProject) return null;
-
-    const allocations = getProjectAllocations(hoveredProject.id) || [];
-    const totalAllocation = allocations.reduce(
-      (sum: number, alloc: any) => sum + (alloc?.days || 0),
-      0
-    );
-
-    const leadId = (hoveredProject as any)?.leadId ?? (hoveredProject as any)?.lead_id ?? null;
-    const lead = leadId ? safeEmployees.find((e: any) => e?.id === leadId) : null;
-
-    const jiraUrl = hoveredProject.ticketReference ? generateLink(hoveredProject.ticketReference) : null;
-
-    const start = toDate((hoveredProject as any)?.startDate ?? (hoveredProject as any)?.start_date ?? null);
-    const end = toDate((hoveredProject as any)?.endDate ?? (hoveredProject as any)?.end_date ?? null);
-
-    return {
-      totalAllocation,
-      leadName: (lead as any)?.name || null,
-      jiraUrl,
-      start,
-      end,
-    };
-  }, [hoveredProject, getProjectAllocations, safeEmployees]);
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -240,63 +200,6 @@ const ProjectGanttView = () => {
             </div>
           </div>
 
-          {/* ✅ Compact hover inspector (this REPLACES any hover tooltip UI) */}
-          {compact && (
-            <div className="sticky top-[33px] z-20 bg-white border-b">
-              <div className="flex">
-                <div className={`${leftColClass} flex-shrink-0 px-2 py-1 text-xs text-muted-foreground`}>
-                  {hoveredProject && hoveredMeta ? (
-                    <div className="truncate">
-                      <span className="font-medium text-foreground">{hoveredProject.name}</span>
-
-                      <span className="ml-2">{hoveredMeta.totalAllocation}d</span>
-
-                      {hoveredMeta.leadName && <span className="ml-2">Lead: {hoveredMeta.leadName}</span>}
-
-                      {(hoveredMeta.start || hoveredMeta.end) && (
-                        <span className="ml-2">
-                          {formatShortDate(hoveredMeta.start) ?? 'No start'} →{' '}
-                          {formatShortDate(hoveredMeta.end) ?? 'No end'}
-                        </span>
-                      )}
-
-                      {hoveredProject.ticketReference && hoveredMeta.jiraUrl && (
-                        <>
-                          <span className="ml-2">·</span>
-                          <a
-                            href={hoveredMeta.jiraUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 text-blue-600 hover:underline"
-                          >
-                            {hoveredProject.ticketReference}
-                          </a>
-                        </>
-                      )}
-
-                      {hoveredProject.archived && (
-                        <span className="ml-2 inline-flex align-middle">
-                          <Badge variant="secondary" className="text-[10px] px-1 py-0">
-                            Archived
-                          </Badge>
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="opacity-60">Hover a project to see details</span>
-                  )}
-                </div>
-
-                {/* filler cells to keep grid aligned */}
-                <div className="flex flex-1">
-                  {months.map((_, i) => (
-                    <div key={i} className={['flex-1 border-r', monthColMinW].join(' ')} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Project Rows */}
           {(filteredProjects || []).map((project) => (
             <div key={project.id}>
@@ -308,8 +211,6 @@ const ProjectGanttView = () => {
                 compact={compact}
                 leftColClass={leftColClass}
                 monthColMinW={monthColMinW}
-                // ✅ in compact, we keep this to drive the inspector (NOT a tooltip)
-                onHoverChange={(isHovering) => setHoveredProjectId(isHovering ? project.id : null)}
               />
 
               {expandedProjects.has(project.id) && (
@@ -331,7 +232,6 @@ interface ProjectGanttRowProps {
   compact?: boolean;
   leftColClass: string;
   monthColMinW: string;
-  onHoverChange?: (isHovering: boolean) => void;
 }
 
 const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
@@ -342,7 +242,6 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
   compact = false,
   leftColClass,
   monthColMinW,
-  onHoverChange,
 }) => {
   const { getProjectAllocations, getEmployeeById } = usePlanner();
   const allocations = getProjectAllocations(project.id) || [];
@@ -373,9 +272,6 @@ const ProjectGanttRow: React.FC<ProjectGanttRowProps> = ({
           'flex border-b hover:bg-gray-50',
           project.archived ? 'bg-gray-100 opacity-60' : '',
         ].join(' ')}
-        // ✅ Hover drives the inspector. Tooltip code should not exist elsewhere.
-        onMouseEnter={() => onHoverChange?.(true)}
-        onMouseLeave={() => onHoverChange?.(false)}
       >
         {/* Left column */}
         <div
