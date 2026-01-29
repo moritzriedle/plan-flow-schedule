@@ -146,19 +146,20 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, 
                 </PopoverTrigger>
 
                 <PopoverContent
-                  className="w-[320px] p-2"
-                  align="start"
-                  side="bottom"
-                  sideOffset={8}
-                  avoidCollisions={false}
-                >
-                  <Calendar
-                    mode="single"
-                    selected={startDate ?? undefined}
-                    onSelect={(date) => date && setStartDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
+  className="w-[320px] p-2 max-h-[calc(100vh-120px)] overflow-y-auto"
+  align="start"
+  side="bottom"
+  sideOffset={8}
+  avoidCollisions={false}
+>
+  <Calendar
+    mode="single"
+    selected={endDate ?? undefined}
+    onSelect={(date) => date && setEndDate(date)}
+    initialFocus
+  />
+</PopoverContent>
+
               </Popover>
             </div>
 
