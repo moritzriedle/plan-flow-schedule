@@ -49,12 +49,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
       <div className="space-y-2">
         <Label htmlFor="project-name">Project Name</Label>
-        <Input
-          id="project-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
+        <Input id="project-name" value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
 
       <div className="space-y-2">
@@ -67,8 +62,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
             {colorOptions.map((colorOption) => (
               <SelectItem key={colorOption} value={colorOption}>
                 <div className="flex items-center">
-                  <div 
-                    className="w-4 h-4 rounded mr-2" 
+                  <div
+                    className="w-4 h-4 rounded mr-2"
                     style={{ backgroundColor: `var(--project-${colorOption})` }}
                   />
                   <span className="capitalize">{colorOption}</span>
@@ -106,6 +101,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
       </div>
 
       <div className="grid grid-cols-2 gap-4">
+        {/* Start Date */}
         <div className="space-y-2">
           <Label>Start Date</Label>
           <Popover>
@@ -115,7 +111,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
                 {format(startDate, 'PPP')}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+
+            <PopoverContent
+              className="w-[320px] p-2"
+              align="start"
+              side="bottom"
+              sideOffset={8}
+              avoidCollisions={false}
+            >
               <Calendar
                 mode="single"
                 selected={startDate}
@@ -126,6 +129,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
           </Popover>
         </div>
 
+        {/* End Date */}
         <div className="space-y-2">
           <Label>End Date</Label>
           <Popover>
@@ -135,7 +139,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialProject, onSubmit, sub
                 {format(endDate, 'PPP')}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+
+            <PopoverContent
+              className="w-[320px] p-2"
+              align="start"
+              side="bottom"
+              sideOffset={8}
+              avoidCollisions={false}
+            >
               <Calendar
                 mode="single"
                 selected={endDate}
