@@ -6,7 +6,7 @@ import { PlannerStoreReturn } from './plannerStore/types';
 
 export const usePlannerStore = (): PlannerStoreReturn => {
   console.log('usePlannerStore initializing');
-  
+
   const {
     employees,
     projects,
@@ -16,20 +16,12 @@ export const usePlannerStore = (): PlannerStoreReturn => {
     setEmployees,
     setProjects,
     setAllocations,
-    setSprints
+    setSprints,
   } = useDataLoader();
 
-  const {
-    addEmployee,
-    updateEmployee,
-    getEmployeeById
-  } = useEmployeeOperations(employees, setEmployees);
+  const { addEmployee, updateEmployee, getEmployeeById } = useEmployeeOperations(employees, setEmployees);
 
-  const {
-    addProject,
-    updateProject,
-    getProjectById
-  } = useProjectOperations(projects, setProjects);
+  const { addProject, updateProject, getProjectById } = useProjectOperations(projects, setProjects);
 
   const {
     addAllocation,
@@ -40,17 +32,14 @@ export const usePlannerStore = (): PlannerStoreReturn => {
     getTotalAllocationDays,
     getProjectAllocations,
     allocateToProjectTimeline,
-    getAvailableDays
-  } = useAllocationOperations(
-    allocations,
-    setAllocations,
-    projects,
-    setProjects,
-    sprints,
-    employees
-  );
+    getAvailableDays,
 
-  const getSprintById = (id: string) => sprints.find(s => s.id === id);
+    // ✅ NEW: expose these for quick allocate UX
+    createSprintAllocation,
+    quickAllocateToProject,
+  } = useAllocationOperations(allocations, setAllocations, projects, setProjects, sprints, employees);
+
+  const getSprintById = (id: string) => sprints.find((s) => s.id === id);
 
   return {
     employees,
@@ -59,14 +48,22 @@ export const usePlannerStore = (): PlannerStoreReturn => {
     sprints,
     setSprints,
     loading,
+
     addEmployee,
     updateEmployee,
+
     addProject,
     updateProject,
+
     addAllocation,
     updateAllocation,
     moveAllocation,
     deleteAllocation,
+
+    // ✅ NEW: returned to the store so usePlanner() can access it
+    createSprintAllocation,
+    quickAllocateToProject,
+
     getEmployeeAllocations,
     getProjectById,
     getEmployeeById,
@@ -74,6 +71,6 @@ export const usePlannerStore = (): PlannerStoreReturn => {
     getProjectAllocations,
     allocateToProjectTimeline,
     getAvailableDays,
-    getSprintById
+    getSprintById,
   };
 };

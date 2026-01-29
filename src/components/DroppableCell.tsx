@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useDrop } from 'react-dnd';
 import { DragItem, Sprint } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
@@ -22,6 +22,13 @@ import {
   CommandGroup,
   CommandItem,
 } from '@/components/ui/command';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface DroppableCellProps {
   employeeId: string;
@@ -34,7 +41,10 @@ type QuickProject = {
   name: string;
   color?: string;
   archived?: boolean;
+  endDate?: Date | string | null;
 };
+
+type RepeatMode = 'single' | 'next-n' | 'until-project-end';
 
 const QuickAllocateDialog: React.FC<{
   open: boolean;
@@ -45,20 +55,31 @@ const QuickAllocateDialog: React.FC<{
   disabled?: boolean;
   defaultDays: number;
 }> = ({ open, onOpenChange, employeeId, sprintId, sprint, disabled, defaultDays }) => {
-  const { projects = [], moveAllocation } = usePlanner();
+  const {
+    projects = [],
+    getTotalAllocationDays,
+    getAvailableDays,
+    // ✅ new API from useAllocationOperations drop-in
+    quickAllocateToProject,
+  } = usePlanner() as any;
 
   const [projectSearch, setProjectSearch] = useState('');
   const [selectedProject, setSelectedProject] = useState<QuickProject | null>(null);
   const [days, setDays] = useState<number>(defaultDays);
   const [saving, setSaving] = useState(false);
 
+  // Optional apply mode
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('single');
+  const [repeatCount, setRepeatCount] = useState<number>(2);
+
   useEffect(() => {
-    if (open) {
-      setProjectSearch('');
-      setSelectedProject(null);
-      setDays(defaultDays);
-      setSaving(false);
-    }
+    if (!open) return;
+    setProjectSearch('');
+    setSelectedProject(null);
+    setDays(defaultDays);
+    setSaving(false);
+    setRepeatMode('single');
+    setRepeatCount(2);
   }, [open, defaultDays]);
 
   const safeProjects: QuickProject[] = useMemo(() => {
@@ -70,35 +91,65 @@ const QuickAllocateDialog: React.FC<{
         name: (p as any).name,
         color: (p as any).color,
         archived: (p as any).archived,
+        endDate: (p as any).endDate ?? (p as any).end_date ?? null,
       }));
   }, [projects]);
 
   const filteredProjects = useMemo(() => {
     const q = projectSearch.trim().toLowerCase();
     if (!q) return safeProjects.slice(0, 50);
-    return safeProjects
-      .filter((p) => p.name.toLowerCase().includes(q))
-      .slice(0, 50);
+    return safeProjects.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 50);
   }, [safeProjects, projectSearch]);
 
-  const canSave = !disabled && !!selectedProject && days > 0 && Number.isFinite(days);
+  const totalDaysThisSprint = useMemo(() => {
+    try {
+      return typeof getTotalAllocationDays === 'function'
+        ? getTotalAllocationDays(employeeId, sprint)
+        : 0;
+    } catch {
+      return 0;
+    }
+  }, [getTotalAllocationDays, employeeId, sprint]);
+
+  const availableDaysThisSprint = useMemo(() => {
+    try {
+      return typeof getAvailableDays === 'function' ? getAvailableDays(employeeId, sprint) : 10;
+    } catch {
+      return 10;
+    }
+  }, [getAvailableDays, employeeId, sprint]);
+
+  const wouldOverallocateThisSprint = useMemo(() => {
+    return totalDaysThisSprint + days > availableDaysThisSprint;
+  }, [totalDaysThisSprint, availableDaysThisSprint, days]);
+
+  const canSave =
+    !disabled &&
+    !!selectedProject &&
+    days > 0 &&
+    Number.isFinite(days) &&
+    typeof quickAllocateToProject === 'function';
 
   const onSave = async () => {
     if (!selectedProject || !canSave) return;
 
     setSaving(true);
     try {
-      // DragItem requires type + id (per your TS error).
-      // We generate a synthetic id and DO NOT set sourceSprintId so moveAllocation won't delete anything.
-      const dragItem: DragItem = {
-        type: 'ALLOCATION',
-        id: `quick-${employeeId}-${sprintId}-${selectedProject.id}-${Date.now()}`,
+      const mode =
+        repeatMode === 'single'
+          ? ({ kind: 'single' } as const)
+          : repeatMode === 'next-n'
+          ? ({ kind: 'next-n', count: repeatCount } as const)
+          : ({ kind: 'until-project-end' } as const);
+
+      await quickAllocateToProject({
         employeeId,
         projectId: selectedProject.id,
+        startSprintId: sprintId,
         days,
-      };
+        mode,
+      });
 
-      await moveAllocation(dragItem, sprintId);
       onOpenChange(false);
     } catch (e) {
       console.error('Quick allocate failed:', e);
@@ -112,11 +163,13 @@ const QuickAllocateDialog: React.FC<{
         <DialogHeader>
           <DialogTitle>Allocate to project</DialogTitle>
           <DialogDescription>
-            Choose a project and the number of days for <span className="font-medium">{sprint.name}</span>.
+            Choose a project and the number of days for{' '}
+            <span className="font-medium">{(sprint as any).name ?? 'this sprint'}</span>.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Project picker */}
           <div className="space-y-2">
             <div className="text-sm font-medium">Project</div>
             <Command className="border rounded-md">
@@ -146,11 +199,13 @@ const QuickAllocateDialog: React.FC<{
 
             {selectedProject && (
               <div className="text-xs text-muted-foreground">
-                Selected: <span className="font-medium text-foreground">{selectedProject.name}</span>
+                Selected:{' '}
+                <span className="font-medium text-foreground">{selectedProject.name}</span>
               </div>
             )}
           </div>
 
+          {/* Days */}
           <div className="space-y-2">
             <div className="text-sm font-medium">Days</div>
             <Input
@@ -161,8 +216,53 @@ const QuickAllocateDialog: React.FC<{
               onChange={(e) => setDays(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
             />
             <div className="text-xs text-muted-foreground">
-              Whole days only. (Yes, reality is discrete here.)
+              Whole days only. Fractional reality is not supported by this timeline.
             </div>
+
+            <div className="text-xs text-muted-foreground">
+              This sprint capacity: {totalDaysThisSprint}/{availableDaysThisSprint} days
+              {wouldOverallocateThisSprint ? (
+                <span className="text-red-600"> (this will overallocate)</span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Optional: Apply */}
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Apply</div>
+            <Select value={repeatMode} onValueChange={(v: RepeatMode) => setRepeatMode(v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Only this sprint</SelectItem>
+                <SelectItem value="next-n">Next N sprints</SelectItem>
+                <SelectItem value="until-project-end">Until project end</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {repeatMode === 'next-n' && (
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-muted-foreground whitespace-nowrap">N</div>
+                <Input
+                  type="number"
+                  min={1}
+                  max={26}
+                  value={repeatCount}
+                  onChange={(e) =>
+                    setRepeatCount(Math.max(1, Math.min(26, Number(e.target.value || 1))))
+                  }
+                  className="h-8"
+                />
+                <div className="text-xs text-muted-foreground">sprints</div>
+              </div>
+            )}
+
+            {repeatMode === 'until-project-end' && (
+              <div className="text-xs text-muted-foreground">
+                Uses the project end date. If it’s missing, we fall back to only this sprint.
+              </div>
+            )}
           </div>
         </div>
 
@@ -186,57 +286,57 @@ const QuickAllocateDialog: React.FC<{
 };
 
 const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, sprint }) => {
-  const {
-    allocations,
-    moveAllocation,
-    getTotalAllocationDays,
-    getAvailableDays,
-    getEmployeeById,
-  } = usePlanner();
+  const { allocations, moveAllocation, getTotalAllocationDays, getAvailableDays, getEmployeeById } =
+    usePlanner();
 
-console.log('alloc sample', allocations?.[0]);
-
-  const [isOver, setIsOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
 
   const employee = getEmployeeById(employeeId);
+  const isEmployeeArchived = employee?.archived || false;
 
-  const cellAllocations = allocations.filter(
-    (alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId
-  );
+  const cellAllocations = useMemo(() => {
+    const list = Array.isArray(allocations) ? allocations : [];
+    return list.filter((alloc) => alloc.employeeId === employeeId && alloc.sprintId === sprintId);
+  }, [allocations, employeeId, sprintId]);
 
   const totalDays = getTotalAllocationDays(employeeId, sprint);
   const availableDays = getAvailableDays(employeeId, sprint);
   const isOverallocated = totalDays > availableDays;
-  const isEmployeeArchived = employee?.archived || false;
 
   const suggestedDays = useMemo(() => {
     const remaining = Math.max(availableDays - totalDays, 0);
     return Math.max(1, remaining || 1);
   }, [availableDays, totalDays]);
 
-  const handleDrop = async (item: DragItem) => {
-    if (isEmployeeArchived) return;
+  const countVacationDaysInSprint = useCallback((vacationDates: string[], sprintArg: Sprint): number => {
+    if (!Array.isArray(vacationDates) || !(sprintArg as any).workingDays) return 0;
+    const workingDays = (sprintArg as any).workingDays as string[];
+    const sprintDays = new Set(workingDays.map((d) => new Date(d).toDateString()));
+    return vacationDates.filter((dateStr) => sprintDays.has(new Date(dateStr).toDateString())).length;
+  }, []);
 
-    setIsProcessing(true);
-    try {
-      const allocationDays = item.days ?? 10;
+  const handleDrop = useCallback(
+    async (item: DragItem) => {
+      if (isEmployeeArchived) return;
 
-      const dragItemWithEmployee: DragItem = {
-        ...item,
-        employeeId,
-        days: allocationDays,
-        // keep item.id and item.type intact
-      };
-
-      await moveAllocation(dragItemWithEmployee, sprintId);
-    } catch (error) {
-      console.error('Drop failed:', error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+      setIsProcessing(true);
+      try {
+        const allocationDays = item.days ?? 10;
+        const dragItemWithEmployee: DragItem = {
+          ...item,
+          employeeId,
+          days: allocationDays,
+        };
+        await moveAllocation(dragItemWithEmployee, sprintId);
+      } catch (error) {
+        console.error('Drop failed:', error);
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [employeeId, sprintId, moveAllocation, isEmployeeArchived]
+  );
 
   const [{ isOverCurrent }, drop] = useDrop({
     accept: 'ALLOCATION',
@@ -245,25 +345,13 @@ console.log('alloc sample', allocations?.[0]);
       handleDrop(item);
       return { sprintId };
     },
-    hover: () => {
-      if (!isEmployeeArchived) setIsOver(true);
-    },
     collect: (monitor) => ({
       isOverCurrent: monitor.isOver({ shallow: true }),
     }),
   });
 
-  useEffect(() => {
-    if (!isOverCurrent) setIsOver(false);
-  }, [isOverCurrent]);
-
-  function countVacationDaysInSprint(vacationDates: string[], sprintArg: Sprint): number {
-    if (!Array.isArray(vacationDates) || !sprintArg.workingDays) return 0;
-    const sprintDays = new Set(sprintArg.workingDays.map((d) => new Date(d).toDateString()));
-    return vacationDates.filter((dateStr) =>
-      sprintDays.has(new Date(dateStr).toDateString())
-    ).length;
-  }
+  const vacationCount =
+    employee?.vacationDates && sprint ? countVacationDaysInSprint(employee.vacationDates, sprint) : 0;
 
   return (
     <>
@@ -271,7 +359,7 @@ console.log('alloc sample', allocations?.[0]);
         ref={drop}
         className={[
           'droppable-cell p-2 h-full min-h-[120px] border-r border-b',
-          isOver ? 'active bg-primary/10' : '',
+          isOverCurrent ? 'active bg-primary/10' : '',
           isOverallocated ? 'bg-red-50' : '',
           isProcessing ? 'bg-gray-50' : '',
           isEmployeeArchived ? 'cursor-not-allowed opacity-50' : '',
@@ -302,14 +390,11 @@ console.log('alloc sample', allocations?.[0]);
           </div>
         </div>
 
-        {employee && sprint && employee.vacationDates && (() => {
-          const vacationCount = countVacationDaysInSprint(employee.vacationDates, sprint);
-          return vacationCount > 0 ? (
-            <div className="text-[11px] text-amber-700 mb-1">
-              {vacationCount} vacation day{vacationCount > 1 ? 's' : ''}
-            </div>
-          ) : null;
-        })()}
+        {vacationCount > 0 ? (
+          <div className="text-[11px] text-amber-700 mb-1">
+            {vacationCount} vacation day{vacationCount > 1 ? 's' : ''}
+          </div>
+        ) : null}
 
         {cellAllocations.map((allocation) => (
           <AllocationItem

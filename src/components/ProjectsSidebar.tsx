@@ -1,8 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { usePlanner } from '../contexts/PlannerContext';
 import { Project, Employee } from '../types';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -19,21 +18,17 @@ import {
 
 interface DraggableProjectItemProps {
   project: Project;
-  onTimelineOpen?: (project: Project) => void; // kept for compatibility, but unused
   employees: Employee[];
 }
 
-// ✅ Helper to generate Jira ticket URL
+// Helper to generate Jira ticket URL
 const generateLink = (ticketRef: string) => {
   if (!ticketRef.trim()) return null;
   const projectKey = ticketRef.split('-')[0];
   return `https://proglove.atlassian.net/jira/polaris/projects/${projectKey}/ideas/view/3252935?selectedIssue=${ticketRef.trim()}`;
 };
 
-const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
-  project,
-  employees,
-}) => {
+const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({ project, employees }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'ALLOCATION',
     item: {
@@ -50,8 +45,6 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
   const lead = project.leadId ? employees.find((emp) => emp.id === project.leadId) : null;
   const leadName = lead ? lead.name : null;
 
-  const opacity = isDragging ? 0.4 : 1;
-
   return (
     <Card
       ref={drag}
@@ -61,11 +54,11 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
       style={{
         borderLeftColor: `var(--project-${project.color})`,
         backgroundColor: `rgba(var(--project-${project.color}-rgb), 0.05)`,
-        opacity,
+        opacity: isDragging ? 0.4 : 1,
       }}
     >
       <div className="flex justify-between items-start">
-        {/* Left side: Project name + lead */}
+        {/* Left side */}
         <div className="flex flex-col flex-1 min-w-0">
           <h4 className="font-medium text-sm truncate">{project.name}</h4>
           <div className="text-xs text-gray-500 truncate">
@@ -73,7 +66,7 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
           </div>
         </div>
 
-        {/* Right side: Jira ticket only (Eye removed) */}
+        {/* Right side */}
         <div className="flex flex-col items-end ml-2 flex-shrink-0">
           {project.ticketReference && (
             <a
@@ -91,40 +84,25 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
   );
 };
 
-interface ProjectsSidebarProps {
-  onProjectTimelineOpen?: (project: Project) => void; // kept for compatibility
-  onDetailedAllocation?: (employee: Employee, project: Project) => void;
-}
-
-const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
-  onProjectTimelineOpen,
-  onDetailedAllocation,
-}) => {
+const ProjectsSidebar: React.FC = () => {
   const { projects = [], employees = [] } = usePlanner();
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [employeeSearch, setEmployeeSearch] = useState<string>('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(''); // informational only
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
   const filteredAndSortedProjects = useMemo(() => {
     try {
-      if (!Array.isArray(projects)) {
-        console.warn('ProjectsSidebar: projects is not an array', projects);
-        return [];
-      }
-
-      let filtered = projects.filter(
-        (project) => project && project.name && typeof project.name === 'string'
+      let filtered = (projects || []).filter(
+        (project: Project) => project && project.name && typeof project.name === 'string'
       );
 
-      // Filter archived projects
-      if (!showArchived) {
-        filtered = filtered.filter((project) => !project.archived);
-      }
+      if (!showArchived) filtered = filtered.filter((p: Project) => !p.archived);
 
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
-        filtered = filtered.filter((project) => project.name.toLowerCase().includes(q));
+        filtered = filtered.filter((p: Project) => p.name.toLowerCase().includes(q));
       }
 
       return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
@@ -137,18 +115,15 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
   const filteredEmployees = useMemo(() => {
     if (!employeeSearch.trim()) return [];
     const q = employeeSearch.toLowerCase();
-    return employees.filter(
-      (emp) =>
-        emp.name.toLowerCase().includes(q) || emp.role.toLowerCase().includes(q)
+    return (employees || []).filter(
+      (emp: Employee) => emp.name.toLowerCase().includes(q) || emp.role.toLowerCase().includes(q)
     );
   }, [employees, employeeSearch]);
 
-  const handleDetailedAllocation = (project: Project) => {
-    if (selectedEmployeeId && onDetailedAllocation) {
-      const employee = employees.find((emp) => emp.id === selectedEmployeeId);
-      if (employee) onDetailedAllocation(employee, project);
-    }
-  };
+  const selectedEmployee = useMemo(
+    () => employees.find((e: Employee) => e.id === selectedEmployeeId) || null,
+    [employees, selectedEmployeeId]
+  );
 
   return (
     <div className="space-y-2">
@@ -181,9 +156,9 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
         </Label>
       </div>
 
-      {/* Employee selector for detailed allocation with type-ahead */}
-      <div className="mb-4">
-        <label className="text-sm font-medium mb-2 block">Quick Allocate:</label>
+      {/* Optional employee selection (context only) */}
+      <div className="mb-2">
+        <label className="text-sm font-medium mb-2 block">Selected Team Member (optional)</label>
         <Command className="border rounded-md">
           <CommandInput
             placeholder="Type to search team member..."
@@ -195,7 +170,7 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
               <>
                 <CommandEmpty>No team member found.</CommandEmpty>
                 <CommandGroup>
-                  {filteredEmployees.map((employee) => (
+                  {filteredEmployees.map((employee: Employee) => (
                     <CommandItem
                       key={employee.id}
                       value={employee.name}
@@ -213,6 +188,12 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
             ) : null}
           </CommandList>
         </Command>
+
+        {selectedEmployee && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            Selected: <span className="font-medium text-foreground">{selectedEmployee.name}</span>
+          </div>
+        )}
       </div>
 
       {/* Projects List */}
@@ -221,32 +202,16 @@ const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
           No projects found matching "{searchTerm}"
         </div>
       ) : (
-        filteredAndSortedProjects.map((project) => (
+        filteredAndSortedProjects.map((project: Project) => (
           <div key={project.id} className="space-y-1">
             <div className={project.archived ? 'opacity-50' : ''}>
-              <DraggableProjectItem
-                project={project}
-                onTimelineOpen={onProjectTimelineOpen} // kept, unused in child (drop-in)
-                employees={employees}
-              />
+              <DraggableProjectItem project={project} employees={employees} />
               {project.archived && (
                 <Badge variant="secondary" className="mt-1 text-xs">
                   Archived
                 </Badge>
               )}
             </div>
-
-            {selectedEmployeeId && !project.archived && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs"
-                onClick={() => handleDetailedAllocation(project)}
-              >
-                Allocate {employees.find((emp) => emp.id === selectedEmployeeId)?.name || ''} to{' '}
-                {project.name}
-              </Button>
-            )}
           </div>
         ))
       )}
