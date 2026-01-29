@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import ProjectForm from './ProjectForm'; // you can replace the whole form with ProjectForm component instead if preferred
 import { usePlanner } from '@/contexts/PlannerContext';
 import { Project } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
-import TicketReferenceInput from './TicketReferenceInput'; // import your Jira input
+import TicketReferenceInput from './TicketReferenceInput';
 
 interface ProjectEditDialogProps {
   project: Project;
@@ -19,11 +18,7 @@ interface ProjectEditDialogProps {
   onClose: () => void;
 }
 
-const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
-  project,
-  isOpen,
-  onClose
-}) => {
+const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({ project, isOpen, onClose }) => {
   const { updateProject, getProjectById, employees } = usePlanner();
 
   const [name, setName] = useState(project.name);
@@ -36,17 +31,17 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
 
   const colorOptions: Project['color'][] = ['blue', 'purple', 'pink', 'orange', 'green'];
 
- // 👇 NEW: Sync state whenever project or dialog open state changes
+  // Sync state whenever project or dialog open state changes
   useEffect(() => {
-    if (project) {
-      setName(project.name);
-      setColor(project.color);
-      setLeadId(project.leadId || '');
-      setStartDate(project.startDate);
-      setEndDate(project.endDate);
-      setTicketReference(project.ticketReference || '');
-      setArchived(project.archived || false);
-    }
+    if (!project) return;
+
+    setName(project.name);
+    setColor(project.color);
+    setLeadId(project.leadId || '');
+    setStartDate(project.startDate ?? null);
+    setEndDate(project.endDate ?? null);
+    setTicketReference(project.ticketReference || '');
+    setArchived(project.archived || false);
   }, [project, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,20 +60,20 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
 
     await updateProject(updatedProject);
 
-   // 👇 CHANGE: await getProjectById if it’s async
+    // Refresh from store/db if getProjectById is async (yours might not be, but this is safe)
     try {
-      const refreshedProject = await getProjectById(project.id); // 👈 added await
+      const refreshedProject = await getProjectById(project.id);
       if (refreshedProject) {
-        setStartDate(refreshedProject.startDate);
-        setEndDate(refreshedProject.endDate);
         setName(refreshedProject.name);
         setColor(refreshedProject.color);
         setLeadId(refreshedProject.leadId || '');
+        setStartDate(refreshedProject.startDate ?? null);
+        setEndDate(refreshedProject.endDate ?? null);
         setTicketReference(refreshedProject.ticketReference || '');
         setArchived(refreshedProject.archived || false);
       }
     } catch (err) {
-      console.error("Failed to refresh project:", err);
+      console.error('Failed to refresh project:', err);
     }
 
     onClose();
@@ -94,12 +89,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="project-name">Project Name</Label>
-            <Input
-              id="project-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <Input id="project-name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
 
           <div className="space-y-2">
@@ -112,10 +102,7 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
                 {colorOptions.map((colorOption) => (
                   <SelectItem key={colorOption} value={colorOption}>
                     <div className="flex items-center">
-                      <div 
-                        className="w-4 h-4 rounded mr-2" 
-                        style={{ backgroundColor: `var(--project-${colorOption})` }}
-                      />
+                      <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: `var(--project-${colorOption})` }} />
                       <span className="capitalize">{colorOption}</span>
                     </div>
                   </SelectItem>
@@ -143,30 +130,31 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="ticketReference">Ticket Reference</Label>
-            <TicketReferenceInput
-              value={ticketReference}
-              onChange={setTicketReference}
-              placeholder="e.g., PPT-82"
-            />
+            <TicketReferenceInput value={ticketReference} onChange={setTicketReference} placeholder="e.g., PPT-82" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Start Date */}
             <div className="space-y-2">
               <Label>Start Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : "Select start date"}
+                    {startDate ? format(startDate, 'PPP') : 'Select start date'}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+
+                <PopoverContent
+                  className="w-[320px] p-2"
+                  align="start"
+                  side="bottom"
+                  sideOffset={8}
+                  avoidCollisions={false}
+                >
                   <Calendar
                     mode="single"
-                    selected={startDate}
+                    selected={startDate ?? undefined}
                     onSelect={(date) => date && setStartDate(date)}
                     initialFocus
                   />
@@ -174,22 +162,27 @@ const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
               </Popover>
             </div>
 
+            {/* End Date */}
             <div className="space-y-2">
               <Label>End Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : "Select end date"}
+                    {endDate ? format(endDate, 'PPP') : 'Select end date'}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+
+                <PopoverContent
+                  className="w-[320px] p-2"
+                  align="start"
+                  side="bottom"
+                  sideOffset={8}
+                  avoidCollisions={false}
+                >
                   <Calendar
                     mode="single"
-                    selected={endDate}
+                    selected={endDate ?? undefined}
                     onSelect={(date) => date && setEndDate(date)}
                     initialFocus
                   />
