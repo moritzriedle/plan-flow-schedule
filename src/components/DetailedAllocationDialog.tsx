@@ -71,7 +71,7 @@ function isSprintOverlappingProjectEnd(s: Sprint, projectEnd: Date) {
   return isBefore(s.startDate, projectEnd) || isEqual(s.startDate, projectEnd);
 }
 
-export const SprintAllocationDialog: React.FC<SprintAllocationDialogProps> = ({
+export const DetailedAllocationDialog: React.FC<SprintAllocationDialogProps> = ({
   isOpen,
   onClose,
   employee,
@@ -299,3 +299,4 @@ export const SprintAllocationDialog: React.FC<SprintAllocationDialogProps> = ({
     </Dialog>
   );
 };
+export default DetailedAllocationDialog;
