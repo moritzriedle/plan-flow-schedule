@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Project } from '../types';
@@ -7,6 +6,7 @@ import { usePlanner } from '../contexts/PlannerContext';
 import TicketReferenceInput from './TicketReferenceInput';
 import { getSprintDateRange } from '../utils/sprintUtils';
 import { ROLE_OPTIONS } from '@/constants/roles';
+import { Badge } from '@/components/ui/badge';
 
 interface ProjectTimelineViewProps {
   project: Project | null;
@@ -21,108 +21,124 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   isOpen,
   onClose,
   selectedRoles = [],
-  onRoleChange
+  onRoleChange,
 }) => {
   const { employees = [], allocations = [], sprints = [] } = usePlanner();
 
   if (!project) return null;
 
-  // Ensure ROLE_OPTIONS is always a valid array
   const availableRoles = React.useMemo(() => {
-    if (!ROLE_OPTIONS || !Array.isArray(ROLE_OPTIONS)) {
-      console.warn('ProjectTimelineView: ROLE_OPTIONS is not a valid array', { ROLE_OPTIONS });
-      return [];
-    }
-    return [...ROLE_OPTIONS].filter(role => role && typeof role === 'string');
+    return Array.isArray(ROLE_OPTIONS)
+      ? ROLE_OPTIONS.filter((r) => r && typeof r === 'string')
+      : [];
   }, []);
 
-  // Ensure selectedRoles is always a valid array
   const safeSelectedRoles = React.useMemo(() => {
-    if (!selectedRoles || !Array.isArray(selectedRoles)) {
-      console.warn('ProjectTimelineView: selectedRoles is not a valid array', { selectedRoles });
-      return [];
-    }
-    return selectedRoles.filter(role => role && typeof role === 'string');
+    return Array.isArray(selectedRoles)
+      ? selectedRoles.filter((r) => r && typeof r === 'string')
+      : [];
   }, [selectedRoles]);
 
-  // Ensure employees is always a valid array
   const safeEmployees = React.useMemo(() => {
-    if (!employees || !Array.isArray(employees)) {
-      console.warn('ProjectTimelineView: employees is not a valid array', { employees });
-      return [];
-    }
-    return employees.filter(emp => emp && emp.id);
+    return Array.isArray(employees) ? employees.filter((e) => e && e.id) : [];
   }, [employees]);
 
   const filteredEmployees = React.useMemo(() => {
-    try {
-      if (safeSelectedRoles.length === 0) {
-        return safeEmployees;
-      }
-      
-      const filtered = safeEmployees.filter(emp => {
-        if (!emp || !emp.role) {
-          console.warn('ProjectTimelineView: Employee missing role', { emp });
-          return false;
-        }
-        return safeSelectedRoles.includes(emp.role);
-      });
-      
-      return filtered;
-    } catch (error) {
-      console.error('ProjectTimelineView: Error filtering employees', error);
-      return safeEmployees;
-    }
+    if (safeSelectedRoles.length === 0) return safeEmployees;
+    return safeEmployees.filter((emp) => emp?.role && safeSelectedRoles.includes(emp.role));
   }, [safeEmployees, safeSelectedRoles]);
 
   const handleRoleChange = (roles: string[]) => {
-    try {
-      const safeRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
-      onRoleChange(safeRoles);
-    } catch (error) {
-      console.error('ProjectTimelineView: Error in handleRoleChange', error);
-      onRoleChange([]);
-    }
+    const safeRoles = Array.isArray(roles) ? roles.filter((r) => r && typeof r === 'string') : [];
+    onRoleChange(safeRoles);
   };
 
-  // Get project allocations with safety checks
+  // Allocations for this project
   const safeAllocations = Array.isArray(allocations) ? allocations : [];
-  const projectAllocations = safeAllocations.filter(alloc => alloc && alloc.projectId === project.id);
-  
-  // Get unique sprints for this project
-  const sprintIdSet = new Set((projectAllocations || []).map(alloc => alloc?.sprintId).filter(id => id));
-  console.log('ProjectTimelineView: About to call Array.from with sprintIdSet:', sprintIdSet);
-  const projectSprintIds = Array.isArray(sprintIdSet) ? Array.from(sprintIdSet) : (sprintIdSet ? Array.from(sprintIdSet) : []);
+  const projectAllocations = safeAllocations.filter((a) => a && a.projectId === project.id);
+
+  // Project sprints (unique, sorted)
   const safeSprints = Array.isArray(sprints) ? sprints : [];
-  
-  if (!Array.isArray(safeSprints)) {
-    console.warn('ProjectTimelineView: safeSprints is not an array', safeSprints);
-  }
-  
-  console.log('ProjectTimelineView: About to filter and sort project sprints');
-  const projectSprints = (Array.isArray(safeSprints) ? safeSprints : []).filter(sprint => 
-    sprint && Array.isArray(projectSprintIds) && projectSprintIds.includes(sprint.id)
-  ).sort((a, b) => 
-    a?.startDate?.getTime() - b?.startDate?.getTime()
-  );
+  const sprintIdSet = new Set(projectAllocations.map((a) => a?.sprintId).filter(Boolean) as string[]);
+  const projectSprintIds = Array.from(sprintIdSet);
+
+  const projectSprints = safeSprints
+    .filter((s) => s && projectSprintIds.includes(s.id))
+    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+  // Header metadata
+  const leadName = React.useMemo(() => {
+    const leadId = (project as any)?.leadId; // depends on your Project type
+    if (!leadId) return null;
+    const lead = safeEmployees.find((e) => e.id === leadId);
+    return lead?.name ?? null;
+  }, [project, safeEmployees]);
+
+  const formatDate = (d?: Date | null) => {
+    if (!d || !(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const startDateText = formatDate((project as any)?.startDate ?? null);
+  const endDateText = formatDate((project as any)?.endDate ?? null);
+
+  const sprintCount = projectSprints.length;
+  const fromSprintName = projectSprints[0]?.name;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-4">
-            <span>{project.name} - Timeline View</span>
-            {project.ticketReference && (
-              <div className="text-sm">
-                <TicketReferenceInput
-                  value={project.ticketReference}
-                  onChange={() => {}} // Read-only in this view
-                />
+          <DialogTitle className="space-y-2">
+            {/* Title row */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="font-semibold truncate">{project.name}</div>
+
+                {/* Subtitle / meta line */}
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  {leadName && (
+                    <span>
+                      Lead: <span className="text-foreground">{leadName}</span>
+                    </span>
+                  )}
+
+                  {(startDateText || endDateText) && (
+                    <span>
+                      • {startDateText ?? 'No start'} → {endDateText ?? 'No end'}
+                    </span>
+                  )}
+
+                  {sprintCount > 0 && fromSprintName && (
+                    <span>
+                      • Showing {sprintCount} sprints from{' '}
+                      <span className="text-foreground">{fromSprintName}</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Optional: show active role filter state as badges */}
+                {safeSelectedRoles.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {safeSelectedRoles.map((r) => (
+                      <Badge key={r} variant="secondary" className="text-xs">
+                        {r}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Ticket ref on the right (read-only) */}
+              {project.ticketReference && (
+                <div className="shrink-0">
+                  <TicketReferenceInput value={project.ticketReference} onChange={() => {}} />
+                </div>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {/* Role Filter */}
           <div className="flex items-center gap-4">
@@ -140,45 +156,35 @@ const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
               {/* Sprint Headers */}
               <div className="flex border-b-2 border-gray-200 bg-gray-50">
                 <div className="w-48 p-3 font-semibold border-r">Team Member</div>
-                {!Array.isArray(projectSprints) ? (
-                  console.warn('ProjectTimelineView: projectSprints is not an array', projectSprints),
-                  <div>No sprints data available</div>
-                ) : (projectSprints || []).map((sprint) => (
+                {projectSprints.map((sprint) => (
                   <div key={sprint.id} className="w-32 p-2 text-center text-sm font-medium border-r">
                     <div className="font-semibold">{sprint.name}</div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      {getSprintDateRange(sprint)}
-                    </div>
+                    <div className="text-xs text-gray-600 mt-1">{getSprintDateRange(sprint)}</div>
                   </div>
                 ))}
               </div>
 
               {/* Employee Rows */}
-              {!Array.isArray(filteredEmployees) ? (
-                console.warn('ProjectTimelineView: filteredEmployees is not an array', filteredEmployees),
-                <div>No employees data available</div>
-              ) : (filteredEmployees || []).map((employee) => {
-                const employeeAllocations = (projectAllocations || []).filter(alloc => alloc?.employeeId === employee?.id);
-                
+              {filteredEmployees.map((employee) => {
+                const employeeAllocations = projectAllocations.filter(
+                  (a) => a?.employeeId === employee?.id
+                );
+
                 if (employeeAllocations.length === 0) return null;
 
                 return (
                   <div key={employee.id} className="flex border-b hover:bg-gray-50">
-                      <div className="w-48 p-3 border-r">
-                        <div className="font-medium">{employee.name}</div>
-                        <div className="text-sm text-gray-500">{employee.role}</div>
-                      </div>
-                      {!Array.isArray(projectSprints) ? (
-                        console.warn('ProjectTimelineView: projectSprints is not an array in employee row', projectSprints),
-                        <div>No sprints available</div>
-                      ) : (projectSprints || []).map((sprint) => {
-                      const allocation = (employeeAllocations || []).find(alloc => alloc?.sprintId === sprint?.id);
+                    <div className="w-48 p-3 border-r">
+                      <div className="font-medium">{employee.name}</div>
+                      <div className="text-sm text-gray-500">{employee.role}</div>
+                    </div>
+
+                    {projectSprints.map((sprint) => {
+                      const allocation = employeeAllocations.find((a) => a?.sprintId === sprint?.id);
                       return (
                         <div key={sprint.id} className="w-32 p-2 text-center border-r">
                           {allocation ? (
-                            <div className="text-sm font-medium text-blue-600">
-                              {allocation.days}d
-                            </div>
+                            <div className="text-sm font-medium text-blue-600">{allocation.days}d</div>
                           ) : (
                             <div className="text-xs text-gray-400">-</div>
                           )}
