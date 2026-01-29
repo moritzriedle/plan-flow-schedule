@@ -254,7 +254,7 @@ const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project }) =>
               <tbody>
                 {matrix.rows.map((r) => (
                   <tr key={r.employeeId} className="border-b last:border-b-0">
-                    <td className="px-2 py-2 truncate" title={r.name}>
+                    <td className="px-2 py-2 truncate">
                       {r.name}
                     </td>
 
