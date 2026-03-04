@@ -252,7 +252,7 @@ const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project }) =>
           </div>
         ) : matrix.rows.length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            No allocations in the next {windowSprints.length} sprints for this project.
+            No allocations in the {viewMode === 'historic' ? 'last' : 'next'} {windowSprints.length} sprints for this project.
           </div>
         ) : (
           <div className="border rounded-md overflow-hidden">
