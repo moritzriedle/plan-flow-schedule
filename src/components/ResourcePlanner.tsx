@@ -184,25 +184,15 @@ const ResourcePlanner: React.FC = () => {
   const handleAllocationComplete = async (params: {
     employeeId: string;
     projectId: string;
-    startDate: Date;
-    endDate: Date;
-    daysPerWeek: number;
+    sprintId: string;
+    days: number;
   }) => {
-    const daysPerWeekMap: { [key: number]: 1 | 3 | 5 } = {
-      1: 1,
-      2: 1,
-      3: 3,
-      4: 3,
-      5: 5
-    };
-    
-    const mappedDaysPerWeek = daysPerWeekMap[params.daysPerWeek] || 5;
-    
-    await allocateToProjectTimeline(
-      params.employeeId,
-      params.projectId,
-      mappedDaysPerWeek
-    );
+    await plannerData.createSprintAllocation({
+      employeeId: params.employeeId,
+      projectId: params.projectId,
+      sprintId: params.sprintId,
+      days: params.days,
+    });
   };
 
   if (loading && !forceShowContent) {
@@ -234,10 +224,7 @@ const ResourcePlanner: React.FC = () => {
               Add Project
             </Button>
           </div>
-          <ProjectsSidebar 
-            onProjectTimelineOpen={handleProjectTimelineOpen}
-            onDetailedAllocation={handleDetailedAllocation}
-          />
+          <ProjectsSidebar />
         </div>
         
         <div className="flex-1 overflow-hidden">
@@ -307,6 +294,7 @@ const ResourcePlanner: React.FC = () => {
           }}
           employee={allocationEmployee}
           project={allocationProject}
+          sprints={Array.isArray(sprints) ? sprints : []}
           onAllocate={handleAllocationComplete}
         />
       )}
