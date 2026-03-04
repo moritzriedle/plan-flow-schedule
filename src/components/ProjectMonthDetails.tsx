@@ -3,7 +3,7 @@ import { usePlanner } from '@/contexts/PlannerContext';
 import { Project } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { X, History, ArrowRight } from 'lucide-react';
 import { format, isWithinInterval } from 'date-fns';
 
 interface ProjectMonthDetailsProps {
@@ -35,6 +35,7 @@ const shortSprintLabel = (name: string) => {
 const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project }) => {
   const { getProjectAllocations, getEmployeeById, sprints } = usePlanner();
   const [isOpen, setIsOpen] = useState(true);
+  const [viewMode, setViewMode] = useState<'upcoming' | 'historic'>('upcoming');
 
   const today = new Date();
   const allocations = useMemo(
@@ -68,8 +69,12 @@ const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project }) =>
 
   const windowSprints = useMemo(() => {
     if (currentSprintIndex < 0) return [];
+    if (viewMode === 'historic') {
+      const start = Math.max(0, currentSprintIndex - 10);
+      return sortedSprints.slice(start, currentSprintIndex);
+    }
     return sortedSprints.slice(currentSprintIndex, currentSprintIndex + 10);
-  }, [sortedSprints, currentSprintIndex]);
+  }, [sortedSprints, currentSprintIndex, viewMode]);
 
   const sprintIdSet = useMemo(() => new Set(windowSprints.map((s) => s.id)), [windowSprints]);
 
@@ -152,7 +157,9 @@ const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project }) =>
       <div className="border-b p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-sm text-muted-foreground">Upcoming sprint allocations</div>
+            <div className="text-sm text-muted-foreground">
+              {viewMode === 'upcoming' ? 'Upcoming sprint allocations' : 'Historic sprint allocations'}
+            </div>
             <div className="font-semibold leading-tight truncate">{project.name}</div>
 
             {windowSprints.length === 0 || !headerMeta ? (
@@ -208,10 +215,30 @@ const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project }) =>
             )}
           </div>
 
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setIsOpen(false)}>
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </Button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              variant={viewMode === 'historic' ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              onClick={() => setViewMode(viewMode === 'upcoming' ? 'historic' : 'upcoming')}
+            >
+              {viewMode === 'upcoming' ? (
+                <>
+                  <History className="h-3.5 w-3.5" />
+                  Historic
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                  Upcoming
+                </>
+              )}
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setIsOpen(false)}>
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -219,7 +246,9 @@ const ProjectMonthDetails: React.FC<ProjectMonthDetailsProps> = ({ project }) =>
       <div className="h-[calc(100%-92px)] overflow-y-auto p-4">
         {windowSprints.length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            Couldn&apos;t determine the currently running sprint. Check sprint dates in your data.
+            {viewMode === 'historic'
+              ? 'No historic sprints found before the current sprint.'
+              : "Couldn't determine the currently running sprint. Check sprint dates in your data."}
           </div>
         ) : matrix.rows.length === 0 ? (
           <div className="text-sm text-muted-foreground">
