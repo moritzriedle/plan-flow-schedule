@@ -110,7 +110,9 @@ export const useDataLoader = () => {
                 sprints.findIndex((s) => new Date(s.startDate) >= today)
               );
 
-        const windowSprints = sprints.slice(nextFutureIdx, nextFutureIdx + 31);
+        // Include 10 past sprints for historic view + 31 future sprints
+        const historicStart = Math.max(0, nextFutureIdx - 10);
+        const windowSprints = sprints.slice(historicStart, nextFutureIdx + 31);
 
         const windowStart = windowSprints[0];
         const windowEnd = windowSprints[windowSprints.length - 1];
