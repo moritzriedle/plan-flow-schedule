@@ -213,7 +213,7 @@ const QuickAllocateDialog: React.FC<{
               min={1}
               step={1}
               value={Number.isFinite(days) ? days : 1}
-              on taxChange={(e) => setDays(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+              onChange={(e) => setDays(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
             />
             <div className="text-xs text-muted-foreground">
               Whole days only. Fractional reality is not supported by this timeline.
