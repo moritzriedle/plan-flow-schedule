@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Project, Sprint, Allocation, Employee } from '../../types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { HandHelping, Plus, Minus, UserPlus, UserMinus } from 'lucide-react';
+import { HandHelping } from 'lucide-react';
 import SupportRoleSelector from './SupportRoleSelector';
+import EditableAllocationBadge from './EditableAllocationBadge';
+import AddAllocationPopover from './AddAllocationPopover';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ProjectAlignmentCardProps {
   project: Project;
@@ -14,12 +16,18 @@ interface ProjectAlignmentCardProps {
   allocations: Allocation[];
   employees: Employee[];
   overallocatedEmployees: Map<string, { employee: Employee; sprintId: string; totalDays: number }[]>;
-  highlightSprintId?: string | null; // ✅ NEW
+  highlightSprintId?: string | null;
+  canEdit: boolean;
+  onUpdateAllocation: (allocation: Allocation) => Promise<boolean>;
+  onDeleteAllocation: (id: string) => Promise<boolean>;
+  onCreateAllocation: (params: { employeeId: string; projectId: string; sprintId: string; days: number }) => Promise<any>;
+  filteredEmployeeIds?: string[];
 }
 
 interface SprintAllocation {
   employee: Employee;
   days: number;
+  allocationId: string;
   isOverallocated: boolean;
   changeType?: 'new' | 'leaving' | 'increased' | 'decreased';
 }
@@ -30,13 +38,17 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
   allocations,
   employees,
   overallocatedEmployees,
-  highlightSprintId, // ✅ NEW
+  highlightSprintId,
+  canEdit,
+  onUpdateAllocation,
+  onDeleteAllocation,
+  onCreateAllocation,
+  filteredEmployeeIds,
 }) => {
   const [supportNeeded, setSupportNeeded] = useState(false);
   const [neededRoles, setNeededRoles] = useState<string[]>([]);
   const [isLoadingSupport, setIsLoadingSupport] = useState(true);
 
-  // Load support request from database
   useEffect(() => {
     const loadSupportRequest = async () => {
       const { data, error } = await supabase
@@ -55,38 +67,26 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
     loadSupportRequest();
   }, [project.id]);
 
-  // Save support request to database
   const handleSupportChange = async (enabled: boolean) => {
     setSupportNeeded(enabled);
-
     await supabase
       .from('project_support_requests')
       .upsert(
-        {
-          project_id: project.id,
-          support_needed: enabled,
-          needed_roles: neededRoles,
-        },
+        { project_id: project.id, support_needed: enabled, needed_roles: neededRoles },
         { onConflict: 'project_id' }
       );
   };
 
   const handleRolesChange = async (roles: string[]) => {
     setNeededRoles(roles);
-
     await supabase
       .from('project_support_requests')
       .upsert(
-        {
-          project_id: project.id,
-          support_needed: supportNeeded,
-          needed_roles: roles,
-        },
+        { project_id: project.id, support_needed: supportNeeded, needed_roles: roles },
         { onConflict: 'project_id' }
       );
   };
 
-  // Calculate allocations per sprint with change detection
   const sprintAllocations = useMemo(() => {
     const result: Map<string, SprintAllocation[]> = new Map();
 
@@ -105,10 +105,14 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
           const employee = employees.find((e) => e.id === allocation.employeeId);
           if (!employee) return null;
 
+          // Apply employee filter
+          if (filteredEmployeeIds && filteredEmployeeIds.length > 0 && !filteredEmployeeIds.includes(employee.id)) {
+            return null;
+          }
+
           const isOverallocated =
             overallocatedEmployees.get(employee.id)?.some((o) => o.sprintId === sprint.id) || false;
 
-          // Detect change type
           let changeType: SprintAllocation['changeType'];
           const previousAllocation = previousAllocations.find(
             (a) => a.employeeId === allocation.employeeId
@@ -125,22 +129,27 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
           return {
             employee,
             days: allocation.days,
+            allocationId: allocation.id,
             isOverallocated,
             changeType,
           } as SprintAllocation;
         })
         .filter((a): a is SprintAllocation => a !== null);
 
-      // Check for employees leaving (were in previous but not in current)
+      // Check for employees leaving
       if (previousSprint) {
         const currentEmployeeIds = new Set(projectAllocations.map((a) => a.employeeId));
         previousAllocations.forEach((prevAlloc) => {
           if (!currentEmployeeIds.has(prevAlloc.employeeId)) {
             const employee = employees.find((e) => e.id === prevAlloc.employeeId);
             if (employee) {
+              if (filteredEmployeeIds && filteredEmployeeIds.length > 0 && !filteredEmployeeIds.includes(employee.id)) {
+                return;
+              }
               sprintData.push({
                 employee,
                 days: 0,
+                allocationId: '',
                 isOverallocated: false,
                 changeType: 'leaving',
               });
@@ -153,7 +162,28 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
     });
 
     return result;
-  }, [sprints, allocations, project.id, employees, overallocatedEmployees]);
+  }, [sprints, allocations, project.id, employees, overallocatedEmployees, filteredEmployeeIds]);
+
+  // Helper to get total days for an employee in a sprint (across all projects)
+  const getEmployeeTotalDaysInSprint = (employeeId: string, sprintId: string) => {
+    return allocations
+      .filter((a) => a.employeeId === employeeId && a.sprintId === sprintId)
+      .reduce((sum, a) => sum + a.days, 0);
+  };
+
+  const handleSaveAllocation = async (allocationId: string, newDays: number) => {
+    const existing = allocations.find((a) => a.id === allocationId);
+    if (!existing) return false;
+    const ok = await onUpdateAllocation({ ...existing, days: newDays });
+    if (ok) toast.success('Allocation updated');
+    return ok;
+  };
+
+  const handleDeleteAllocation = async (allocationId: string) => {
+    const ok = await onDeleteAllocation(allocationId);
+    if (ok) toast.success('Allocation removed');
+    return ok;
+  };
 
   const getColorClass = (color: string) => {
     const colorMap: Record<string, string> = {
@@ -176,7 +206,6 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
             <h3 className="font-semibold truncate">{project.name}</h3>
           </div>
 
-          {/* Support Toggle */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Switch
@@ -212,7 +241,7 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
                 <div
                   key={sprint.id}
                   className={[
-                    'space-y-2 rounded-md p-2 -m-2', // padding so the highlight looks intentional
+                    'space-y-2 rounded-md p-2 -m-2',
                     isHighlighted ? 'bg-primary/5 ring-2 ring-primary/30' : '',
                   ].join(' ')}
                 >
@@ -222,26 +251,29 @@ const ProjectAlignmentCard: React.FC<ProjectAlignmentCardProps> = ({
                     {sprintData.length === 0 ? (
                       <span className="text-sm text-muted-foreground italic">No allocations</span>
                     ) : (
-                      sprintData.map(({ employee, days, isOverallocated, changeType }) => (
-                        <Badge
-                          key={employee.id}
-                          variant={changeType === 'leaving' ? 'outline' : 'secondary'}
-                          className={`text-xs flex items-center gap-1 ${
-                            isOverallocated ? 'border-destructive bg-destructive/10' : ''
-                          } ${changeType === 'new' ? 'bg-green-500/20 border-green-500' : ''} ${
-                            changeType === 'leaving' ? 'opacity-50 line-through' : ''
-                          }`}
-                        >
-                          {changeType === 'new' && <UserPlus className="w-3 h-3 text-green-600" />}
-                          {changeType === 'leaving' && <UserMinus className="w-3 h-3 text-red-500" />}
-                          {changeType === 'increased' && <Plus className="w-3 h-3 text-green-600" />}
-                          {changeType === 'decreased' && <Minus className="w-3 h-3 text-red-500" />}
-                          <span className={changeType === 'leaving' ? 'text-muted-foreground' : ''}>
-                            {employee.name.split(' ')[0]}
-                          </span>
-                          <span className="opacity-70">{days}d</span>
-                        </Badge>
+                      sprintData.map(({ employee, days, allocationId, isOverallocated, changeType }) => (
+                        <EditableAllocationBadge
+                          key={`${employee.id}-${allocationId}`}
+                          employee={employee}
+                          days={days}
+                          allocationId={allocationId}
+                          isOverallocated={isOverallocated}
+                          changeType={changeType}
+                          totalEmployeeDaysInSprint={getEmployeeTotalDaysInSprint(employee.id, sprint.id)}
+                          onSave={handleSaveAllocation}
+                          onDelete={handleDeleteAllocation}
+                          canEdit={canEdit && changeType !== 'leaving'}
+                        />
                       ))
+                    )}
+                    {canEdit && (
+                      <AddAllocationPopover
+                        project={project}
+                        sprint={sprint}
+                        employees={employees}
+                        allocations={allocations}
+                        onAdd={onCreateAllocation}
+                      />
                     )}
                   </div>
                 </div>
