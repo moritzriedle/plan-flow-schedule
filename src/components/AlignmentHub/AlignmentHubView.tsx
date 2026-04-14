@@ -2,12 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { usePlanner } from '../../contexts/PlannerContext';
 import { useTimeframeSprints } from '../../hooks/useTimeframeSprints';
 import { findActiveSprint } from '../../utils/sprintUtils';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ArrowLeft, AlertTriangle, UserMinus } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, UserMinus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProjectAlignmentCard from './ProjectAlignmentCard';
+import AlignmentFilters from './AlignmentFilters';
 import { Employee } from '../../types';
+import { useAuth } from '../../hooks/useAuth';
 
 const AlignmentHubView: React.FC = () => {
   const {
@@ -16,74 +17,86 @@ const AlignmentHubView: React.FC = () => {
     allocations = [],
     loading,
     getAvailableDays,
+    updateAllocation,
+    deleteAllocation,
+    createSprintAllocation,
   } = usePlanner();
 
+  const { profile } = useAuth();
   const { sprints } = useTimeframeSprints();
-  const [searchTerm, setSearchTerm] = useState('');
+
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+
+  const canEdit =
+    !!profile &&
+    (profile.is_admin ||
+      ['Manager', 'Product Manager', 'Product Owner', 'Technical Project Manager'].includes(
+        profile.role
+      ));
 
   // Get current sprint and next 2 sprints
   const relevantSprints = useMemo(() => {
     const safeSprints = Array.isArray(sprints) ? sprints : [];
     const activeSprint = findActiveSprint(safeSprints);
-
     if (!activeSprint) return safeSprints.slice(0, 3);
-
     const activeIndex = safeSprints.findIndex((s) => s.id === activeSprint.id);
     return safeSprints.slice(activeIndex, activeIndex + 3);
   }, [sprints]);
 
-  // Highlight the upcoming sprint (middle column)
-  const highlightedSprintId = useMemo(() => {
-    return relevantSprints?.[1]?.id ?? null;
-  }, [relevantSprints]);
+  const highlightedSprintId = useMemo(() => relevantSprints?.[1]?.id ?? null, [relevantSprints]);
 
-  // ✅ Sort by color (blue last), then by name
   const colorRank = (color?: string) => {
     if (!color) return 50;
     const c = color.toLowerCase();
     if (c === 'blue') return 999;
-
     const order = ['red', 'orange', 'yellow', 'green', 'teal', 'purple', 'pink', 'gray'];
     const idx = order.indexOf(c);
     return idx === -1 ? 50 : idx;
   };
 
-  // Filter projects by search term (excluding archived) + sort by color
+  // Filter projects by multi-select + employee presence
   const filteredProjects = useMemo(() => {
     const safeProjects = Array.isArray(projects) ? projects : [];
-    const activeProjects = safeProjects.filter((p) => p && !p.archived);
+    let activeProjects = safeProjects.filter((p) => p && !p.archived);
 
-    const base = !searchTerm.trim()
-      ? activeProjects
-      : activeProjects.filter((p) =>
-          (p?.name || '').toLowerCase().includes(searchTerm.toLowerCase().trim())
-        );
+    // Apply project filter
+    if (selectedProjectIds.length > 0) {
+      activeProjects = activeProjects.filter((p) => selectedProjectIds.includes(p.id));
+    }
 
-    return [...base].sort((a, b) => {
+    // If employee filter is active, only show projects that have at least one matching allocation
+    if (selectedEmployeeIds.length > 0) {
+      const sprintIds = new Set(relevantSprints.map((s) => s.id));
+      activeProjects = activeProjects.filter((p) =>
+        allocations.some(
+          (a) =>
+            a.projectId === p.id &&
+            sprintIds.has(a.sprintId) &&
+            selectedEmployeeIds.includes(a.employeeId)
+        )
+      );
+    }
+
+    return [...activeProjects].sort((a, b) => {
       const r = colorRank(a.color) - colorRank(b.color);
       if (r !== 0) return r;
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [projects, searchTerm]);
+  }, [projects, selectedProjectIds, selectedEmployeeIds, allocations, relevantSprints]);
 
-  // Calculate overallocated employees across relevant sprints
+  // Calculate overallocated employees
   const overallocatedEmployees = useMemo(() => {
-    const overallocated: Map<
-      string,
-      { employee: Employee; sprintId: string; totalDays: number }[]
-    > = new Map();
-
+    const overallocated: Map<string, { employee: Employee; sprintId: string; totalDays: number }[]> = new Map();
     const safeEmployees = Array.isArray(employees) ? employees : [];
     const activeEmployees = safeEmployees.filter((e) => e && !e.archived);
 
     for (const sprint of relevantSprints) {
       for (const employee of activeEmployees) {
-        const sprintAllocations = allocations.filter(
-          (a) => a.employeeId === employee.id && a.sprintId === sprint.id
-        );
-        const totalDays = sprintAllocations.reduce((sum, a) => sum + (a.days ?? 0), 0);
+        const totalDays = allocations
+          .filter((a) => a.employeeId === employee.id && a.sprintId === sprint.id)
+          .reduce((sum, a) => sum + (a.days ?? 0), 0);
 
-        // Assuming 10 days max per sprint (2 weeks * 5 days)
         if (totalDays > 10) {
           const existing = overallocated.get(employee.id) || [];
           existing.push({ employee, sprintId: sprint.id, totalDays });
@@ -91,36 +104,27 @@ const AlignmentHubView: React.FC = () => {
         }
       }
     }
-
     return overallocated;
   }, [employees, allocations, relevantSprints]);
 
-  // ✅ Unallocated employees PER sprint (exclude full-sprint vacation / 0 available days)
+  // Unallocated employees per sprint
   const unallocatedBySprint = useMemo(() => {
-  const safeEmployees = Array.isArray(employees) ? employees : [];
-  const activeEmployees = safeEmployees.filter((e) => e && !e.archived);
+    const safeEmployees = Array.isArray(employees) ? employees : [];
+    const activeEmployees = safeEmployees.filter((e) => e && !e.archived);
 
-  return relevantSprints.map((sprint) => {
-    const unallocated = activeEmployees.filter((employee) => {
-      const hasAllocations = allocations.some(
-        (a) => a.employeeId === employee.id && a.sprintId === sprint.id
-      );
-
-      // ✅ getAvailableDays expects a Sprint (not a string id)
-      const availableDays =
-        typeof getAvailableDays === 'function'
-          ? getAvailableDays(employee.id, sprint)
-          : 10;
-
-      return !hasAllocations && availableDays > 0;
+    return relevantSprints.map((sprint) => {
+      const unallocated = activeEmployees.filter((employee) => {
+        const hasAllocations = allocations.some(
+          (a) => a.employeeId === employee.id && a.sprintId === sprint.id
+        );
+        const availableDays =
+          typeof getAvailableDays === 'function' ? getAvailableDays(employee.id, sprint) : 10;
+        return !hasAllocations && availableDays > 0;
+      });
+      unallocated.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      return { sprint, employees: unallocated };
     });
-
-    unallocated.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-    return { sprint, employees: unallocated };
-  });
-}, [employees, allocations, relevantSprints, getAvailableDays]);
-
+  }, [employees, allocations, relevantSprints, getAvailableDays]);
 
   if (loading) {
     return (
@@ -147,23 +151,21 @@ const AlignmentHubView: React.FC = () => {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search projects..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          {/* Filters */}
+          <AlignmentFilters
+            projects={projects}
+            employees={employees}
+            selectedProjectIds={selectedProjectIds}
+            selectedEmployeeIds={selectedEmployeeIds}
+            onProjectFilterChange={setSelectedProjectIds}
+            onEmployeeFilterChange={setSelectedEmployeeIds}
+          />
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Alerts Section */}
         <div className="flex flex-wrap gap-4 mb-6">
-          {/* Overallocated Alert (aggregated) */}
           {overallocatedEmployees.size > 0 && (
             <div className="bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3 flex items-start gap-3 max-w-full">
               <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
@@ -182,7 +184,6 @@ const AlignmentHubView: React.FC = () => {
             </div>
           )}
 
-          {/* Unallocated Alerts PER sprint, show ALL names */}
           {unallocatedBySprint
             .filter(({ employees }) => employees.length > 0)
             .map(({ sprint, employees: unalloc }, idx) => {
@@ -211,7 +212,6 @@ const AlignmentHubView: React.FC = () => {
                       {unalloc.length} unallocated in {sprint.name}
                       {isCurrent ? ' (current)' : ''}
                     </p>
-
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {unalloc.map((e) => (
                         <span
@@ -234,7 +234,6 @@ const AlignmentHubView: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 py-3">
             <div className="grid grid-cols-[300px_1fr] gap-4">
               <div className="font-medium text-muted-foreground">Project</div>
-
               <div
                 className="grid gap-4"
                 style={{ gridTemplateColumns: `repeat(${relevantSprints.length}, 1fr)` }}
@@ -242,7 +241,6 @@ const AlignmentHubView: React.FC = () => {
                 {relevantSprints.map((sprint, index) => {
                   const isCurrent = index === 0;
                   const isUpcoming = sprint.id === highlightedSprintId;
-
                   return (
                     <div
                       key={sprint.id}
@@ -261,22 +259,15 @@ const AlignmentHubView: React.FC = () => {
                         {sprint.name}
                         {isUpcoming ? ' (upcoming)' : ''}
                       </div>
-
                       <div
                         className={[
                           'text-sm',
                           isUpcoming ? 'text-foreground' : 'text-muted-foreground',
                         ].join(' ')}
                       >
-                        {new Date(sprint.startDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {new Date(sprint.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         {' - '}
-                        {new Date(sprint.endDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {new Date(sprint.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
                     </div>
                   );
@@ -297,12 +288,19 @@ const AlignmentHubView: React.FC = () => {
               employees={employees}
               overallocatedEmployees={overallocatedEmployees}
               highlightSprintId={highlightedSprintId}
+              canEdit={canEdit}
+              onUpdateAllocation={updateAllocation}
+              onDeleteAllocation={deleteAllocation}
+              onCreateAllocation={createSprintAllocation}
+              filteredEmployeeIds={selectedEmployeeIds.length > 0 ? selectedEmployeeIds : undefined}
             />
           ))}
 
           {filteredProjects.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              {searchTerm ? 'No projects match your search.' : 'No active projects found.'}
+              {selectedProjectIds.length > 0 || selectedEmployeeIds.length > 0
+                ? 'No projects match your filters.'
+                : 'No active projects found.'}
             </div>
           )}
         </div>
