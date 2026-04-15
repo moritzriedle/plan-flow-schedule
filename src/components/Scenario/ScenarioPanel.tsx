@@ -145,25 +145,37 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
     setNewNote('');
   };
 
+  const openAddMode = (mode: 'named' | 'placeholder') => {
+    setIsExpanded(true);
+    setAddMode((current) => (current === mode ? 'none' : mode));
+  };
+
   return (
     <div className="border-t bg-muted/20">
-      <div className="flex flex-col gap-2 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+      <div
+        className={`flex px-4 ${isExpanded ? 'flex-col gap-2 py-3 lg:flex-row lg:items-center lg:justify-between' : 'items-center justify-between gap-3 py-2.5'}`}
+      >
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-start gap-2 text-left"
+          className={`flex min-w-0 flex-1 gap-2 text-left ${isExpanded ? 'items-start' : 'items-center'}`}
           onClick={() => setIsExpanded((current) => !current)}
         >
           {isExpanded ? (
             <ChevronDown className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Users className="h-4 w-4 text-muted-foreground" />
               Scenario Allocations & Warnings
+              {!isExpanded ? (
+                <span className="hidden text-xs font-normal text-muted-foreground sm:inline">
+                  {collapsedSummary}
+                </span>
+              ) : null}
             </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className={`text-xs text-muted-foreground ${isExpanded ? 'mt-0.5' : 'mt-0.5 sm:hidden'}`}>
               {isExpanded
                 ? 'Review issues and placeholder demand, then collapse to focus on the grid.'
                 : collapsedSummary}
@@ -171,22 +183,20 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
           </div>
         </button>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className={`flex flex-wrap gap-1.5 ${isExpanded ? '' : 'justify-end'}`}>
           <Button
             size="sm"
             variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            disabled={!isExpanded}
-            onClick={() => setAddMode(addMode === 'named' ? 'none' : 'named')}
+            className={`gap-1.5 text-xs ${isExpanded ? 'h-8' : 'h-8 border-border bg-background text-foreground shadow-sm hover:bg-accent'}`}
+            onClick={() => openAddMode('named')}
           >
             <UserPlus className="h-3.5 w-3.5" /> Assign Team Member
           </Button>
           <Button
             size="sm"
             variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            disabled={!isExpanded}
-            onClick={() => setAddMode(addMode === 'placeholder' ? 'none' : 'placeholder')}
+            className={`gap-1.5 text-xs ${isExpanded ? 'h-8' : 'h-8 border-border bg-background text-foreground shadow-sm hover:bg-accent'}`}
+            onClick={() => openAddMode('placeholder')}
           >
             <Plus className="h-3.5 w-3.5" /> Add Placeholder
           </Button>
@@ -484,19 +494,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
             )}
           </section>
         </div>
-      ) : (
-        <div className="px-4 pb-3">
-          {placeholders.length > 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Placeholder demand remains editable when you expand the summary.
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Expand the summary to review detailed issues and placeholder demand.
-            </p>
-          )}
-        </div>
-      )}
+      ) : null}
 
       {isExpanded && placeholders.length === 0 && hardConflicts.length === 0 && warnings.length === 0 && (
         <div className="px-4 pb-3">
