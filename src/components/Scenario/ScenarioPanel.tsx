@@ -12,7 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, AlertTriangle, AlertCircle, UserPlus, Users } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  AlertTriangle,
+  AlertCircle,
+  UserPlus,
+  Users,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 import { getSprintDateRange } from '@/utils/sprintUtils';
 
 interface ScenarioPanelProps {
@@ -44,6 +53,9 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
   const [newSprintId, setNewSprintId] = useState('');
   const [newDays, setNewDays] = useState(5);
   const [newNote, setNewNote] = useState('');
+  const [isExpanded, setIsExpanded] = useState(conflicts.length > 0 || scenarioAllocations.length > 0);
+  const [healthExpanded, setHealthExpanded] = useState(true);
+  const [placeholderExpanded, setPlaceholderExpanded] = useState(true);
 
   const placeholders = scenarioAllocations.filter((a) => a.isPlaceholder);
   const hardConflicts = conflicts.filter((c) => c.type === 'hard');
@@ -58,6 +70,30 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
 
   const getEmployeeName = (employeeId?: string) =>
     employees.find((e) => e.id === employeeId)?.name || 'Unknown team member';
+
+  const uniquePlaceholderWarningSummary = Array.from(
+    new Map(
+      placeholderWarnings.map((conflict) => [
+        `${conflict.role}-${conflict.sprintId}`,
+        {
+          role: conflict.role || 'Unknown role',
+          sprintId: conflict.sprintId,
+          days: conflict.totalDays,
+        },
+      ])
+    ).values()
+  );
+
+  const collapsedSummaryParts = [
+    hardConflicts.length > 0 ? `${hardConflicts.length} conflict${hardConflicts.length !== 1 ? 's' : ''}` : null,
+    healthWarnings.length > 0 ? `${healthWarnings.length} warning${healthWarnings.length !== 1 ? 's' : ''}` : null,
+    placeholders.length > 0 ? `${placeholders.length} placeholder${placeholders.length !== 1 ? 's' : ''}` : null,
+  ].filter(Boolean) as string[];
+
+  const collapsedSummary =
+    collapsedSummaryParts.length > 0
+      ? collapsedSummaryParts.join(' • ')
+      : 'No active issues or placeholder demand';
 
   const formatConflictText = (conflict: ScenarioConflict) => {
     const overBy = Math.max(conflict.totalDays - conflict.availableDays, 0);
@@ -110,40 +146,37 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
   };
 
   return (
-    <div className="max-h-[320px] space-y-3 overflow-y-auto border-t bg-muted/20 px-4 py-3">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            Scenario Allocations & Warnings
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
-            <Badge
-              variant="outline"
-              className="h-6 rounded-full border-red-200 bg-red-50 px-2 text-[11px] font-medium text-red-700"
-            >
-              {hardConflicts.length} Conflict{hardConflicts.length !== 1 ? 's' : ''}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="h-6 rounded-full border-amber-200 bg-amber-50 px-2 text-[11px] font-medium text-amber-700"
-            >
-              {warnings.length} Warning{warnings.length !== 1 ? 's' : ''}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="h-6 rounded-full border-violet-200 bg-violet-50 px-2 text-[11px] font-medium text-violet-700"
-            >
-              {placeholders.length} Placeholder{placeholders.length !== 1 ? 's' : ''}
-            </Badge>
+    <div className="border-t bg-muted/20">
+      <div className="flex flex-col gap-2 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-start gap-2 text-left"
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          {isExpanded ? (
+            <ChevronDown className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              Scenario Allocations & Warnings
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {isExpanded
+                ? 'Review issues and placeholder demand, then collapse to focus on the grid.'
+                : collapsedSummary}
+            </p>
           </div>
-        </div>
+        </button>
 
         <div className="flex flex-wrap gap-1.5">
           <Button
             size="sm"
             variant="outline"
             className="h-8 gap-1.5 text-xs"
+            disabled={!isExpanded}
             onClick={() => setAddMode(addMode === 'named' ? 'none' : 'named')}
           >
             <UserPlus className="h-3.5 w-3.5" /> Assign Team Member
@@ -152,6 +185,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
             size="sm"
             variant="outline"
             className="h-8 gap-1.5 text-xs"
+            disabled={!isExpanded}
             onClick={() => setAddMode(addMode === 'placeholder' ? 'none' : 'placeholder')}
           >
             <Plus className="h-3.5 w-3.5" /> Add Placeholder
@@ -159,8 +193,8 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
         </div>
       </div>
 
-      {addMode !== 'none' && (
-        <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-background p-3">
+      {isExpanded && addMode !== 'none' && (
+        <div className="mx-4 mb-3 flex flex-wrap items-end gap-2 rounded-lg border bg-background p-3">
           {addMode === 'placeholder' ? (
             <div className="min-w-[150px] space-y-1">
               <label className="text-xs font-medium">Role</label>
@@ -246,185 +280,231 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
         </div>
       )}
 
-      <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-lg border bg-background/90 p-3">
-          <div className="mb-2">
-            <div className="text-sm font-medium text-foreground">Scenario Health</div>
-            <p className="text-[11px] text-muted-foreground">
-              Conflicts and warnings that need attention
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Conflicts
-              </div>
-              {hardConflicts.length > 0 ? (
-                <div className="space-y-1.5">
-                  {hardConflicts.map((conflict, index) => (
-                    <div
-                      key={`hard-${index}`}
-                      className="flex items-start gap-2 rounded-md border border-border bg-white px-2.5 py-2 shadow-sm"
-                    >
-                      <div className="w-1 self-stretch rounded-full bg-red-500" />
-                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-600" />
-                      <span className="min-w-0 flex-1 text-xs text-foreground">
-                        {formatConflictText(conflict)}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="ml-auto h-5 border-red-200 bg-red-50 px-1.5 text-[10px] text-red-700"
-                      >
-                        {getSprintLabel(conflict.sprintId)}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No hard conflicts in this scenario.</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Warnings
-              </div>
-              {healthWarnings.length > 0 ? (
-                <div className="space-y-1.5">
-                  {healthWarnings.map((conflict, index) => (
-                    <div
-                      key={`warn-${index}`}
-                      className="flex items-start gap-2 rounded-md border border-border bg-white px-2.5 py-2 shadow-sm"
-                    >
-                      <div className="w-1 self-stretch rounded-full bg-amber-500" />
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
-                      <span className="min-w-0 flex-1 text-xs text-foreground">
-                        {formatConflictText(conflict)}
-                      </span>
-                      <Badge className="ml-auto h-5 bg-amber-100 px-1.5 text-[10px] text-amber-800">
-                        {getSprintLabel(conflict.sprintId)}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No scenario warnings right now.</p>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-lg border bg-background/90 p-3">
-          <div className="mb-2">
-            <div className="text-sm font-medium text-foreground">Placeholder Demand</div>
-            <p className="text-[11px] text-muted-foreground">
-              Unassigned role demand and placeholder allocations
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Unassigned Placeholder Demand
-              </div>
-              {placeholderWarnings.length > 0 ? (
-                <div className="space-y-1.5">
-                  {placeholderWarnings.map((conflict, index) => (
-                    <div
-                      key={`placeholder-warning-${index}`}
-                      className="flex items-start gap-2 rounded-md border border-border bg-white px-2.5 py-2 shadow-sm"
-                    >
-                      <div className="w-1 self-stretch rounded-full bg-violet-500" />
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-violet-600" />
-                      <span className="min-w-0 flex-1 text-xs text-foreground">
-                        {formatConflictText(conflict)}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="ml-auto h-5 border-violet-200 bg-violet-50 px-1.5 text-[10px] text-violet-700"
-                      >
-                        {getSprintLabel(conflict.sprintId)}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No unassigned placeholder demand.</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Placeholder Allocations
-              </div>
-              {placeholders.length > 0 ? (
-                <div className="space-y-1.5">
-                  {placeholders.map((placeholder) => (
-                    <div
-                      key={placeholder.id}
-                      className="flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-2 text-xs shadow-sm"
-                    >
-                      <div className="w-1 self-stretch rounded-full bg-violet-500" />
-                      <Badge
-                        variant="outline"
-                        className="h-5 border-violet-200 bg-violet-50 px-1.5 text-[10px] text-violet-700"
-                      >
-                        {placeholder.role}
-                      </Badge>
-                      <span className="min-w-0 flex-1 text-foreground">
-                        {placeholder.days}d unassigned
-                        {placeholder.note ? (
-                          <span className="text-muted-foreground"> • {placeholder.note}</span>
-                        ) : null}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="h-5 border-slate-200 bg-slate-50 px-1.5 text-[10px] text-slate-700"
-                      >
-                        {getSprintLabel(placeholder.sprintId)}
-                      </Badge>
-                      <div className="ml-auto flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min={1}
-                          max={10}
-                          value={placeholder.days}
-                          onChange={(e) =>
-                            onUpdateAllocation(
-                              placeholder.id,
-                              Math.max(1, Math.min(10, Number(e.target.value) || 1))
-                            )
-                          }
-                          className="h-6 w-14 text-xs"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => onDeleteAllocation(placeholder.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  No placeholder allocations yet. Add demand here or directly from the grid.
+      {isExpanded ? (
+        <div className="grid max-h-[260px] gap-3 overflow-y-auto px-4 pb-3 xl:grid-cols-[1.2fr_0.8fr]">
+          <section className="rounded-lg border bg-background/90 p-3">
+            <button
+              type="button"
+              className="mb-2 flex w-full items-center justify-between text-left"
+              onClick={() => setHealthExpanded((current) => !current)}
+            >
+              <div>
+                <div className="text-sm font-medium text-foreground">Scenario Health</div>
+                <p className="text-[11px] text-muted-foreground">
+                  Conflicts and warnings that need attention
                 </p>
+              </div>
+              {healthExpanded ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               )}
-            </div>
-          </div>
-        </section>
-      </div>
+            </button>
 
-      {placeholders.length === 0 && hardConflicts.length === 0 && warnings.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          No placeholder allocations or conflicts. Add scenario allocations using the grid above
-          or the controls here.
-        </p>
+            {healthExpanded ? (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Conflicts
+                  </div>
+                  {hardConflicts.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {hardConflicts.map((conflict, index) => (
+                        <div
+                          key={`hard-${index}`}
+                          className="flex items-start gap-2 rounded-md border border-border bg-white px-2.5 py-2 shadow-sm"
+                        >
+                          <div className="w-1 self-stretch rounded-full bg-red-500" />
+                          <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-600" />
+                          <span className="min-w-0 flex-1 text-xs text-foreground">
+                            {formatConflictText(conflict)}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto h-5 border-red-200 bg-red-50 px-1.5 text-[10px] text-red-700"
+                          >
+                            {getSprintLabel(conflict.sprintId)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No hard conflicts in this scenario.</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Warnings
+                  </div>
+                  {healthWarnings.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {healthWarnings.map((conflict, index) => (
+                        <div
+                          key={`warn-${index}`}
+                          className="flex items-start gap-2 rounded-md border border-border bg-white px-2.5 py-2 shadow-sm"
+                        >
+                          <div className="w-1 self-stretch rounded-full bg-amber-500" />
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
+                          <span className="min-w-0 flex-1 text-xs text-foreground">
+                            {formatConflictText(conflict)}
+                          </span>
+                          <Badge className="ml-auto h-5 bg-amber-100 px-1.5 text-[10px] text-amber-800">
+                            {getSprintLabel(conflict.sprintId)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No scenario warnings right now.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {hardConflicts.length + healthWarnings.length > 0
+                  ? `${hardConflicts.length + healthWarnings.length} health item${hardConflicts.length + healthWarnings.length !== 1 ? 's' : ''} hidden`
+                  : 'No health issues'}
+              </p>
+            )}
+          </section>
+
+          <section className="rounded-lg border bg-background/90 p-3">
+            <button
+              type="button"
+              className="mb-2 flex w-full items-center justify-between text-left"
+              onClick={() => setPlaceholderExpanded((current) => !current)}
+            >
+              <div>
+                <div className="text-sm font-medium text-foreground">Placeholder Demand</div>
+                <p className="text-[11px] text-muted-foreground">
+                  Editable placeholder allocations and unassigned demand
+                </p>
+              </div>
+              {placeholderExpanded ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+
+            {placeholderExpanded ? (
+              <div className="space-y-3">
+                {uniquePlaceholderWarningSummary.length > 0 ? (
+                  <div className="rounded-md border border-violet-100 bg-violet-50/50 px-2.5 py-2 text-xs text-violet-800">
+                    <div className="font-medium">Unassigned demand summary</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {uniquePlaceholderWarningSummary.map((item) => (
+                        <Badge
+                          key={`${item.role}-${item.sprintId}`}
+                          variant="outline"
+                          className="h-5 border-violet-200 bg-white px-1.5 text-[10px] text-violet-700"
+                        >
+                          {item.role}: {item.days}d {getSprintLabel(item.sprintId)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Placeholder Allocations
+                  </div>
+                  {placeholders.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {placeholders.map((placeholder) => (
+                        <div
+                          key={placeholder.id}
+                          className="flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-2 text-xs shadow-sm"
+                        >
+                          <div className="w-1 self-stretch rounded-full bg-violet-500" />
+                          <Badge
+                            variant="outline"
+                            className="h-5 border-violet-200 bg-violet-50 px-1.5 text-[10px] text-violet-700"
+                          >
+                            {placeholder.role}
+                          </Badge>
+                          <span className="min-w-0 flex-1 text-foreground">
+                            {placeholder.days}d unassigned
+                            {placeholder.note ? (
+                              <span className="text-muted-foreground"> • {placeholder.note}</span>
+                            ) : null}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="h-5 border-slate-200 bg-slate-50 px-1.5 text-[10px] text-slate-700"
+                          >
+                            {getSprintLabel(placeholder.sprintId)}
+                          </Badge>
+                          <div className="ml-auto flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={1}
+                              max={10}
+                              value={placeholder.days}
+                              onChange={(e) =>
+                                onUpdateAllocation(
+                                  placeholder.id,
+                                  Math.max(1, Math.min(10, Number(e.target.value) || 1))
+                                )
+                              }
+                              className="h-6 w-14 text-xs"
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => onDeleteAllocation(placeholder.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No placeholder allocations yet. Add demand here or directly from the grid.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {placeholders.length > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {placeholders.length} editable placeholder allocation
+                    {placeholders.length !== 1 ? 's' : ''} hidden
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No placeholder allocations</p>
+                )}
+              </>
+            )}
+          </section>
+        </div>
+      ) : (
+        <div className="px-4 pb-3">
+          {placeholders.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Placeholder demand remains editable when you expand the summary.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Expand the summary to review detailed issues and placeholder demand.
+            </p>
+          )}
+        </div>
+      )}
+
+      {isExpanded && placeholders.length === 0 && hardConflicts.length === 0 && warnings.length === 0 && (
+        <div className="px-4 pb-3">
+          <p className="text-xs text-muted-foreground">
+            No placeholder allocations or conflicts. Add scenario allocations using the grid above
+            or the controls here.
+          </p>
+        </div>
       )}
     </div>
   );
