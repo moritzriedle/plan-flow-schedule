@@ -58,6 +58,7 @@ const ResourcePlanner: React.FC = () => {
   const [isDetailedAllocationOpen, setIsDetailedAllocationOpen] = useState(false);
   const [allocationEmployee, setAllocationEmployee] = useState<Employee | null>(null);
   const [allocationProject, setAllocationProject] = useState<Project | null>(null);
+  const [showAffectedPeopleOnly, setShowAffectedPeopleOnly] = useState(false);
 
   // Scenario state
   const [isScenarioSelectorOpen, setIsScenarioSelectorOpen] = useState(false);
@@ -150,6 +151,45 @@ const ResourcePlanner: React.FC = () => {
 
   const hardConflicts = scenario.conflicts.filter(c => c.type === 'hard').length;
   const warningConflicts = scenario.conflicts.filter(c => c.type === 'warning').length;
+  const visibleSprintIds = React.useMemo(
+    () => new Set((Array.isArray(sprints) ? sprints : []).map((sprint) => sprint.id)),
+    [sprints]
+  );
+  const affectedEmployeeIds = React.useMemo(() => {
+    if (!scenario.scenarioMode || !scenario.activeScenario) return new Set<string>();
+
+    const affectedIds = new Set<string>();
+
+    scenario.scenarioAllocations.forEach((allocation) => {
+      if (!allocation.isPlaceholder && allocation.employeeId && visibleSprintIds.has(allocation.sprintId)) {
+        affectedIds.add(allocation.employeeId);
+      }
+    });
+
+    scenario.conflicts.forEach((conflict) => {
+      if (conflict.employeeId && visibleSprintIds.has(conflict.sprintId)) {
+        affectedIds.add(conflict.employeeId);
+      }
+    });
+
+    return affectedIds;
+  }, [
+    scenario.scenarioMode,
+    scenario.activeScenario,
+    scenario.scenarioAllocations,
+    scenario.conflicts,
+    visibleSprintIds,
+  ]);
+  const scenarioFilteredEmployees = React.useMemo(() => {
+    if (!scenario.scenarioMode || !showAffectedPeopleOnly) return filteredEmployees;
+    return filteredEmployees.filter((employee) => affectedEmployeeIds.has(employee.id));
+  }, [scenario.scenarioMode, showAffectedPeopleOnly, filteredEmployees, affectedEmployeeIds]);
+
+  useEffect(() => {
+    if (!scenario.scenarioMode) {
+      setShowAffectedPeopleOnly(false);
+    }
+  }, [scenario.scenarioMode]);
 
   if (loading && !forceShowContent) {
     return (
@@ -209,10 +249,13 @@ const ResourcePlanner: React.FC = () => {
               isOutdated={scenario.isOutdated}
               conflictCount={hardConflicts}
               warningCount={warningConflicts}
+              showAffectedPeople={showAffectedPeopleOnly}
+              affectedPeopleCount={scenarioFilteredEmployees.length}
               onSave={scenario.saveScenario}
               onCommit={() => scenario.commitScenario(createSprintAllocation)}
               onExit={scenario.exitScenario}
               onShift={scenario.shiftScenario}
+              onShowAffectedPeopleChange={setShowAffectedPeopleOnly}
             />
           )}
 
@@ -248,20 +291,28 @@ const ResourcePlanner: React.FC = () => {
             onAddEmployee={() => setIsAddEmployeeDialogOpen(true)}
           />
 
-          <ResourcePlannerGrid
-            filteredEmployees={filteredEmployees}
-            sprints={Array.isArray(sprints) ? sprints : []}
-            onEmployeeEdit={handleEmployeeEdit}
-            scenarioMode={scenario.scenarioMode}
-            scenarioAllocations={scenario.scenarioAllocations}
-            scenarioProject={scenarioProject}
-            scenarioConflicts={scenario.conflicts}
-            onAddScenarioAllocation={scenario.addScenarioAllocation}
-            onUpdateScenarioAllocation={scenario.updateScenarioAllocation}
-            onDeleteScenarioAllocation={scenario.deleteScenarioAllocation}
-            getScenarioAllocationsForCell={scenario.getScenarioAllocationsForCell}
-            getConflictsForCell={scenario.getConflictsForCell}
-          />
+          <div className="flex min-h-0 flex-1 flex-col">
+            {scenario.scenarioMode && showAffectedPeopleOnly && scenarioFilteredEmployees.length === 0 ? (
+              <div className="border-b bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                No employees are directly affected yet. Placeholder demand is shown in the summary above.
+              </div>
+            ) : null}
+
+            <ResourcePlannerGrid
+              filteredEmployees={scenarioFilteredEmployees}
+              sprints={Array.isArray(sprints) ? sprints : []}
+              onEmployeeEdit={handleEmployeeEdit}
+              scenarioMode={scenario.scenarioMode}
+              scenarioAllocations={scenario.scenarioAllocations}
+              scenarioProject={scenarioProject}
+              scenarioConflicts={scenario.conflicts}
+              onAddScenarioAllocation={scenario.addScenarioAllocation}
+              onUpdateScenarioAllocation={scenario.updateScenarioAllocation}
+              onDeleteScenarioAllocation={scenario.deleteScenarioAllocation}
+              getScenarioAllocationsForCell={scenario.getScenarioAllocationsForCell}
+              getConflictsForCell={scenario.getConflictsForCell}
+            />
+          </div>
         </div>
       </div>
 

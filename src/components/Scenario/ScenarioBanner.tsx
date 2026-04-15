@@ -3,6 +3,7 @@ import { Project, Employee } from '@/types';
 import { Scenario } from '@/hooks/useScenarioStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { AlertTriangle, X, Save, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface ScenarioBannerProps {
@@ -12,10 +13,13 @@ interface ScenarioBannerProps {
   isOutdated: boolean;
   conflictCount: number;
   warningCount: number;
+  showAffectedPeople: boolean;
+  affectedPeopleCount: number;
   onSave: () => void;
   onCommit: () => void;
   onExit: () => void;
   onShift: (by: number) => void;
+  onShowAffectedPeopleChange: (checked: boolean) => void;
 }
 
 const ScenarioBanner: React.FC<ScenarioBannerProps> = ({
@@ -25,15 +29,18 @@ const ScenarioBanner: React.FC<ScenarioBannerProps> = ({
   isOutdated,
   conflictCount,
   warningCount,
+  showAffectedPeople,
+  affectedPeopleCount,
   onSave,
   onCommit,
   onExit,
   onShift,
+  onShowAffectedPeopleChange,
 }) => {
   return (
     <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Badge className="bg-white/20 text-white border-white/30 text-xs font-semibold">
             PRE-G2 SCENARIO
           </Badge>
@@ -46,6 +53,20 @@ const ScenarioBanner: React.FC<ScenarioBannerProps> = ({
               Shifted {scenario.sprintShift > 0 ? '+' : ''}{scenario.sprintShift} sprint(s)
             </Badge>
           )}
+          <div className="flex items-center gap-2 border-l border-white/30 pl-3 ml-1">
+            <Switch
+              checked={showAffectedPeople}
+              onCheckedChange={onShowAffectedPeopleChange}
+              aria-label="Show affected people"
+              className="data-[state=checked]:bg-white data-[state=unchecked]:bg-white/25"
+            />
+            <span className="text-xs font-medium text-white">Show affected people</span>
+            {showAffectedPeople && affectedPeopleCount > 0 ? (
+              <span className="text-xs text-white/80">
+                Showing {affectedPeopleCount} affected {affectedPeopleCount === 1 ? 'person' : 'people'}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
