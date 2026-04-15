@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { ScenarioAllocation, ScenarioConflict } from '@/hooks/useScenarioStore';
-import { Project } from '@/types';
+import { Project, Sprint } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, Edit2, Check, X, AlertCircle, Plus } from 'lucide-react';
+import { Trash2, Edit2, Check, X, AlertCircle, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ScenarioCellOverlayProps {
   scenarioAllocations: ScenarioAllocation[];
   conflicts: ScenarioConflict[];
   project: Project | undefined;
+  sprints: Sprint[];
   onUpdate: (id: string, days: number) => void;
   onDelete: (id: string) => void;
   onAdd: (params: { employeeId: string; sprintId: string; days: number }) => void;
@@ -21,6 +22,7 @@ const ScenarioCellOverlay: React.FC<ScenarioCellOverlayProps> = ({
   scenarioAllocations,
   conflicts,
   project,
+  sprints,
   onUpdate,
   onDelete,
   onAdd,
@@ -31,8 +33,27 @@ const ScenarioCellOverlay: React.FC<ScenarioCellOverlayProps> = ({
   const [editDays, setEditDays] = useState(0);
   const [showAdd, setShowAdd] = useState(false);
   const [addDays, setAddDays] = useState(5);
+  const [copyingKey, setCopyingKey] = useState<string | null>(null);
 
   const hasConflict = conflicts.some(c => c.type === 'hard');
+  const currentSprintIndex = sprints.findIndex((s) => s.id === sprintId);
+  const previousSprint = currentSprintIndex > 0 ? sprints[currentSprintIndex - 1] : null;
+  const nextSprint =
+    currentSprintIndex >= 0 && currentSprintIndex < sprints.length - 1
+      ? sprints[currentSprintIndex + 1]
+      : null;
+
+  const handleCopyAllocation = async (allocation: ScenarioAllocation, targetSprint: Sprint | null) => {
+    if (!targetSprint || !allocation.employeeId) return;
+
+    const targetKey = `${allocation.id}-${targetSprint.id}`;
+    setCopyingKey(targetKey);
+    try {
+      await onAdd({ employeeId: allocation.employeeId, sprintId: targetSprint.id, days: allocation.days });
+    } finally {
+      setCopyingKey(null);
+    }
+  };
 
   if (scenarioAllocations.length === 0 && !showAdd) {
     return (
@@ -100,6 +121,34 @@ const ScenarioCellOverlay: React.FC<ScenarioCellOverlayProps> = ({
               <Badge className="bg-purple-200 text-purple-800 text-[10px] px-1 py-0 h-4 font-semibold">
                 {alloc.days}d
               </Badge>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-4 w-4 p-0 text-purple-500 hover:text-purple-800 disabled:opacity-30"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleCopyAllocation(alloc, previousSprint);
+                }}
+                disabled={!previousSprint || copyingKey === `${alloc.id}-${previousSprint?.id}`}
+                title={previousSprint ? `Copy to ${previousSprint.name}` : 'No previous sprint'}
+                aria-label={previousSprint ? `Copy scenario allocation to ${previousSprint.name}` : 'No previous sprint'}
+              >
+                <ChevronLeft className="h-2.5 w-2.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-4 w-4 p-0 text-purple-500 hover:text-purple-800 disabled:opacity-30"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleCopyAllocation(alloc, nextSprint);
+                }}
+                disabled={!nextSprint || copyingKey === `${alloc.id}-${nextSprint?.id}`}
+                title={nextSprint ? `Copy to ${nextSprint.name}` : 'No next sprint'}
+                aria-label={nextSprint ? `Copy scenario allocation to ${nextSprint.name}` : 'No next sprint'}
+              >
+                <ChevronRight className="h-2.5 w-2.5" />
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"

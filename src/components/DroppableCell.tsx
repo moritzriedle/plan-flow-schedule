@@ -306,7 +306,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({
   onUpdateScenarioAllocation,
   onDeleteScenarioAllocation,
 }) => {
-  const { allocations, moveAllocation, getTotalAllocationDays, getAvailableDays, getEmployeeById } =
+  const { allocations, moveAllocation, getTotalAllocationDays, getAvailableDays, getEmployeeById, sprints } =
     usePlanner();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -473,6 +473,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({
               scenarioAllocations={scenarioAllocations}
               conflicts={scenarioConflicts}
               project={scenarioProject}
+              sprints={sprints}
               onUpdate={onUpdateScenarioAllocation || (async () => false)}
               onDelete={onDeleteScenarioAllocation || (async () => false)}
               onAdd={onAddScenarioAllocation || (async () => null)}
