@@ -216,6 +216,22 @@ const ResourcePlanner: React.FC = () => {
             />
           )}
 
+          {scenario.scenarioMode && scenario.activeScenario && (
+            <div className="sticky top-0 z-10 border-b bg-background">
+              <ScenarioPanel
+                scenarioAllocations={scenario.scenarioAllocations}
+                conflicts={scenario.conflicts}
+                sprints={Array.isArray(sprints) ? sprints : []}
+                employees={safeEmployees}
+                projectId={scenario.activeScenario.projectId}
+                onAddPlaceholder={scenario.addPlaceholderAllocation}
+                onAddNamed={scenario.addScenarioAllocation}
+                onUpdateAllocation={scenario.updateScenarioAllocation}
+                onDeleteAllocation={scenario.deleteScenarioAllocation}
+              />
+            </div>
+          )}
+
           <ResourcePlannerHeader
             timeframe={timeframe}
             onTimeframeChange={setTimeframe}
@@ -246,21 +262,6 @@ const ResourcePlanner: React.FC = () => {
             getScenarioAllocationsForCell={scenario.getScenarioAllocationsForCell}
             getConflictsForCell={scenario.getConflictsForCell}
           />
-
-          {/* Scenario Panel */}
-          {scenario.scenarioMode && scenario.activeScenario && (
-            <ScenarioPanel
-              scenarioAllocations={scenario.scenarioAllocations}
-              conflicts={scenario.conflicts}
-              sprints={Array.isArray(sprints) ? sprints : []}
-              employees={safeEmployees}
-              projectId={scenario.activeScenario.projectId}
-              onAddPlaceholder={scenario.addPlaceholderAllocation}
-              onAddNamed={scenario.addScenarioAllocation}
-              onUpdateAllocation={scenario.updateScenarioAllocation}
-              onDeleteAllocation={scenario.deleteScenarioAllocation}
-            />
-          )}
         </div>
       </div>
 
