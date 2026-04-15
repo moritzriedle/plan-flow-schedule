@@ -4,7 +4,6 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePlanner } from '../contexts/PlannerContext';
 import ProjectsSidebar from './ProjectsSidebar';
-// import ProjectTimelineView from './ProjectTimelineView';
 import EmployeeEditor from './EmployeeEditor';
 import AddProjectDialog from './AddProjectDialog';
 import { AddEmployeeDialog } from './AddEmployeeDialog';
@@ -14,42 +13,39 @@ import ResourcePlannerGrid from './ResourcePlannerGrid';
 import { useTimeframeSprints } from '../hooks/useTimeframeSprints';
 import { Project, Employee } from '../types';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, FlaskConical, Eye } from 'lucide-react';
 import ProjectTimelineView from './ProjectTimelineView';
 import { ROLE_OPTIONS } from '@/constants/roles';
 import { findActiveSprint } from '@/utils/sprintUtils';
+import { useScenarioStore } from '@/hooks/useScenarioStore';
+import ScenarioBanner from './Scenario/ScenarioBanner';
+import ScenarioProjectSelector from './Scenario/ScenarioProjectSelector';
+import ScenarioPanel from './Scenario/ScenarioPanel';
+import SavedScenariosDialog from './Scenario/SavedScenariosDialog';
 
 const ResourcePlanner: React.FC = () => {
   const plannerData = usePlanner();
-  const { employees = [], loading, allocateToProjectTimeline } = plannerData;
-   // Ensure employees is always a valid array
+  const { employees = [], projects = [], allocations = [], loading, allocateToProjectTimeline, getAvailableDays, createSprintAllocation } = plannerData;
+
   const safeEmployees = React.useMemo(() => {
-    if (!employees || !Array.isArray(employees)) {
-      console.warn('ResourcePlanner: employees is not a valid array', { employees });
-      return [];
-    }
+    if (!employees || !Array.isArray(employees)) return [];
     return employees.filter(emp => emp && emp.id);
   }, [employees]);
-  
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [forceShowContent, setForceShowContent] = useState(false);
-  
-  // Fallback mechanism: if loading is stuck for too long, show content anyway
+
   useEffect(() => {
     if (loading) {
       const fallbackTimer = setTimeout(() => {
-        console.warn('ResourcePlanner: Loading stuck for 15 seconds, forcing content display');
         setForceShowContent(true);
       }, 15000);
-      
-      return () => {
-        clearTimeout(fallbackTimer);
-      };
+      return () => clearTimeout(fallbackTimer);
     } else {
       setForceShowContent(false);
     }
   }, [loading]);
-  
+
   const [isProjectTimelineOpen, setIsProjectTimelineOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -62,68 +58,46 @@ const ResourcePlanner: React.FC = () => {
   const [isDetailedAllocationOpen, setIsDetailedAllocationOpen] = useState(false);
   const [allocationEmployee, setAllocationEmployee] = useState<Employee | null>(null);
   const [allocationProject, setAllocationProject] = useState<Project | null>(null);
-  
+
+  // Scenario state
+  const [isScenarioSelectorOpen, setIsScenarioSelectorOpen] = useState(false);
+
   const { timeframe, sprints, setTimeframe } = useTimeframeSprints();
- 
-   const safeRoleOptions = React.useMemo(() => {
-  const fromEmployees = Array.isArray(safeEmployees)
-    ? safeEmployees
-        .map(emp => emp?.role)
-        .filter((role): role is string => typeof role === 'string' && role.trim() !== '')
-    : [];
 
-  const fromConstants = Array.isArray(ROLE_OPTIONS)
-    ? ROLE_OPTIONS.filter(role => typeof role === 'string' && role.trim() !== '')
-    : [];
+  const scenario = useScenarioStore(
+    safeEmployees,
+    allocations,
+    projects,
+    Array.isArray(sprints) ? sprints : [],
+    getAvailableDays,
+  );
 
-  const allRoles = [...fromEmployees, ...fromConstants];
+  const safeRoleOptions = React.useMemo(() => {
+    const fromEmployees = Array.isArray(safeEmployees)
+      ? safeEmployees.map(emp => emp?.role).filter((role): role is string => typeof role === 'string' && role.trim() !== '')
+      : [];
+    const fromConstants = Array.isArray(ROLE_OPTIONS)
+      ? ROLE_OPTIONS.filter(role => typeof role === 'string' && role.trim() !== '')
+      : [];
+    return Array.from(new Set([...fromEmployees, ...fromConstants]));
+  }, [safeEmployees]);
 
-  return Array.from(new Set(allRoles)); // remove duplicates
-}, [safeEmployees]);
-
-  
-  // Ensure selectedRoles is always a valid array
   const safeSelectedRoles = React.useMemo(() => {
-    if (!selectedRoles || !Array.isArray(selectedRoles)) {
-      console.warn('ResourcePlanner: selectedRoles is not a valid array', { selectedRoles });
-      return [];
-    }
+    if (!selectedRoles || !Array.isArray(selectedRoles)) return [];
     return selectedRoles.filter(role => role && typeof role === 'string');
   }, [selectedRoles]);
 
- // Filter employees by selected roles and search term with comprehensive safety checks
   const filteredEmployees = React.useMemo(() => {
     try {
       let filtered = safeEmployees;
-      
-      // Filter out archived employees unless toggle is on
-      if (!showArchivedEmployees) {
-        filtered = filtered.filter(emp => !emp.archived);
-      }
-      
-      // Filter by roles
+      if (!showArchivedEmployees) filtered = filtered.filter(emp => !emp.archived);
       if (safeSelectedRoles.length > 0) {
-        filtered = filtered.filter(emp => {
-          if (!emp || !emp.role || typeof emp.role !== 'string') {
-            console.warn('ResourcePlanner: Employee missing valid role', { emp });
-            return false;
-          }
-          return safeSelectedRoles.includes(emp.role);
-        });
+        filtered = filtered.filter(emp => emp?.role && safeSelectedRoles.includes(emp.role));
       }
-      
-      // Filter by search term
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase().trim();
-        filtered = filtered.filter(emp => {
-          if (!emp || !emp.name || typeof emp.name !== 'string') {
-            return false;
-          }
-          return emp.name.toLowerCase().includes(searchLower);
-        });
+        filtered = filtered.filter(emp => emp?.name?.toLowerCase().includes(searchLower));
       }
-      
-      // Filter by unallocated in active sprint
       if (showUnallocatedOnly) {
         const activeSprint = findActiveSprint(sprints);
         if (activeSprint) {
@@ -133,33 +107,16 @@ const ResourcePlanner: React.FC = () => {
           });
         }
       }
-      
       return filtered;
-    } catch (error) {
-      console.error('ResourcePlanner: Error filtering employees', error);
+    } catch {
       return safeEmployees;
     }
   }, [safeEmployees, safeSelectedRoles, searchTerm, showUnallocatedOnly, showArchivedEmployees, sprints, plannerData]);
 
   const handleRoleChange = (roles: string[]) => {
-    try {
-      const safeRoles = Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : [];
-      setSelectedRoles(safeRoles);
-    } catch (error) {
-      console.error('ResourcePlanner: Error in handleRoleChange', error);
-      setSelectedRoles([]);
-    }
+    setSelectedRoles(Array.isArray(roles) ? roles.filter(role => role && typeof role === 'string') : []);
   };
 
-  // Final defensive fallback before render
-  if (!Array.isArray(safeSelectedRoles)) {
-    console.warn('safeSelectedRoles not iterable — defaulting to empty array');
-  }
-
-  if (!Array.isArray(safeRoleOptions)) {
-    console.warn('safeRoleOptions not iterable — defaulting to empty array');
-  }
-  
   const handleProjectTimelineOpen = (project: Project) => {
     setSelectedProject(project);
     setIsProjectTimelineOpen(true);
@@ -175,59 +132,90 @@ const ResourcePlanner: React.FC = () => {
     setIsEmployeeEditorOpen(false);
   };
 
-  const handleDetailedAllocation = (employee: Employee, project: Project) => {
-    setAllocationEmployee(employee);
-    setAllocationProject(project);
-    setIsDetailedAllocationOpen(true);
-  };
-
   const handleAllocationComplete = async (params: {
     employeeId: string;
     projectId: string;
     sprintId: string;
     days: number;
   }) => {
-    await plannerData.createSprintAllocation({
-      employeeId: params.employeeId,
-      projectId: params.projectId,
-      sprintId: params.sprintId,
-      days: params.days,
-    });
+    await plannerData.createSprintAllocation(params);
   };
+
+  const scenarioProject = scenario.activeScenario
+    ? projects.find(p => p.id === scenario.activeScenario!.projectId)
+    : undefined;
+  const scenarioLead = scenarioProject?.leadId
+    ? safeEmployees.find(e => e.id === scenarioProject.leadId)
+    : undefined;
+
+  const hardConflicts = scenario.conflicts.filter(c => c.type === 'hard').length;
+  const warningConflicts = scenario.conflicts.filter(c => c.type === 'warning').length;
 
   if (loading && !forceShowContent) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading resource planner...</div>
-        <div className="text-sm text-gray-500 mt-2">
-          This is taking longer than expected. If stuck, please refresh the page.
-        </div>
       </div>
     );
   }
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="flex h-screen bg-gray-50">
-        <div className="w-80 border-r bg-white p-4 overflow-y-auto">
+      <div className="flex h-screen bg-background">
+        <div className="w-80 border-r bg-card p-4 overflow-y-auto">
           <div className="mb-4">
             <h3 className="font-semibold mb-2">Projects</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Drag projects to allocate resources or click for details
             </p>
-            <Button 
-              onClick={() => setIsAddProjectDialogOpen(true)}
-              className="w-full mb-4"
-              variant="outline"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Project
-            </Button>
+            <div className="space-y-2">
+              <Button
+                onClick={() => setIsAddProjectDialogOpen(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Project
+              </Button>
+              <Button
+                onClick={() => setIsScenarioSelectorOpen(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <FlaskConical className="w-4 h-4 mr-2" />
+                Pre-G2 Planning
+              </Button>
+              <Button
+                onClick={() => { scenario.setShowSavedScenarios(true); scenario.loadSavedScenarios(); }}
+                className="w-full"
+                variant="ghost"
+                size="sm"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Show Saved Scenarios
+              </Button>
+            </div>
           </div>
           <ProjectsSidebar />
         </div>
-        
-        <div className="flex-1 overflow-hidden">
+
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Scenario Banner */}
+          {scenario.scenarioMode && scenario.activeScenario && (
+            <ScenarioBanner
+              scenario={scenario.activeScenario}
+              project={scenarioProject}
+              projectLead={scenarioLead}
+              isOutdated={scenario.isOutdated}
+              conflictCount={hardConflicts}
+              warningCount={warningConflicts}
+              onSave={scenario.saveScenario}
+              onCommit={() => scenario.commitScenario(createSprintAllocation)}
+              onExit={scenario.exitScenario}
+              onShift={scenario.shiftScenario}
+            />
+          )}
+
           <ResourcePlannerHeader
             timeframe={timeframe}
             onTimeframeChange={setTimeframe}
@@ -243,38 +231,49 @@ const ResourcePlanner: React.FC = () => {
             onAddProject={() => setIsAddProjectDialogOpen(true)}
             onAddEmployee={() => setIsAddEmployeeDialogOpen(true)}
           />
-          
+
           <ResourcePlannerGrid
             filteredEmployees={filteredEmployees}
             sprints={Array.isArray(sprints) ? sprints : []}
             onEmployeeEdit={handleEmployeeEdit}
+            scenarioMode={scenario.scenarioMode}
+            scenarioAllocations={scenario.scenarioAllocations}
+            scenarioProject={scenarioProject}
+            scenarioConflicts={scenario.conflicts}
+            onAddScenarioAllocation={scenario.addScenarioAllocation}
+            onUpdateScenarioAllocation={scenario.updateScenarioAllocation}
+            onDeleteScenarioAllocation={scenario.deleteScenarioAllocation}
+            getScenarioAllocationsForCell={scenario.getScenarioAllocationsForCell}
+            getConflictsForCell={scenario.getConflictsForCell}
           />
+
+          {/* Scenario Panel */}
+          {scenario.scenarioMode && scenario.activeScenario && (
+            <ScenarioPanel
+              scenarioAllocations={scenario.scenarioAllocations}
+              conflicts={scenario.conflicts}
+              sprints={Array.isArray(sprints) ? sprints : []}
+              employees={safeEmployees}
+              projectId={scenario.activeScenario.projectId}
+              onAddPlaceholder={scenario.addPlaceholderAllocation}
+              onAddNamed={scenario.addScenarioAllocation}
+              onUpdateAllocation={scenario.updateScenarioAllocation}
+              onDeleteAllocation={scenario.deleteScenarioAllocation}
+            />
+          )}
         </div>
       </div>
 
-     
-<ProjectTimelineView
-  project={selectedProject}
-  isOpen={isProjectTimelineOpen}
-  onClose={() => {
-    setIsProjectTimelineOpen(false);
-    setSelectedProject(null);
-  }}
-  selectedRoles={safeSelectedRoles}
-  onRoleChange={handleRoleChange}
-/>
-
-
-
-      <AddProjectDialog 
-        open={isAddProjectDialogOpen} 
-        onOpenChange={setIsAddProjectDialogOpen} 
+      <ProjectTimelineView
+        project={selectedProject}
+        isOpen={isProjectTimelineOpen}
+        onClose={() => { setIsProjectTimelineOpen(false); setSelectedProject(null); }}
+        selectedRoles={safeSelectedRoles}
+        onRoleChange={handleRoleChange}
       />
 
-      <AddEmployeeDialog 
-        open={isAddEmployeeDialogOpen} 
-        onOpenChange={setIsAddEmployeeDialogOpen} 
-      />
+      <AddProjectDialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen} />
+      <AddEmployeeDialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen} />
 
       {selectedEmployee && (
         <EmployeeEditor
@@ -298,6 +297,21 @@ const ResourcePlanner: React.FC = () => {
           onAllocate={handleAllocationComplete}
         />
       )}
+
+      <ScenarioProjectSelector
+        open={isScenarioSelectorOpen}
+        onOpenChange={setIsScenarioSelectorOpen}
+        projects={projects}
+        onSelect={scenario.startScenario}
+      />
+
+      <SavedScenariosDialog
+        open={scenario.showSavedScenarios}
+        onOpenChange={scenario.setShowSavedScenarios}
+        scenarios={scenario.savedScenarios}
+        projects={projects}
+        onLoad={scenario.startScenario}
+      />
     </DndProvider>
   );
 };

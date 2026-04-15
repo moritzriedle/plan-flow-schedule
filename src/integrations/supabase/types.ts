@@ -65,6 +65,47 @@ export type Database = {
           },
         ]
       }
+      planning_scenarios: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          last_saved_at: string | null
+          project_id: string
+          sprint_shift: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          last_saved_at?: string | null
+          project_id: string
+          sprint_shift?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          last_saved_at?: string | null
+          project_id?: string
+          sprint_shift?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_scenarios_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           archived: boolean
@@ -182,6 +223,53 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scenario_allocations: {
+        Row: {
+          created_at: string
+          days: number
+          employee_id: string | null
+          id: string
+          is_placeholder: boolean
+          note: string | null
+          role: string | null
+          scenario_id: string
+          sprint_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          days?: number
+          employee_id?: string | null
+          id?: string
+          is_placeholder?: boolean
+          note?: string | null
+          role?: string | null
+          scenario_id: string
+          sprint_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          days?: number
+          employee_id?: string | null
+          id?: string
+          is_placeholder?: boolean
+          note?: string | null
+          role?: string | null
+          scenario_id?: string
+          sprint_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenario_allocations_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "planning_scenarios"
             referencedColumns: ["id"]
           },
         ]
