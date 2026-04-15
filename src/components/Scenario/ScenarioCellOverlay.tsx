@@ -36,7 +36,7 @@ const ScenarioCellOverlay: React.FC<ScenarioCellOverlayProps> = ({
 
   if (scenarioAllocations.length === 0 && !showAdd) {
     return (
-      <div className="mt-1">
+      <div>
         <Button
           size="sm"
           variant="ghost"
@@ -51,7 +51,7 @@ const ScenarioCellOverlay: React.FC<ScenarioCellOverlayProps> = ({
   }
 
   return (
-    <div className="mt-1 space-y-1">
+    <div className="space-y-1">
       {hasConflict && (
         <div className="flex items-center gap-1 text-[10px] text-destructive">
           <AlertCircle className="h-3 w-3" />

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useDrop } from 'react-dnd';
-import { DragItem, Sprint } from '../types';
+import { DragItem, Project, Sprint } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import AllocationItem from './AllocationItem';
 import { Loader2, Plus } from 'lucide-react';
@@ -29,11 +29,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ScenarioAllocation, ScenarioConflict } from '@/hooks/useScenarioStore';
+import ScenarioCellOverlay from './Scenario/ScenarioCellOverlay';
 
 interface DroppableCellProps {
   employeeId: string;
   sprintId: string;
   sprint: Sprint;
+  scenarioMode?: boolean;
+  scenarioAllocations?: ScenarioAllocation[];
+  scenarioConflicts?: ScenarioConflict[];
+  scenarioProject?: Project;
+  onAddScenarioAllocation?: (params: { employeeId: string; sprintId: string; days: number }) => Promise<string | null>;
+  onUpdateScenarioAllocation?: (id: string, days: number) => Promise<boolean>;
+  onDeleteScenarioAllocation?: (id: string) => Promise<boolean>;
 }
 
 type QuickProject = {
@@ -285,7 +294,18 @@ const QuickAllocateDialog: React.FC<{
   );
 };
 
-const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, sprint }) => {
+const DroppableCell: React.FC<DroppableCellProps> = ({
+  employeeId,
+  sprintId,
+  sprint,
+  scenarioMode = false,
+  scenarioAllocations = [],
+  scenarioConflicts = [],
+  scenarioProject,
+  onAddScenarioAllocation,
+  onUpdateScenarioAllocation,
+  onDeleteScenarioAllocation,
+}) => {
   const { allocations, moveAllocation, getTotalAllocationDays, getAvailableDays, getEmployeeById } =
     usePlanner();
 
@@ -303,19 +323,6 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
   const totalDays = getTotalAllocationDays(employeeId, sprint);
   const availableDays = getAvailableDays(employeeId, sprint);
   const isOverallocated = totalDays > availableDays;
-
-  const percent = useMemo(() => {
-    if (!availableDays || availableDays <= 0) return 0;
-    return Math.round((totalDays / availableDays) * 100);
-  }, [totalDays, availableDays]);
-
-  const fillPct = Math.min(100, Math.max(0, availableDays > 0 ? (totalDays / availableDays) * 100 : 0));
-
-  const barClass = isOverallocated
-    ? 'bg-red-500'
-    : totalDays === 0
-    ? 'bg-gray-300'
-    : 'bg-green-600';
 
   const suggestedDays = useMemo(() => {
     const remaining = Math.max(availableDays - totalDays, 0);
@@ -371,7 +378,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
       <div
         ref={drop}
         className={[
-          'droppable-cell p-2 h-full min-h-[120px] border-r border-b',
+          'droppable-cell flex min-h-[120px] flex-col border-r border-b p-2',
           isOverCurrent ? 'active bg-primary/10' : '',
           isOverallocated ? 'bg-red-50' : '',
           isProcessing ? 'bg-gray-50' : '',
@@ -379,69 +386,69 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
         ].join(' ')}
       >
         {/* Header: slim progress bar + % */}
-<div className="mb-1 flex justify-between items-center gap-2">
-  <div className="flex-1 min-w-0">
-    {(() => {
-      const cap = Math.max(availableDays || 0, 0);
-      const used = Math.max(totalDays || 0, 0);
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {(() => {
+              const cap = Math.max(availableDays || 0, 0);
+              const used = Math.max(totalDays || 0, 0);
 
-      const ratio = cap > 0 ? used / cap : 0;
-      const pct = cap > 0 ? Math.round(ratio * 100) : 0;
-      const fillPct = Math.min(100, Math.max(0, cap > 0 ? ratio * 100 : 0));
+              const ratio = cap > 0 ? used / cap : 0;
+              const pct = cap > 0 ? Math.round(ratio * 100) : 0;
+              const fillPct = Math.min(100, Math.max(0, cap > 0 ? ratio * 100 : 0));
 
-      // color logic
-      const isLow = cap > 0 ? ratio < 0.3 : used === 0; // <30% = low allocation
-      const isNearFull = cap > 0 ? ratio >= 0.9 && ratio <= 1 : false;
+              // color logic
+              const isLow = cap > 0 ? ratio < 0.3 : used === 0; // <30% = low allocation
+              const isNearFull = cap > 0 ? ratio >= 0.9 && ratio <= 1 : false;
 
-      const barClass = isOverallocated
-        ? 'bg-red-500'
-        : isLow
-        ? 'bg-gray-400'
-        : isNearFull
-        ? 'bg-amber-500'
-        : 'bg-blue-600';
+              const barClass = isOverallocated
+                ? 'bg-red-500'
+                : isLow
+                ? 'bg-gray-400'
+                : isNearFull
+                ? 'bg-amber-500'
+                : 'bg-blue-600';
 
-      const trackClass = isOverallocated ? 'bg-red-100' : 'bg-gray-200';
+              const trackClass = isOverallocated ? 'bg-red-100' : 'bg-gray-200';
 
-      return (
-        <div className="flex items-center gap-2">
-          <div className="relative h-1.5 flex-1 rounded-full overflow-hidden">
-            <div className={`absolute inset-0 ${trackClass}`} />
-            <div
-              className={`absolute inset-y-0 left-0 ${barClass}`}
-              style={{ width: `${fillPct}%` }}
-            />
+              return (
+                <div className="flex items-center gap-2">
+                  <div className="relative h-1.5 flex-1 overflow-hidden rounded-full">
+                    <div className={`absolute inset-0 ${trackClass}`} />
+                    <div
+                      className={`absolute inset-y-0 left-0 ${barClass}`}
+                      style={{ width: `${fillPct}%` }}
+                    />
+                  </div>
+
+                  <span
+                    className={`text-[11px] font-medium tabular-nums ${isOverallocated ? 'text-red-600' : 'text-gray-600'}`}
+                  >
+                    {pct}%
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
-          <span className={`text-[11px] font-medium tabular-nums ${isOverallocated ? 'text-red-600' : 'text-gray-600'}`}>
-            {pct}%
-          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              disabled={isEmployeeArchived}
+              title={isEmployeeArchived ? 'Archived employee' : 'Allocate to a project'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setQuickOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+
+            {isOverallocated && <span className="text-xs font-bold text-red-500">!</span>}
+            {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+          </div>
         </div>
-      );
-    })()}
-  </div>
-
-  <div className="flex items-center gap-1">
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-6 w-6 p-0"
-      disabled={isEmployeeArchived}
-      title={isEmployeeArchived ? 'Archived employee' : 'Allocate to a project'}
-      onClick={(e) => {
-        e.stopPropagation();
-        setQuickOpen(true);
-      }}
-    >
-      <Plus className="h-4 w-4" />
-    </Button>
-
-    {isOverallocated && <span className="text-xs text-red-500 font-bold">!</span>}
-    {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
-  </div>
-</div>
-
-
 
         {vacationCount > 0 ? (
           <div className="text-[11px] text-amber-700 mb-1">
@@ -459,6 +466,21 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ employeeId, sprintId, spr
             sprintId={allocation.sprintId}
           />
         ))}
+
+        {scenarioMode ? (
+          <div className="mt-1">
+            <ScenarioCellOverlay
+              scenarioAllocations={scenarioAllocations}
+              conflicts={scenarioConflicts}
+              project={scenarioProject}
+              onUpdate={onUpdateScenarioAllocation || (async () => false)}
+              onDelete={onDeleteScenarioAllocation || (async () => false)}
+              onAdd={onAddScenarioAllocation || (async () => null)}
+              employeeId={employeeId}
+              sprintId={sprintId}
+            />
+          </div>
+        ) : null}
       </div>
 
       <QuickAllocateDialog

@@ -5,7 +5,6 @@ import { getSprintDateRange, findActiveSprint } from '../utils/sprintUtils';
 import { Employee, Sprint, Project } from '../types';
 import { usePlanner } from '../contexts/PlannerContext';
 import { ScenarioAllocation, ScenarioConflict } from '@/hooks/useScenarioStore';
-import ScenarioCellOverlay from './Scenario/ScenarioCellOverlay';
 
 interface ResourcePlannerGridProps {
   filteredEmployees: Employee[];
@@ -153,19 +152,18 @@ const ResourcePlannerGrid: React.FC<ResourcePlannerGridProps> = ({
                       ].join(' ')}
                       style={{ width: `${sprintColumnWidth}px` }}
                     >
-                      <DroppableCell employeeId={employee.id} sprintId={sprint.id} sprint={sprint} />
-                      {scenarioMode && (
-                        <ScenarioCellOverlay
-                          scenarioAllocations={cellScenarioAllocations}
-                          conflicts={cellConflicts}
-                          project={scenarioProject}
-                          onUpdate={onUpdateScenarioAllocation || (async () => false)}
-                          onDelete={onDeleteScenarioAllocation || (async () => false)}
-                          onAdd={onAddScenarioAllocation || (async () => null)}
-                          employeeId={employee.id}
-                          sprintId={sprint.id}
-                        />
-                      )}
+                      <DroppableCell
+                        employeeId={employee.id}
+                        sprintId={sprint.id}
+                        sprint={sprint}
+                        scenarioMode={scenarioMode}
+                        scenarioAllocations={cellScenarioAllocations}
+                        scenarioConflicts={cellConflicts}
+                        scenarioProject={scenarioProject}
+                        onAddScenarioAllocation={onAddScenarioAllocation}
+                        onUpdateScenarioAllocation={onUpdateScenarioAllocation}
+                        onDeleteScenarioAllocation={onDeleteScenarioAllocation}
+                      />
                     </div>
                   );
                 })}
